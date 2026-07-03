@@ -1,5 +1,6 @@
 import {
   Check,
+  ChevronDown,
   Copy,
   File,
   FolderOpen,
@@ -316,12 +317,15 @@ export default function MediaVault(): React.JSX.Element {
         </div>
         <label className="media-sort-control">
           <span>Sort</span>
-          <select value={sort} onChange={(event) => setSort(event.target.value as MediaSort)}>
-            <option value="type">Type</option>
-            <option value="newest">Newest</option>
-            <option value="name">Name</option>
-            <option value="size">Size</option>
-          </select>
+          <span className="media-sort-select">
+            <select value={sort} onChange={(event) => setSort(event.target.value as MediaSort)}>
+              <option value="type">Type</option>
+              <option value="newest">Newest</option>
+              <option value="name">Name</option>
+              <option value="size">Size</option>
+            </select>
+            <ChevronDown className="media-sort-chevron" size={15} aria-hidden="true" />
+          </span>
         </label>
         <button className="btn btn-compact" disabled={selectedItems.length !== 1} onClick={() => selectedItems[0] && window.forge.reveal(vault, selectedItems[0].path)}>
           <FolderOpen size={14} />
