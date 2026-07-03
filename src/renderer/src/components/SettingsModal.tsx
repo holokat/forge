@@ -1245,12 +1245,22 @@ export default function SettingsModal(): React.JSX.Element {
                     </div>
                     <div className="public-publish-options">
                       <div className="public-publish-option">
-                        <strong>SEO defaults</strong>
-                        <span>Sitemaps, canonical URLs, Open Graph, schema, per-page title and description overrides.</span>
+                        <span className="public-publish-option-icon" aria-hidden="true">
+                          <SearchCheck size={15} />
+                        </span>
+                        <span className="public-publish-option-copy">
+                          <strong>SEO defaults</strong>
+                          <span>Sitemaps, canonical URLs, Open Graph, schema, per-page title and description overrides.</span>
+                        </span>
                       </div>
                       <div className="public-publish-option">
-                        <strong>Growth surfaces</strong>
-                        <span>RSS, search, related posts, authors, analytics hooks, email capture snippets, and newsletter export.</span>
+                        <span className="public-publish-option-icon" aria-hidden="true">
+                          <Rocket size={15} />
+                        </span>
+                        <span className="public-publish-option-copy">
+                          <strong>Growth surfaces</strong>
+                          <span>RSS, search, related posts, authors, analytics hooks, email capture snippets, and newsletter export.</span>
+                        </span>
                       </div>
                     </div>
                   </div>
