@@ -1,6 +1,6 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g transform="translate(100 100) scale(0.8046875)">
 <rect width="1024" height="1024" rx="250" fill="black"/>
-<circle cx="512" cy="512" r="238.5" stroke="white" stroke-width="123"/>
+<path d="M465.23 269 Q512 242 558.77 269 L699.06 350 Q745.83 377 745.83 431 L745.83 593 Q745.83 647 699.06 674 L558.77 755 Q512 782 465.23 755 L324.94 674 Q278.17 647 278.17 593 L278.17 431 Q278.17 377 324.94 350 Z" fill="white"/>
 </g>
 </svg>
