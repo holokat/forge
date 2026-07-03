@@ -18,6 +18,7 @@ Forge is open source under the MIT License.
 - Expose a local CLI and MCP server for Codex, Claude, and other agent tools.
 - Publish a vault to static HTML.
 - Manage bundled extensions through an early local marketplace.
+- Check and install app updates from GitHub releases.
 
 ## Current Status
 
@@ -35,6 +36,7 @@ Implemented foundations:
 - Static HTML publisher.
 - Forge Buddy pairing/ingest support.
 - Local declarative extension marketplace foundation.
+- In-app update checks and release notes.
 
 Planned or in progress:
 
