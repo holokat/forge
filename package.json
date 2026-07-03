@@ -100,6 +100,10 @@
         "to": "scripts/lib"
       },
       {
+        "from": "node_modules/marked",
+        "to": "node_modules/marked"
+      },
+      {
         "from": "src/renderer/src/extensions/registry.ts",
         "to": "src/renderer/src/extensions/registry.ts"
       }
