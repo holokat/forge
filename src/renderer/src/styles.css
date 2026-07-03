@@ -1455,6 +1455,55 @@ button.tag:hover {
   font-size: 13px;
 }
 
+.release-notes-panel {
+  width: min(560px, calc(100vw - 80px));
+  max-height: min(620px, calc(100vh - 80px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 13px;
+  background: var(--bg-panel-translucent);
+  backdrop-filter: blur(28px);
+  box-shadow: var(--shadow-modal);
+  border: 1px solid var(--border-strong);
+  animation: panel-in 0.16s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.release-notes-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.release-notes-eyebrow {
+  margin-bottom: 4px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.release-notes-header h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.release-notes-body {
+  overflow: auto;
+  padding: 16px 20px 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  user-select: text;
+}
+
 /* ============================================================
    Settings
    ============================================================ */
@@ -1674,6 +1723,102 @@ button.tag:hover {
 
 .static-publish-status.failed {
   color: #e5484d;
+}
+
+.update-card {
+  gap: 12px;
+}
+
+.update-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.update-badge {
+  flex-shrink: 0;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.update-badge.downloaded,
+.update-badge.not-available {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.update-badge.error {
+  color: #e5484d;
+  background: rgba(229, 72, 77, 0.1);
+}
+
+.update-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.update-status svg {
+  flex-shrink: 0;
+}
+
+.update-status.downloaded,
+.update-status.not-available {
+  color: var(--accent);
+}
+
+.update-status.error {
+  color: #e5484d;
+}
+
+.update-progress {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--bg-panel);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.update-progress span {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff8a3d, #f2600e);
+  transition: width 0.18s ease;
+}
+
+.update-release-notes {
+  max-height: 150px;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--bg-panel);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+.update-release-title {
+  margin-bottom: 5px;
+  color: var(--text-normal);
+  font-weight: 650;
 }
 
 .mobile-pairing-card {

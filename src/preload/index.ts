@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { Settings, ForgeAPI, ThemeMode } from '../shared/types'
+import type { Settings, ForgeAPI, ThemeMode, UpdateStatus } from '../shared/types'
 
 const api: ForgeAPI = {
   selectVault: () => ipcRenderer.invoke('dialog:selectVault'),
@@ -19,6 +19,15 @@ const api: ForgeAPI = {
   resetMobilePairingToken: () => ipcRenderer.invoke('mobile:resetPairingToken'),
   setMobileVault: (vault) => ipcRenderer.invoke('mobile:setVault', vault),
   publishVault: (vault, outDir) => ipcRenderer.invoke('vault:publish', vault, outDir),
+  getUpdateStatus: () => ipcRenderer.invoke('updates:getStatus'),
+  checkForUpdates: () => ipcRenderer.invoke('updates:check'),
+  installUpdate: () => ipcRenderer.invoke('updates:install'),
+  consumePendingReleaseNotes: () => ipcRenderer.invoke('updates:consumePendingReleaseNotes'),
+  onUpdateStatus: (cb) => {
+    const listener = (_event: Electron.IpcRendererEvent, status: UpdateStatus): void => cb(status)
+    ipcRenderer.on('updates:status', listener)
+    return () => ipcRenderer.removeListener('updates:status', listener)
+  },
   setThemeSource: (mode: ThemeMode) => ipcRenderer.invoke('theme:setSource', mode),
   watchVault: (vault) => ipcRenderer.invoke('vault:watch', vault),
   onVaultChanged: (cb) => {

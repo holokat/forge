@@ -10,11 +10,25 @@ import {
   protocol,
   shell
 } from 'electron'
+import {
+  autoUpdater,
+  type ProgressInfo,
+  type UpdateDownloadedEvent,
+  type UpdateInfo
+} from 'electron-updater'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import fsSync, { type FSWatcher } from 'node:fs'
 import { pathToFileURL } from 'node:url'
-import { DEFAULT_SETTINGS, type AgentAccessInfo, type Settings, type ThemeMode, type VaultData } from '../shared/types'
+import {
+  DEFAULT_SETTINGS,
+  type AgentAccessInfo,
+  type ReleaseNotesInfo,
+  type Settings,
+  type ThemeMode,
+  type UpdateStatus,
+  type VaultData
+} from '../shared/types'
 import { MobileIngestServer } from './mobileIngest'
 
 const MD_EXT = '.md'
@@ -26,6 +40,14 @@ const ASSET_EXTS = new Set([
 let mainWindow: BrowserWindow | null = null
 let watcher: FSWatcher | null = null
 let suppressWatchUntil = 0
+let updaterConfigured = false
+let updateStatus: UpdateStatus = {
+  state: 'idle',
+  currentVersion: app.getVersion(),
+  progress: null,
+  message: null,
+  canInstall: false
+}
 const mobileIngest = new MobileIngestServer({
   onVaultChanged: () => mainWindow?.webContents.send('vault:changed')
 })
@@ -88,6 +110,159 @@ async function publishVaultForDesktop(vault: string, outDir: string): Promise<{ 
     files: result.written.length + result.copied.length,
     notes: result.totals.notes
   }
+}
+
+// ---------- updates ----------
+
+function pendingReleaseNotesPath(): string {
+  return path.join(app.getPath('userData'), 'pending-release-notes.json')
+}
+
+function normalizeReleaseNotes(notes: UpdateInfo['releaseNotes']): string | null {
+  if (!notes) return null
+  if (typeof notes === 'string') return notes.trim() || null
+  const rendered = notes
+    .map((entry) => [`## ${entry.version}`, entry.note ?? ''].filter(Boolean).join('\n\n'))
+    .join('\n\n')
+    .trim()
+  return rendered || null
+}
+
+function updateDetails(info: UpdateInfo): Pick<UpdateStatus, 'version' | 'releaseName' | 'releaseNotes' | 'releaseDate'> {
+  return {
+    version: info.version,
+    releaseName: info.releaseName ?? null,
+    releaseNotes: normalizeReleaseNotes(info.releaseNotes),
+    releaseDate: info.releaseDate ?? null
+  }
+}
+
+function setUpdateStatus(next: Partial<UpdateStatus>): UpdateStatus {
+  updateStatus = {
+    ...updateStatus,
+    currentVersion: app.getVersion(),
+    ...next
+  }
+  mainWindow?.webContents.send('updates:status', updateStatus)
+  return updateStatus
+}
+
+async function savePendingReleaseNotes(info: UpdateInfo): Promise<void> {
+  const pending: ReleaseNotesInfo = {
+    version: info.version,
+    releaseName: info.releaseName ?? null,
+    releaseNotes: normalizeReleaseNotes(info.releaseNotes)
+  }
+  await fs.writeFile(pendingReleaseNotesPath(), JSON.stringify(pending, null, 2), 'utf8')
+}
+
+async function consumePendingReleaseNotes(): Promise<ReleaseNotesInfo | null> {
+  try {
+    const raw = await fs.readFile(pendingReleaseNotesPath(), 'utf8')
+    const pending = JSON.parse(raw) as ReleaseNotesInfo
+    if (pending.version !== app.getVersion()) return null
+    await fs.unlink(pendingReleaseNotesPath()).catch(() => undefined)
+    return pending
+  } catch {
+    return null
+  }
+}
+
+function configureAutoUpdater(): void {
+  if (updaterConfigured) return
+  updaterConfigured = true
+
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = false
+  autoUpdater.fullChangelog = true
+  autoUpdater.logger = console
+
+  autoUpdater.on('checking-for-update', () => {
+    setUpdateStatus({
+      state: 'checking',
+      progress: null,
+      message: 'Checking for updates...',
+      canInstall: false
+    })
+  })
+
+  autoUpdater.on('update-available', (info: UpdateInfo) => {
+    setUpdateStatus({
+      state: 'available',
+      ...updateDetails(info),
+      progress: null,
+      message: `Downloading Forge ${info.version}...`,
+      canInstall: false
+    })
+  })
+
+  autoUpdater.on('download-progress', (progress: ProgressInfo) => {
+    setUpdateStatus({
+      state: 'downloading',
+      progress: Math.max(0, Math.min(100, progress.percent)),
+      message: `Downloading update (${Math.round(progress.percent)}%)`,
+      canInstall: false
+    })
+  })
+
+  autoUpdater.on('update-downloaded', (info: UpdateDownloadedEvent) => {
+    savePendingReleaseNotes(info).catch((error) => console.error('Failed to save pending release notes.', error))
+    setUpdateStatus({
+      state: 'downloaded',
+      ...updateDetails(info),
+      progress: 100,
+      message: `Forge ${info.version} is ready to install.`,
+      canInstall: true
+    })
+  })
+
+  autoUpdater.on('update-not-available', (info: UpdateInfo) => {
+    setUpdateStatus({
+      state: 'not-available',
+      ...updateDetails(info),
+      progress: null,
+      message: 'Forge is up to date.',
+      canInstall: false
+    })
+  })
+
+  autoUpdater.on('error', (error: Error) => {
+    setUpdateStatus({
+      state: 'error',
+      progress: null,
+      message: error.message,
+      canInstall: false
+    })
+  })
+}
+
+async function checkForUpdates(): Promise<UpdateStatus> {
+  if (!app.isPackaged && process.env.FORGE_FORCE_UPDATE_CHECK !== '1') {
+    return setUpdateStatus({
+      state: 'disabled',
+      progress: null,
+      message: 'Updates are available in packaged builds.',
+      canInstall: false
+    })
+  }
+
+  try {
+    configureAutoUpdater()
+    await autoUpdater.checkForUpdates()
+    return updateStatus
+  } catch (error) {
+    return setUpdateStatus({
+      state: 'error',
+      progress: null,
+      message: error instanceof Error ? error.message : String(error),
+      canInstall: false
+    })
+  }
+}
+
+function installDownloadedUpdate(): void {
+  if (!updateStatus.canInstall) throw new Error('No downloaded update is ready to install.')
+  autoUpdater.quitAndInstall(false, true)
 }
 
 // ---------- settings ----------
@@ -289,6 +464,10 @@ function registerIpc(): void {
   ipcMain.handle('agent:getAccessInfo', () => getAgentAccessInfo())
   ipcMain.handle('clipboard:writeText', (_e, text: string) => clipboard.writeText(text))
   ipcMain.handle('vault:publish', (_e, vault: string, outDir: string) => publishVaultForDesktop(vault, outDir))
+  ipcMain.handle('updates:getStatus', () => updateStatus)
+  ipcMain.handle('updates:check', () => checkForUpdates())
+  ipcMain.handle('updates:install', () => installDownloadedUpdate())
+  ipcMain.handle('updates:consumePendingReleaseNotes', () => consumePendingReleaseNotes())
   ipcMain.handle('mobile:getPairingInfo', () => mobileIngest.getPairingInfo())
   ipcMain.handle('mobile:resetPairingToken', () => {
     mobileIngest.resetToken()
@@ -319,6 +498,7 @@ app.whenReady().then(() => {
   })
 
   registerIpc()
+  configureAutoUpdater()
   createWindow()
 
   app.on('activate', () => {

@@ -1,7 +1,7 @@
 {
   "name": "forge",
   "productName": "Forge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Forge — a fast, beautiful local knowledge base for macOS",
   "main": "./out/main/index.js",
   "author": "Forge",
@@ -34,6 +34,7 @@
     "@lezer/highlight": "^1.2.1",
     "@types/qrcode": "^1.5.6",
     "dompurify": "^3.2.4",
+    "electron-updater": "^6.8.9",
     "lucide-react": "^0.474.0",
     "marked": "^15.0.6",
     "qrcode": "^1.5.4",
@@ -57,6 +58,13 @@
     "directories": {
       "output": "release"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "holokat",
+        "repo": "forge"
+      }
+    ],
     "files": [
       "out/**"
     ],

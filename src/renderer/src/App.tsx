@@ -1,4 +1,6 @@
-import { useEffect } from 'react'
+import { X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import type { ReleaseNotesInfo } from '../../shared/types'
 import CommandPalette from './components/CommandPalette'
 import ContextMenu from './components/ContextMenu'
 import QuickSwitcher from './components/QuickSwitcher'
@@ -76,11 +78,39 @@ function useShortcuts(): void {
   }, [])
 }
 
+function ReleaseNotesModal({
+  notes,
+  onClose
+}: {
+  notes: ReleaseNotesInfo
+  onClose: () => void
+}): React.JSX.Element {
+  return (
+    <div className="modal-overlay" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <div className="release-notes-panel">
+        <div className="release-notes-header">
+          <div>
+            <div className="release-notes-eyebrow">Updated to Forge {notes.version}</div>
+            <h2>{notes.releaseName || 'What changed'}</h2>
+          </div>
+          <button className="icon-btn" onClick={onClose}>
+            <X size={16} />
+          </button>
+        </div>
+        <div className="release-notes-body">
+          {notes.releaseNotes ? notes.releaseNotes : 'Forge has been updated.'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function App(): React.JSX.Element {
   const booted = useStore((s) => s.booted)
   const vault = useStore((s) => s.vault)
   const modal = useStore((s) => s.modal)
   const contextMenu = useStore((s) => s.contextMenu)
+  const [releaseNotes, setReleaseNotes] = useState<ReleaseNotesInfo | null>(null)
 
   useTheme()
   useShortcuts()
@@ -95,6 +125,10 @@ export default function App(): React.JSX.Element {
     })
   }, [])
 
+  useEffect(() => {
+    window.forge.consumePendingReleaseNotes().then(setReleaseNotes).catch(console.error)
+  }, [])
+
   if (!booted) return <div className="app-loading" />
 
   return (
@@ -104,6 +138,7 @@ export default function App(): React.JSX.Element {
       {modal === 'switcher' && <QuickSwitcher />}
       {modal === 'settings' && <SettingsModal />}
       {contextMenu && <ContextMenu {...contextMenu} />}
+      {releaseNotes && <ReleaseNotesModal notes={releaseNotes} onClose={() => setReleaseNotes(null)} />}
     </>
   )
 }

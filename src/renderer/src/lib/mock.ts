@@ -176,6 +176,23 @@ export function installMockApi(): void {
     }),
     setMobileVault: async () => {},
     publishVault: async (_vault, outDir) => ({ outDir, files: 0, notes: 0 }),
+    getUpdateStatus: async () => ({
+      state: 'disabled',
+      currentVersion: '0.1.1',
+      progress: null,
+      message: 'Updates are available in packaged builds.',
+      canInstall: false
+    }),
+    checkForUpdates: async () => ({
+      state: 'disabled',
+      currentVersion: '0.1.1',
+      progress: null,
+      message: 'Updates are available in packaged builds.',
+      canInstall: false
+    }),
+    installUpdate: async () => {},
+    consumePendingReleaseNotes: async () => null,
+    onUpdateStatus: () => () => {},
     setThemeSource: async () => {},
     watchVault: async () => {},
     onVaultChanged: () => () => {},

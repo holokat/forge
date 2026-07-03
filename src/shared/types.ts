@@ -60,6 +60,34 @@ export interface AgentAccessInfo {
   mcp: AgentCommandInfo
 }
 
+export type UpdateState =
+  | 'idle'
+  | 'disabled'
+  | 'checking'
+  | 'available'
+  | 'downloading'
+  | 'downloaded'
+  | 'not-available'
+  | 'error'
+
+export interface ReleaseNotesInfo {
+  version: string
+  releaseName?: string | null
+  releaseNotes?: string | null
+}
+
+export interface UpdateStatus {
+  state: UpdateState
+  currentVersion: string
+  version?: string
+  releaseName?: string | null
+  releaseNotes?: string | null
+  releaseDate?: string | null
+  progress?: number | null
+  message?: string | null
+  canInstall?: boolean
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   lastVault: null,
@@ -94,6 +122,11 @@ export interface ForgeAPI {
   resetMobilePairingToken(): Promise<MobilePairingInfo>
   setMobileVault(vault: string | null): Promise<void>
   publishVault(vault: string, outDir: string): Promise<{ outDir: string; files: number; notes: number }>
+  getUpdateStatus(): Promise<UpdateStatus>
+  checkForUpdates(): Promise<UpdateStatus>
+  installUpdate(): Promise<void>
+  consumePendingReleaseNotes(): Promise<ReleaseNotesInfo | null>
+  onUpdateStatus(cb: (status: UpdateStatus) => void): () => void
   setThemeSource(mode: ThemeMode): Promise<void>
   watchVault(vault: string): Promise<void>
   onVaultChanged(cb: () => void): () => void

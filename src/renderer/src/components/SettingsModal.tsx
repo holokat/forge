@@ -1,7 +1,7 @@
-import { AlertCircle, Bot, Check, Clipboard, Code2, Monitor, Moon, RefreshCw, Smartphone, Sun, Terminal, X } from 'lucide-react'
+import { AlertCircle, Bot, Check, Clipboard, Code2, Download, Monitor, Moon, RefreshCw, Smartphone, Sun, Terminal, X } from 'lucide-react'
 import QRCode from 'qrcode'
 import { useEffect, useMemo, useState } from 'react'
-import type { AgentAccessInfo, MobilePairingInfo, ThemeMode } from '../../../shared/types'
+import type { AgentAccessInfo, MobilePairingInfo, ThemeMode, UpdateStatus } from '../../../shared/types'
 import { useStore } from '../store'
 import ExtensionMarketplace from './ExtensionMarketplace'
 
@@ -316,6 +316,103 @@ function MobileRecorderCard({ vault }: { vault: string }): React.JSX.Element {
   )
 }
 
+function updateLabel(status: UpdateStatus | null): string {
+  if (!status) return 'Loading update status'
+  if (status.state === 'checking') return 'Checking for updates'
+  if (status.state === 'available') return status.message || `Forge ${status.version} is available`
+  if (status.state === 'downloading') return status.message || 'Downloading update'
+  if (status.state === 'downloaded') return status.message || `Forge ${status.version} is ready`
+  if (status.state === 'not-available') return status.message || 'Forge is up to date'
+  if (status.state === 'disabled') return status.message || 'Updates are available in packaged builds'
+  if (status.state === 'error') return status.message || 'Could not check for updates'
+  return `Current version ${status.currentVersion}`
+}
+
+function UpdateCard(): React.JSX.Element {
+  const [status, setStatus] = useState<UpdateStatus | null>(null)
+  const [isInstalling, setIsInstalling] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    window.forge.getUpdateStatus().then((next) => {
+      if (!cancelled) setStatus(next)
+    }).catch((error) => {
+      console.error('Update status failed.', error)
+    })
+    const unsubscribe = window.forge.onUpdateStatus((next) => setStatus(next))
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
+  }, [])
+
+  const isBusy = status?.state === 'checking' || status?.state === 'available' || status?.state === 'downloading'
+  const canInstall = Boolean(status?.canInstall && status.state === 'downloaded')
+  const progress = Math.round(status?.progress ?? 0)
+
+  const check = async (): Promise<void> => {
+    try {
+      setStatus(await window.forge.checkForUpdates())
+    } catch (error) {
+      console.error('Update check failed.', error)
+    }
+  }
+
+  const install = async (): Promise<void> => {
+    setIsInstalling(true)
+    try {
+      await window.forge.installUpdate()
+    } catch (error) {
+      console.error('Update install failed.', error)
+      setIsInstalling(false)
+    }
+  }
+
+  return (
+    <div className="settings-callout update-card">
+      <div className="update-card-header">
+        <div>
+          <div className="settings-row-label">Forge updates</div>
+          <div className="settings-row-desc">Current version {status?.currentVersion ?? '...'}</div>
+        </div>
+        <div className={`update-badge ${status?.state ?? 'idle'}`}>{status?.state === 'downloaded' ? 'Ready' : status?.state === 'not-available' ? 'Current' : status?.state === 'error' ? 'Error' : 'Update'}</div>
+      </div>
+
+      <div className={`update-status ${status?.state ?? 'idle'}`}>
+        {status?.state === 'error' ? <AlertCircle size={14} /> : status?.state === 'downloaded' ? <Check size={14} /> : <RefreshCw size={14} />}
+        <span>{updateLabel(status)}</span>
+      </div>
+
+      {(status?.state === 'downloading' || status?.state === 'downloaded') && (
+        <div className="update-progress" aria-label={`Download progress ${progress}%`}>
+          <span style={{ width: `${progress}%` }} />
+        </div>
+      )}
+
+      {status?.releaseNotes && (
+        <div className="update-release-notes">
+          <div className="update-release-title">{status.releaseName || `Forge ${status.version}`}</div>
+          <div>{status.releaseNotes}</div>
+        </div>
+      )}
+
+      <div className="static-publish-actions">
+        {canInstall ? (
+          <button className="btn btn-primary" disabled={isInstalling} onClick={() => install()}>
+            <Download size={14} />
+            {isInstalling ? 'Installing' : 'Restart and install'}
+          </button>
+        ) : (
+          <button className="btn" disabled={isBusy} onClick={() => check()}>
+            <RefreshCw size={14} />
+            {isBusy ? 'Checking' : 'Check for updates'}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function SettingsModal(): React.JSX.Element {
   const theme = useStore((s) => s.theme)
   const fontSize = useStore((s) => s.fontSize)
@@ -561,6 +658,11 @@ export default function SettingsModal(): React.JSX.Element {
               </div>
             </section>
           )}
+
+          <section>
+            <h3>Updates</h3>
+            <UpdateCard />
+          </section>
 
           {vault && (
             <section>
