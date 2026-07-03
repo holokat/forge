@@ -30,6 +30,11 @@ Commands:
                                         Append content to a file
   create-doc <path> [--title <title>] [--stdin|--content <s>|--content-file <file>] [--overwrite]
                                         Create a Markdown document
+  templates [--folder <path>] [--json] List Markdown templates
+  create-template <name> [--folder <path>] [--stdin|--content <s>|--content-file <file>] [--overwrite]
+                                        Create a Markdown template
+  create-from-template <template> <path> [--title <title>] [--folder <path>] [--overwrite]
+                                        Create a note from a template
   create-folder <path>                  Create a folder
   move <from> <to>                      Move or rename a file or folder
   search <query> [--limit <n>] [--json] Search Markdown filenames and contents
@@ -150,12 +155,16 @@ function defaultSettingsPath() {
 }
 
 async function readActiveVaultFromSettings() {
+  const settings = await readDesktopSettings()
+  return typeof settings.lastVault === 'string' ? settings.lastVault : ''
+}
+
+async function readDesktopSettings() {
   try {
     const raw = await fs.readFile(defaultSettingsPath(), 'utf8')
-    const settings = JSON.parse(raw)
-    return typeof settings.lastVault === 'string' ? settings.lastVault : ''
+    return JSON.parse(raw)
   } catch {
-    return ''
+    return {}
   }
 }
 
@@ -191,6 +200,48 @@ function safeJoin(vault, rel, options) {
     throw new Error(`Path escapes the vault: ${rel}`)
   }
   return { clean, abs }
+}
+
+async function templatesFolder(options = {}) {
+  const explicit = options.folder || options['templates-folder']
+  if (explicit) return safeRel(explicit, { allowRoot: true })
+  const settings = await readDesktopSettings()
+  return safeRel(settings.templatesFolder || 'Templates', { allowRoot: true })
+}
+
+function formatDateParts(date = new Date()) {
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  const hh = String(date.getHours()).padStart(2, '0')
+  const min = String(date.getMinutes()).padStart(2, '0')
+  const dateValue = `${yyyy}-${mm}-${dd}`
+  const time = `${hh}:${min}`
+  return { date: dateValue, time, datetime: `${dateValue} ${time}` }
+}
+
+function renderTemplateContent(template, { title, vault, templateName }) {
+  const parts = formatDateParts()
+  const values = {
+    title,
+    date: parts.date,
+    time: parts.time,
+    datetime: parts.datetime,
+    vault: path.basename(vault),
+    template: templateName
+  }
+  return template.replace(/\{\{\s*(title|date|time|datetime|vault|template)\s*\}\}/gi, (_match, key) => values[key.toLowerCase()] ?? '')
+}
+
+function templateDisplayName(templatePath, folder) {
+  const prefix = folder ? `${folder.replace(/\/+$/, '')}/` : ''
+  const rel = prefix && templatePath.startsWith(prefix) ? templatePath.slice(prefix.length) : templatePath
+  return rel.replace(/\.md$/i, '')
+}
+
+function templateRel(folder, name) {
+  const cleanName = normalizeDocPath(safeRel(name))
+  return folder ? path.posix.join(folder, cleanName) : cleanName
 }
 
 async function ensureVault(vault) {
@@ -378,6 +429,74 @@ async function createDocCommand(vault, rel, { title = '', content = '', overwrit
   return { path: clean, bytes: Buffer.byteLength(body), created: !exists, overwritten: exists }
 }
 
+async function templatesCommand(vault, options = {}) {
+  const folder = await templatesFolder(options)
+  const scan = await walkVault(vault)
+  const prefix = folder ? `${folder.replace(/\/+$/, '')}/` : ''
+  const templates = scan.files
+    .filter((file) => file.markdown)
+    .filter((file) => !prefix || file.path.startsWith(prefix))
+    .map((file) => ({
+      path: file.path,
+      name: templateDisplayName(file.path, folder),
+      size: file.size,
+      modified: file.modified
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+  return { templatesFolder: folder || '(vault root)', count: templates.length, templates }
+}
+
+async function createTemplateCommand(vault, name, { folder = '', content = '', overwrite = false } = {}) {
+  const templateFolder = await templatesFolder({ folder })
+  const rel = templateRel(templateFolder, name)
+  const body = content || `# {{title}}\n`
+  return createDocCommand(vault, rel, { content: body, overwrite })
+}
+
+async function resolveTemplatePath(vault, requested, options = {}) {
+  const folder = await templatesFolder(options)
+  const direct = safeRel(requested)
+  const candidates = [
+    normalizeDocPath(direct),
+    templateRel(folder, direct)
+  ]
+
+  for (const candidate of candidates) {
+    const { clean, abs } = safeJoin(vault, candidate)
+    const stat = await fs.stat(abs).catch(() => null)
+    if (stat?.isFile()) return clean
+  }
+
+  const listed = await templatesCommand(vault, { folder })
+  const lowered = requested.toLowerCase().replace(/\.md$/i, '')
+  const match = listed.templates.find((template) => {
+    return template.path.toLowerCase() === requested.toLowerCase() ||
+      template.name.toLowerCase() === lowered ||
+      path.basename(template.path).toLowerCase().replace(/\.md$/i, '') === lowered
+  })
+  if (!match) throw new Error(`Template not found: ${requested}`)
+  return match.path
+}
+
+async function createFromTemplateCommand(
+  vault,
+  template,
+  rel,
+  { title = '', folder = '', overwrite = false } = {}
+) {
+  const templatePath = await resolveTemplatePath(vault, template, { folder })
+  const templateFile = await readCommand(vault, templatePath)
+  const docPath = normalizeDocPath(rel)
+  const cleanTitle = String(title || baseName(docPath)).replace(/[\\/:*?"<>|]/g, '').trim() || baseName(docPath)
+  const content = renderTemplateContent(templateFile.content || '# {{title}}\n', {
+    title: cleanTitle,
+    vault,
+    templateName: baseName(templatePath)
+  })
+  const result = await createDocCommand(vault, docPath, { title: cleanTitle, content, overwrite })
+  return { ...result, template: templatePath }
+}
+
 async function createFolderCommand(vault, rel) {
   const { clean, abs } = safeJoin(vault, rel)
   await fs.mkdir(abs, { recursive: true })
@@ -534,6 +653,24 @@ async function runOperation(vault, op) {
         content: op.content ?? '',
         overwrite: Boolean(op.overwrite)
       })
+    case 'templates':
+    case 'listTemplates':
+    case 'list-templates':
+      return templatesCommand(vault, { folder: op.folder ?? op.templatesFolder })
+    case 'createTemplate':
+    case 'create-template':
+      return createTemplateCommand(vault, op.name ?? op.path, {
+        folder: op.folder ?? op.templatesFolder,
+        content: op.content ?? '',
+        overwrite: Boolean(op.overwrite)
+      })
+    case 'createFromTemplate':
+    case 'create-from-template':
+      return createFromTemplateCommand(vault, op.template, op.path, {
+        title: op.title,
+        folder: op.folder ?? op.templatesFolder,
+        overwrite: Boolean(op.overwrite)
+      })
     case 'createFolder':
     case 'create-folder':
       return createFolderCommand(vault, op.path)
@@ -644,6 +781,36 @@ async function main() {
           { json }
         )
         break
+      case 'templates':
+      case 'list-templates':
+        printResult(await templatesCommand(vault, { folder: options.folder || options.templatesFolder }), {
+          json,
+          text: (result) =>
+            result.templates.length
+              ? result.templates.map((template) => `${template.name}\t${template.path}`).join('\n')
+              : `No templates found in ${result.templatesFolder}.`
+        })
+        break
+      case 'create-template':
+        printResult(
+          await createTemplateCommand(vault, positional[0], {
+            folder: options.folder || options.templatesFolder,
+            content: await readContent(options),
+            overwrite: Boolean(options.overwrite)
+          }),
+          { json }
+        )
+        break
+      case 'create-from-template':
+        printResult(
+          await createFromTemplateCommand(vault, positional[0], positional[1], {
+            title: options.title,
+            folder: options.folder || options.templatesFolder,
+            overwrite: Boolean(options.overwrite)
+          }),
+          { json }
+        )
+        break
       case 'create-folder':
       case 'ensure-folder':
         printResult(await createFolderCommand(vault, positional[0]), { json })
@@ -715,8 +882,10 @@ export {
   analyzeCommand,
   appendCommand,
   batchCommand,
+  createFromTemplateCommand,
   createDocCommand,
   createFolderCommand,
+  createTemplateCommand,
   ensureVault,
   listCommand,
   moveCommand,
@@ -726,6 +895,7 @@ export {
   resolveVault,
   runOperation,
   searchCommand,
+  templatesCommand,
   writeCommand
 }
 

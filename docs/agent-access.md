@@ -30,6 +30,9 @@ Forge resolves the vault in this order:
 forge --vault /path/to/vault list
 forge --vault /path/to/vault create-folder Projects
 forge --vault /path/to/vault create-doc Projects/Plan --title "Plan"
+forge --vault /path/to/vault templates --json
+forge --vault /path/to/vault create-template Meeting --content "# {{title}}\n\n## Notes\n"
+forge --vault /path/to/vault create-from-template Meeting Projects/Kickoff --title "Kickoff"
 printf '\n## Next\n- Define scope\n' | forge --vault /path/to/vault append Projects/Plan.md --stdin
 forge --vault /path/to/vault search "Define scope" --json
 forge --vault /path/to/vault analyze --json
@@ -111,9 +114,27 @@ For MCP clients:
 - `forge_write`
 - `forge_append`
 - `forge_create_doc`
+- `forge_templates`
+- `forge_create_template`
+- `forge_create_from_template`
 - `forge_create_folder`
 - `forge_move`
 - `forge_search`
 - `forge_analyze`
 - `forge_publish`
 - `forge_batch`
+
+## Templates
+
+Templates are Markdown files in the configured templates folder, usually `Templates/`. Use them for repeatable note shapes like daily notes, meetings, projects, people, research briefs, prompts, and publishing drafts.
+
+Supported placeholders:
+
+- `{{title}}`
+- `{{date}}`
+- `{{time}}`
+- `{{datetime}}`
+- `{{vault}}`
+- `{{template}}`
+
+Agents should call `forge templates --json` or `forge_templates` before creating from a template, then use `forge create-from-template` or `forge_create_from_template` so generated notes preserve the user’s preferred structure.

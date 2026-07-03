@@ -5,6 +5,7 @@ import CommandPalette from './components/CommandPalette'
 import ContextMenu from './components/ContextMenu'
 import QuickSwitcher from './components/QuickSwitcher'
 import SettingsModal from './components/SettingsModal'
+import TemplatePicker from './components/TemplatePicker'
 import VaultPicker from './components/VaultPicker'
 import Workspace from './components/Workspace'
 import { activeTab, useStore } from './store'
@@ -136,6 +137,7 @@ export default function App(): React.JSX.Element {
       {vault ? <Workspace /> : <VaultPicker />}
       {modal === 'palette' && <CommandPalette />}
       {modal === 'switcher' && <QuickSwitcher />}
+      {modal === 'template' && <TemplatePicker />}
       {modal === 'settings' && <SettingsModal />}
       {contextMenu && <ContextMenu {...contextMenu} />}
       {releaseNotes && <ReleaseNotesModal notes={releaseNotes} onClose={() => setReleaseNotes(null)} />}

@@ -56,6 +56,7 @@ export default function CommandPalette(): React.JSX.Element {
     }
     const list: Command[] = [
       { name: 'New note', hint: '⌘N', action: close(() => store.createNote()) },
+      { name: 'New note from template', action: () => store.setModal('template') },
       { name: "Open today's daily note", action: close(() => store.createDailyNote()) },
       { name: 'Open quick switcher', hint: '⌘O', action: () => store.setModal('switcher') },
       { name: 'Open graph view', hint: '⌘⇧G', action: close(() => store.openGraph()) },

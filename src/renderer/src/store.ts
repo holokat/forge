@@ -12,6 +12,7 @@ import { baseName, isMarkdown, noteDisplayTitle, parseNote, resolveLink, wordCou
 
 export type TabKind = 'note' | 'graph' | 'empty'
 export type ViewMode = 'edit' | 'read'
+export type StarterTemplateKind = 'daily' | 'meeting' | 'project' | 'person' | 'research'
 
 export interface Tab {
   id: string
@@ -33,7 +34,7 @@ export interface ContextMenuState {
   items: ContextMenuItem[]
 }
 
-export type ModalKind = 'palette' | 'switcher' | 'settings' | null
+export type ModalKind = 'palette' | 'switcher' | 'template' | 'settings' | null
 
 /** Note contents live outside React state to avoid re-render storms. */
 export const noteContents = new Map<string, string>()
@@ -86,6 +87,8 @@ export interface ForgeState {
   updateContent(path: string, content: string): void
   createNote(folder?: string): Promise<void>
   createNoteNamed(name: string): Promise<string | null>
+  createNoteFromTemplate(templatePath: string, opts?: { title?: string; folder?: string }): Promise<string | null>
+  createStarterTemplate(kind: StarterTemplateKind): Promise<string | null>
   createDailyNote(): Promise<string | null>
   createFolder(parent: string, name: string): Promise<void>
   renamePath(oldPath: string, newPath: string): Promise<void>
@@ -128,6 +131,160 @@ async function persistSettings(state: ForgeState): Promise<void> {
     extensionSettings: state.extensionSettings
   }
   await window.forge.writeSettings(settings)
+}
+
+function normalizeFolderPath(value: string): string {
+  return value
+    .replaceAll('\\', '/')
+    .split('/')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => part !== '.' && part !== '..')
+    .join('/')
+}
+
+function noteTitle(value: string, fallback: string): string {
+  return (value || fallback).replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim() || fallback
+}
+
+function folderAncestors(folder: string): string[] {
+  const clean = normalizeFolderPath(folder)
+  if (!clean) return []
+  const parts = clean.split('/')
+  return parts.map((_part, index) => parts.slice(0, index + 1).join('/'))
+}
+
+function formatDateParts(date: Date): { date: string; time: string; datetime: string } {
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  const hh = String(date.getHours()).padStart(2, '0')
+  const min = String(date.getMinutes()).padStart(2, '0')
+  const dateValue = `${yyyy}-${mm}-${dd}`
+  const time = `${hh}:${min}`
+  return { date: dateValue, time, datetime: `${dateValue} ${time}` }
+}
+
+function renderTemplate(
+  template: string,
+  context: { title: string; vaultName: string; templateName: string; now?: Date }
+): string {
+  const parts = formatDateParts(context.now ?? new Date())
+  const values: Record<string, string> = {
+    title: context.title,
+    date: parts.date,
+    time: parts.time,
+    datetime: parts.datetime,
+    vault: context.vaultName,
+    template: context.templateName
+  }
+  return template.replace(/\{\{\s*(title|date|time|datetime|vault|template)\s*\}\}/gi, (_match, key: string) => {
+    return values[key.toLowerCase()] ?? ''
+  })
+}
+
+const STARTER_TEMPLATES: Record<StarterTemplateKind, { file: string; content: string }> = {
+  daily: {
+    file: 'Daily.md',
+    content: [
+      '---',
+      'date: {{date}}',
+      'tags: [daily]',
+      '---',
+      '',
+      '# {{date}}',
+      '',
+      '## Focus',
+      '',
+      '## Notes',
+      '',
+      '## Tasks',
+      ''
+    ].join('\n')
+  },
+  meeting: {
+    file: 'Meeting.md',
+    content: [
+      '---',
+      'type: meeting',
+      'date: {{date}}',
+      'tags: [meeting]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Attendees',
+      '',
+      '## Agenda',
+      '',
+      '## Notes',
+      '',
+      '## Decisions',
+      '',
+      '## Action items',
+      ''
+    ].join('\n')
+  },
+  project: {
+    file: 'Project.md',
+    content: [
+      '---',
+      'type: project',
+      'status: active',
+      'tags: [project]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Goal',
+      '',
+      '## Scope',
+      '',
+      '## Milestones',
+      '',
+      '## Open questions',
+      ''
+    ].join('\n')
+  },
+  person: {
+    file: 'Person.md',
+    content: [
+      '---',
+      'type: person',
+      'tags: [person]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Context',
+      '',
+      '## Notes',
+      '',
+      '## Follow-ups',
+      ''
+    ].join('\n')
+  },
+  research: {
+    file: 'Research.md',
+    content: [
+      '---',
+      'type: research',
+      'created: {{date}}',
+      'tags: [research]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Question',
+      '',
+      '## Sources',
+      '',
+      '## Findings',
+      '',
+      '## Synthesis',
+      ''
+    ].join('\n')
+  }
 }
 
 export const useStore = create<ForgeState>((set, get) => ({
@@ -369,15 +526,55 @@ export const useStore = create<ForgeState>((set, get) => ({
     return created
   },
 
+  async createNoteFromTemplate(templatePath, opts) {
+    const { vault, vaultName } = get()
+    if (!vault) return null
+
+    const template = await window.forge.readFile(vault, templatePath)
+    const title = noteTitle(opts?.title ?? '', baseName(templatePath))
+    const folder = normalizeFolderPath(opts?.folder ?? '')
+    const rel = `${folder ? folder + '/' : ''}${title}.md`
+    const content = renderTemplate(template || `# {{title}}\n`, {
+      title,
+      vaultName,
+      templateName: baseName(templatePath)
+    })
+
+    const created = await window.forge.createFile(vault, rel, content)
+    noteContents.set(created, content)
+    set({
+      files: [...get().files, created].sort(),
+      folders: [...new Set([...get().folders, ...folderAncestors(folder)])].sort(),
+      index: { ...get().index, [created]: parseNote(content) },
+      contentVersion: get().contentVersion + 1
+    })
+    get().openFile(created)
+    return created
+  },
+
+  async createStarterTemplate(kind) {
+    const { vault, templatesFolder } = get()
+    if (!vault) return null
+    const starter = STARTER_TEMPLATES[kind]
+    const folder = normalizeFolderPath(templatesFolder || DEFAULT_SETTINGS.templatesFolder)
+    const rel = `${folder ? folder + '/' : ''}${starter.file}`
+    const created = await window.forge.createFile(vault, rel, starter.content)
+    noteContents.set(created, starter.content)
+    set({
+      files: [...get().files, created].sort(),
+      folders: [...new Set([...get().folders, ...folderAncestors(folder)])].sort(),
+      index: { ...get().index, [created]: parseNote(starter.content) },
+      contentVersion: get().contentVersion + 1
+    })
+    get().openFile(created)
+    return created
+  },
+
   async createDailyNote() {
     const { vault, dailyNotesFolder, templatesFolder } = get()
     if (!vault) return null
-    const date = new Date()
-    const yyyy = date.getFullYear()
-    const mm = String(date.getMonth() + 1).padStart(2, '0')
-    const dd = String(date.getDate()).padStart(2, '0')
-    const isoDate = `${yyyy}-${mm}-${dd}`
-    const rel = `${dailyNotesFolder || 'Daily'}/${isoDate}.md`
+    const today = formatDateParts(new Date())
+    const rel = `${dailyNotesFolder || 'Daily'}/${today.date}.md`
     const existing = get().files.find((file) => file.toLowerCase() === rel.toLowerCase())
     if (existing) {
       get().openFile(existing)
@@ -391,11 +588,11 @@ export const useStore = create<ForgeState>((set, get) => ({
     } catch {
       template = [
         '---',
-        `date: ${isoDate}`,
+        `date: ${today.date}`,
         'tags: [daily]',
         '---',
         '',
-        `# ${isoDate}`,
+        '# {{date}}',
         '',
         '## Notes',
         '',
@@ -403,10 +600,11 @@ export const useStore = create<ForgeState>((set, get) => ({
         ''
       ].join('\n')
     }
-    const content = template
-      .replaceAll('{{date}}', isoDate)
-      .replaceAll('{{title}}', isoDate)
-      .replaceAll('{{vault}}', get().vaultName)
+    const content = renderTemplate(template, {
+      title: today.date,
+      vaultName: get().vaultName,
+      templateName: 'Daily'
+    })
 
     const created = await window.forge.createFile(vault, rel, content)
     noteContents.set(created, content)

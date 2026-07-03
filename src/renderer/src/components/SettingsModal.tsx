@@ -13,7 +13,6 @@ import {
   Plug,
   RefreshCw,
   Smartphone,
-  SquarePen,
   Sun,
   Terminal,
   Vault as VaultIcon,
@@ -33,7 +32,6 @@ const THEMES: { mode: ThemeMode; label: string; icon: React.ReactNode }[] = [
 
 type SettingsTabId =
   | 'appearance'
-  | 'editor'
   | 'notes'
   | 'vault'
   | 'publishing'
@@ -479,6 +477,7 @@ export default function SettingsModal(): React.JSX.Element {
   const dailyNotesFolder = useStore((s) => s.dailyNotesFolder)
   const setTemplatesFolder = useStore((s) => s.setTemplatesFolder)
   const setDailyNotesFolder = useStore((s) => s.setDailyNotesFolder)
+  const createStarterTemplate = useStore((s) => s.createStarterTemplate)
   const setModal = useStore((s) => s.setModal)
   const openVaultDialog = useStore((s) => s.openVaultDialog)
   const [activeTab, setActiveTab] = useState<SettingsTabId>('appearance')
@@ -509,21 +508,14 @@ export default function SettingsModal(): React.JSX.Element {
       {
         id: 'appearance',
         label: 'Appearance',
-        description: 'Theme and interface color.',
+        description: 'Theme, type size, and reading width.',
         group: 'Workspace',
         icon: <Palette size={15} />
       },
       {
-        id: 'editor',
-        label: 'Editor',
-        description: 'Reading width and text scale.',
-        group: 'Workspace',
-        icon: <SquarePen size={15} />
-      },
-      {
         id: 'notes',
         label: 'Notes',
-        description: 'Daily note and template folders.',
+        description: 'Daily notes and templates.',
         group: 'Workspace',
         icon: <FileText size={15} />
       },
@@ -621,6 +613,13 @@ export default function SettingsModal(): React.JSX.Element {
       : ''
   const publishDir = vault ? defaultPublishDir(vault) : ''
   const activeSettingsTab = settingsTabs.find((tab) => tab.id === activeTab) ?? settingsTabs[0]
+  const starterTemplates = [
+    { kind: 'daily' as const, label: 'Daily', detail: 'Date-based planning' },
+    { kind: 'meeting' as const, label: 'Meeting', detail: 'Agenda and action items' },
+    { kind: 'project' as const, label: 'Project', detail: 'Goal, scope, milestones' },
+    { kind: 'person' as const, label: 'Person', detail: 'Relationship notes' },
+    { kind: 'research' as const, label: 'Research', detail: 'Sources and findings' }
+  ]
   const groupedTabs = settingsTabs.reduce<Record<SettingsNavGroup, SettingsNavItem[]>>(
     (groups, tab) => {
       groups[tab.group].push(tab)
@@ -677,7 +676,6 @@ export default function SettingsModal(): React.JSX.Element {
                     <span className="settings-nav-icon">{tab.icon}</span>
                     <span className="settings-nav-copy">
                       <span>{tab.label}</span>
-                      <small>{tab.disabled ? 'Open a vault' : tab.description}</small>
                     </span>
                   </button>
                 ))}
@@ -712,11 +710,6 @@ export default function SettingsModal(): React.JSX.Element {
                       </button>
                     ))}
                   </div>
-                </section>
-              )}
-
-              {activeTab === 'editor' && (
-                <section className="settings-section">
                   <div className="settings-row">
                     <div>
                       <div className="settings-row-label">Font size</div>
@@ -771,7 +764,7 @@ export default function SettingsModal(): React.JSX.Element {
                   <div className="settings-row">
                     <div>
                       <div className="settings-row-label">Templates folder</div>
-                      <div className="settings-row-desc">Use Templates/Daily.md for daily note content</div>
+                      <div className="settings-row-desc">Markdown files here appear in New from template</div>
                     </div>
                     <div className="settings-row-control">
                       <input
@@ -780,6 +773,30 @@ export default function SettingsModal(): React.JSX.Element {
                         onChange={(event) => setTemplatesFolder(event.target.value)}
                       />
                     </div>
+                  </div>
+                  <div className="settings-callout template-starters-card">
+                    <div>
+                      <div className="settings-row-label">Starter templates</div>
+                      <div className="settings-row-desc">
+                        Templates can be daily notes, meetings, projects, people, research briefs, or any repeatable Markdown shape.
+                      </div>
+                    </div>
+                    <div className="template-starter-grid">
+                      {starterTemplates.map((template) => (
+                        <button
+                          key={template.kind}
+                          className="template-starter"
+                          onClick={() => createStarterTemplate(template.kind).catch(console.error)}
+                        >
+                          <strong>{template.label}</strong>
+                          <span>{template.detail}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <button className="btn btn-compact" onClick={() => setModal('template')}>
+                      <FileText size={14} />
+                      New from template
+                    </button>
                   </div>
                 </section>
               )}

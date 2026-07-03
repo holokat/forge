@@ -2,6 +2,7 @@ import {
   BookOpen,
   FilePlus2,
   FileText,
+  LayoutTemplate,
   PanelLeft,
   PanelRight,
   Pencil,
@@ -133,6 +134,10 @@ function EmptyTab(): React.JSX.Element {
           <FilePlus2 size={15} />
           Create new note
           <kbd>⌘N</kbd>
+        </button>
+        <button className="empty-tab-action" onClick={() => setModal('template')}>
+          <LayoutTemplate size={15} />
+          New from template
         </button>
         <button className="empty-tab-action" onClick={() => setModal('switcher')}>
           <Search size={15} />

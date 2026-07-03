@@ -28,6 +28,9 @@ If the Forge desktop app is open on the same vault, its file watcher will pick u
 ```bash
 forge --vault /path/to/vault create-folder Projects
 forge --vault /path/to/vault create-doc Projects/Plan --title "Plan"
+forge --vault /path/to/vault templates --json
+forge --vault /path/to/vault create-template Meeting --content "# {{title}}\n\n## Notes\n"
+forge --vault /path/to/vault create-from-template Meeting Projects/Kickoff --title "Kickoff"
 printf '\n## Next\n- Ship it\n' | forge --vault /path/to/vault append Projects/Plan.md --stdin
 forge --vault /path/to/vault read Projects/Plan.md
 forge --vault /path/to/vault search "Ship it" --json
@@ -44,7 +47,13 @@ Use `forge-mcp` for Codex, Claude, and other MCP clients:
 FORGE_VAULT=/path/to/vault forge-mcp
 ```
 
-The MCP server exposes tools for listing, reading, writing, appending, creating folders/docs, moving, searching, analyzing, publishing, and batch operations. It speaks stdio MCP and should be launched by the MCP client, not used interactively.
+The MCP server exposes tools for listing, reading, writing, appending, creating folders/docs, listing/creating/using templates, moving, searching, analyzing, publishing, and batch operations. It speaks stdio MCP and should be launched by the MCP client, not used interactively.
+
+## Templates
+
+Templates are Markdown files in the configured templates folder, usually `Templates/`. Agents can list them with `forge templates --json`, create reusable templates with `forge create-template`, and create notes with `forge create-from-template`.
+
+Supported placeholders are `{{title}}`, `{{date}}`, `{{time}}`, `{{datetime}}`, `{{vault}}`, and `{{template}}`.
 
 ## Batch Operations
 
@@ -55,7 +64,8 @@ Batch mode is best when an agent needs multiple changes to stay ordered:
   "vault": "/path/to/vault",
   "operations": [
     { "action": "createFolder", "path": "Projects" },
-    { "action": "createDoc", "path": "Projects/Plan.md", "title": "Plan" },
+    { "action": "createTemplate", "name": "Project.md", "content": "# {{title}}\n\n## Goal\n" },
+    { "action": "createFromTemplate", "template": "Project", "path": "Projects/Plan.md", "title": "Plan" },
     { "action": "append", "path": "Projects/Plan.md", "content": "\n## Next\n- Define scope\n" },
     { "action": "analyze" },
     { "action": "publish", "outDir": "/path/to/site", "clean": true }
@@ -79,7 +89,7 @@ forge batch batch.json --json
 
 ## Capabilities
 
-The CLI can list, read, create, overwrite, append, move, search, analyze Markdown notes, and publish static HTML. `analyze --json` returns totals, tags, wikilinks, backlinks, broken links, empty notes, notes without tags, inbox notes, and orphan notes for organization workflows.
+The CLI can list, read, create, overwrite, append, move, search, analyze Markdown notes, publish static HTML, and work with templates. `analyze --json` returns totals, tags, wikilinks, backlinks, broken links, empty notes, notes without tags, inbox notes, and orphan notes for organization workflows.
 
 ## Changelog Rule
 

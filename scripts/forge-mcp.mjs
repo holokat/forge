@@ -132,6 +132,51 @@ const tools = [
     }
   },
   {
+    name: 'forge_templates',
+    description: 'List Markdown templates in the Forge templates folder.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        vault: { type: 'string', description: 'Optional explicit vault path.' },
+        folder: { type: 'string', description: 'Optional templates folder, relative to the vault. Defaults to Forge settings or Templates.' }
+      }
+    }
+  },
+  {
+    name: 'forge_create_template',
+    description: 'Create a Markdown template in the Forge templates folder.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['name'],
+      properties: {
+        vault: { type: 'string', description: 'Optional explicit vault path.' },
+        name: { type: 'string', description: 'Template filename or relative path. The .md extension is added when omitted.' },
+        folder: { type: 'string', description: 'Optional templates folder, relative to the vault. Defaults to Forge settings or Templates.' },
+        content: { type: 'string', description: 'Template Markdown content. Supports {{title}}, {{date}}, {{time}}, {{datetime}}, {{vault}}, and {{template}}.' },
+        overwrite: { type: 'boolean', description: 'Allow replacing an existing template.' }
+      }
+    }
+  },
+  {
+    name: 'forge_create_from_template',
+    description: 'Create a Markdown note from a Forge template.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['template', 'path'],
+      properties: {
+        vault: { type: 'string', description: 'Optional explicit vault path.' },
+        template: { type: 'string', description: 'Template name or path.' },
+        path: { type: 'string', description: 'Destination note path. The .md extension is added when omitted.' },
+        title: { type: 'string', description: 'Optional title used for {{title}}.' },
+        folder: { type: 'string', description: 'Optional templates folder, relative to the vault. Defaults to Forge settings or Templates.' },
+        overwrite: { type: 'boolean', description: 'Allow replacing an existing note.' }
+      }
+    }
+  },
+  {
     name: 'forge_create_folder',
     description: 'Create a folder in the Forge vault.',
     inputSchema: {
@@ -270,6 +315,25 @@ async function callTool(name, args = {}) {
         content: input.content ?? '',
         overwrite: Boolean(input.overwrite)
       })
+    case 'forge_templates':
+      return runOperation(vault, { action: 'templates', folder: input.folder })
+    case 'forge_create_template':
+      return runOperation(vault, {
+        action: 'createTemplate',
+        name: input.name,
+        folder: input.folder,
+        content: input.content ?? '',
+        overwrite: Boolean(input.overwrite)
+      })
+    case 'forge_create_from_template':
+      return runOperation(vault, {
+        action: 'createFromTemplate',
+        template: input.template,
+        path: input.path,
+        title: input.title,
+        folder: input.folder,
+        overwrite: Boolean(input.overwrite)
+      })
     case 'forge_create_folder':
       return runOperation(vault, { action: 'createFolder', path: input.path })
     case 'forge_move':
@@ -327,7 +391,7 @@ async function handleMessage(message) {
           capabilities: { tools: {} },
           serverInfo: { name: 'forge', version: SERVER_VERSION },
           instructions:
-            'Forge exposes a local Markdown vault. Use relative paths. Prefer create/append/move over destructive overwrites unless the user asks.'
+            'Forge exposes a local Markdown vault. Use relative paths. Prefer create/append/move/template tools over destructive overwrites unless the user asks. Use forge_templates before creating notes from templates.'
         })
         break
       case 'ping':
