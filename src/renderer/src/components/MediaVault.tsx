@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ImportedAttachmentKind, VaultFileStat } from '../../../shared/types'
+import { filePayloads } from '../lib/filePayloads'
 import { baseName, isAudio, isImage, isMarkdown, isVideo } from '../lib/parse'
 import { useStore } from '../store'
 
@@ -170,13 +171,13 @@ export default function MediaVault(): React.JSX.Element {
     if (!vault || !fileList?.length) return
     const files = Array.from(fileList)
     const sourcePaths = window.forge.droppedFilePaths(files)
-    if (sourcePaths.length === 0) {
-      setStatus({ tone: 'danger', text: 'No local file paths were available.' })
-      return
-    }
+    setStatus({ tone: 'neutral', text: 'Adding media...' })
 
     try {
-      const imported = await window.forge.importMedia(vault, sourcePaths)
+      const imported =
+        sourcePaths.length === files.length
+          ? await window.forge.importMedia(vault, sourcePaths)
+          : await window.forge.importMediaFiles(vault, await filePayloads(files))
       await refreshVault()
       setSelected(new Set(imported.map((item) => item.path)))
       setStatus({

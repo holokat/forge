@@ -34,6 +34,7 @@ import {
   type AITextTaskResult,
   type ImportedAttachment,
   type ImportedAttachmentKind,
+  type ImportedFilePayload,
   type PublishVaultOptions,
   type ReleaseNotesInfo,
   type Settings,
@@ -843,6 +844,40 @@ async function importAttachments(
   return imported
 }
 
+function payloadBuffer(payload: ImportedFilePayload): Buffer {
+  return Buffer.from(payload.bytes)
+}
+
+async function importAttachmentFiles(
+  vault: string,
+  noteRel: string,
+  files: ImportedFilePayload[]
+): Promise<ImportedAttachment[]> {
+  suppressWatchUntil = Date.now() + 1200
+  const noteStem = sanitizeFileName(path.basename(noteRel, path.extname(noteRel))).replace(/\.[^.]+$/, '')
+  const targetDir = path.posix.join('Attachments', noteStem || 'Note')
+  const imported: ImportedAttachment[] = []
+
+  for (const file of files) {
+    const name = sanitizeFileName(file.name)
+    const ext = path.extname(name).toLowerCase()
+    if (!ASSET_EXTS.has(ext)) continue
+
+    const rel = await uniqueVaultRel(vault, path.posix.join(targetDir, name))
+    const abs = safeJoin(vault, rel)
+    await fs.mkdir(path.dirname(abs), { recursive: true })
+    await fs.writeFile(abs, payloadBuffer(file))
+    imported.push({
+      sourcePath: file.name,
+      path: slash(rel),
+      name: path.basename(rel),
+      kind: attachmentKind(ext)
+    })
+  }
+
+  return imported
+}
+
 function mediaFolderForKind(kind: ImportedAttachmentKind): string {
   if (kind === 'image') return 'Media/Images'
   if (kind === 'audio') return 'Media/Audio'
@@ -869,6 +904,31 @@ async function importMedia(vault: string, sourcePaths: string[]): Promise<Import
     await fs.copyFile(sourcePath, abs)
     imported.push({
       sourcePath,
+      path: slash(rel),
+      name: path.basename(rel),
+      kind
+    })
+  }
+
+  return imported
+}
+
+async function importMediaFiles(vault: string, files: ImportedFilePayload[]): Promise<ImportedAttachment[]> {
+  suppressWatchUntil = Date.now() + 1200
+  const imported: ImportedAttachment[] = []
+
+  for (const file of files) {
+    const name = sanitizeFileName(file.name)
+    const ext = path.extname(name).toLowerCase()
+    if (!ASSET_EXTS.has(ext)) continue
+
+    const kind = attachmentKind(ext)
+    const rel = await uniqueVaultRel(vault, path.posix.join(mediaFolderForKind(kind), name))
+    const abs = safeJoin(vault, rel)
+    await fs.mkdir(path.dirname(abs), { recursive: true })
+    await fs.writeFile(abs, payloadBuffer(file))
+    imported.push({
+      sourcePath: file.name,
       path: slash(rel),
       name: path.basename(rel),
       kind
@@ -1031,8 +1091,16 @@ function registerIpc(): void {
     return importAttachments(vault, noteRel, sourcePaths)
   })
 
+  ipcMain.handle('file:importAttachmentFiles', (_e, vault: string, noteRel: string, files: ImportedFilePayload[]) => {
+    return importAttachmentFiles(vault, noteRel, files)
+  })
+
   ipcMain.handle('file:importMedia', (_e, vault: string, sourcePaths: string[]) => {
     return importMedia(vault, sourcePaths)
+  })
+
+  ipcMain.handle('file:importMediaFiles', (_e, vault: string, files: ImportedFilePayload[]) => {
+    return importMediaFiles(vault, files)
   })
 
   ipcMain.handle('file:rename', async (_e, vault: string, oldRel: string, newRel: string) => {

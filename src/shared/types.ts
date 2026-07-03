@@ -277,6 +277,11 @@ export interface ImportedAttachment {
   kind: ImportedAttachmentKind
 }
 
+export interface ImportedFilePayload {
+  name: string
+  bytes: Uint8Array
+}
+
 export type UpdateState =
   | 'idle'
   | 'disabled'
@@ -354,7 +359,9 @@ export interface ForgeAPI {
   setMobileVault(vault: string | null): Promise<void>
   droppedFilePaths(files: unknown[]): string[]
   importAttachments(vault: string, noteRel: string, sourcePaths: string[]): Promise<ImportedAttachment[]>
+  importAttachmentFiles(vault: string, noteRel: string, files: ImportedFilePayload[]): Promise<ImportedAttachment[]>
   importMedia(vault: string, sourcePaths: string[]): Promise<ImportedAttachment[]>
+  importMediaFiles(vault: string, files: ImportedFilePayload[]): Promise<ImportedAttachment[]>
   publishVault(vault: string, outDir: string, options?: PublishVaultOptions): Promise<{ outDir: string; files: number; notes: number }>
   getUpdateStatus(): Promise<UpdateStatus>
   checkForUpdates(): Promise<UpdateStatus>

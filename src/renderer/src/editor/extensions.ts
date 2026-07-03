@@ -22,7 +22,7 @@ import { linkTarget } from '../lib/parse'
 export interface EditorCallbacks {
   onChange(content: string): void
   onNavigate(target: string): void
-  onDropFiles(paths: string[]): Promise<string>
+  onDropFiles(paths: string[], files: File[]): Promise<string>
   getLinkTargets(): { label: string; detail?: string }[]
 }
 
@@ -148,8 +148,7 @@ function wikilinkClick(onNavigate: (target: string) => void): Extension {
   })
 }
 
-function droppedFilePaths(event: DragEvent): string[] {
-  const files = Array.from(event.dataTransfer?.files ?? [])
+function droppedFilePaths(files: File[]): string[] {
   if (files.length === 0) return []
 
   const pathsFromPreload = window.forge.droppedFilePaths(files)
@@ -170,8 +169,9 @@ function insertionBlock(doc: string, pos: number, body: string): string {
 function fileDropHandler(onDropFiles: EditorCallbacks['onDropFiles']): Extension {
   return EditorView.domEventHandlers({
     drop(event, view) {
-      const paths = droppedFilePaths(event)
-      if (paths.length === 0) return false
+      const files = Array.from(event.dataTransfer?.files ?? [])
+      const paths = droppedFilePaths(files)
+      if (paths.length === 0 && files.length === 0) return false
 
       event.preventDefault()
       event.stopPropagation()
@@ -179,7 +179,7 @@ function fileDropHandler(onDropFiles: EditorCallbacks['onDropFiles']): Extension
 
       const requestedPos = view.posAtCoords({ x: event.clientX, y: event.clientY }) ?? view.state.selection.main.from
 
-      onDropFiles(paths)
+      onDropFiles(paths.length === files.length ? paths : [], paths.length === files.length ? [] : files)
         .then((markdown) => {
           if (!markdown.trim()) return
           const pos = Math.min(requestedPos, view.state.doc.length)

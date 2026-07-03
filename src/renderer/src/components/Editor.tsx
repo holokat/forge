@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 import type { ImportedAttachment } from '../../../shared/types'
 import { createEditorState, scrollToLine } from '../editor/extensions'
 import { getActiveEditor, setActiveEditor } from '../editor/active'
+import { filePayloads } from '../lib/filePayloads'
 import { baseName, isMarkdown, resolveLink } from '../lib/parse'
 import { noteContents, useStore } from '../store'
 
@@ -27,10 +28,13 @@ export default function Editor({ path }: { path: string }): React.JSX.Element {
           if (resolved) store.openFile(resolved)
           else store.createNoteNamed(target).catch(console.error)
         },
-        onDropFiles: async (paths) => {
+        onDropFiles: async (paths, files) => {
           const store = useStore.getState()
           if (!store.vault) return ''
-          const imported = await window.forge.importAttachments(store.vault, path, paths)
+          const imported =
+            paths.length > 0
+              ? await window.forge.importAttachments(store.vault, path, paths)
+              : await window.forge.importAttachmentFiles(store.vault, path, await filePayloads(files))
           if (imported.length === 0) return ''
           await store.refreshVault()
           return imported.map(attachmentMarkdown).join('\n\n')

@@ -1,7 +1,14 @@
 // In-browser mock of the Forge API so the renderer can run without Electron
 // (used for design preview via `npm run dev:web`). Installed only when
 // window.forge is missing.
-import { DEFAULT_SETTINGS, type Settings, type ForgeAPI, type VaultData } from '../../../shared/types'
+import {
+  DEFAULT_SETTINGS,
+  type ImportedAttachment,
+  type ImportedFilePayload,
+  type Settings,
+  type ForgeAPI,
+  type VaultData
+} from '../../../shared/types'
 
 const WELCOME = `# Welcome to Forge
 
@@ -102,6 +109,35 @@ const files: Record<string, string> = {
 }
 
 let settings: Settings = { ...DEFAULT_SETTINGS, lastVault: '/Users/demo/Notes', recentVaults: ['/Users/demo/Notes'] }
+
+function mockMediaKind(name: string): ImportedAttachment['kind'] {
+  const ext = name.split('.').pop()?.toLowerCase() ?? ''
+  if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'avif', 'bmp', 'tif', 'tiff', 'heic', 'heif'].includes(ext)) return 'image'
+  if (['mp3', 'm4a', 'wav', 'aac', 'caf', 'ogg', 'oga', 'opus', 'flac', 'aif', 'aiff'].includes(ext)) return 'audio'
+  if (['mp4', 'mov', 'm4v', 'webm', 'ogv'].includes(ext)) return 'video'
+  return 'file'
+}
+
+function mockMediaFolder(kind: ImportedAttachment['kind']): string {
+  if (kind === 'image') return 'Media/Images'
+  if (kind === 'audio') return 'Media/Audio'
+  if (kind === 'video') return 'Media/Video'
+  return 'Media/Files'
+}
+
+function mockImportFiles(items: ImportedFilePayload[], folderForKind: (kind: ImportedAttachment['kind']) => string): ImportedAttachment[] {
+  return items.map((item) => {
+    const kind = mockMediaKind(item.name)
+    const rel = `${folderForKind(kind)}/${item.name}`
+    files[rel] = ''
+    return {
+      sourcePath: item.name,
+      path: rel,
+      name: item.name,
+      kind
+    }
+  })
+}
 
 function vaultData(): VaultData {
   const modified = new Date().toISOString()
@@ -247,7 +283,10 @@ export function installMockApi(): void {
     }),
     setMobileVault: async () => {},
     importAttachments: async () => [],
+    importAttachmentFiles: async (_vault, noteRel, items) =>
+      mockImportFiles(items, () => `Attachments/${noteRel.replace(/\.md$/i, '')}`),
     importMedia: async () => [],
+    importMediaFiles: async (_vault, items) => mockImportFiles(items, mockMediaFolder),
     publishVault: async (_vault, outDir, _options) => ({ outDir, files: 0, notes: 0 }),
     getUpdateStatus: async () => ({
       state: 'disabled',
