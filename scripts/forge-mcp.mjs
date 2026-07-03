@@ -154,7 +154,7 @@ const tools = [
         vault: { type: 'string', description: 'Optional explicit vault path.' },
         name: { type: 'string', description: 'Template filename or relative path. The .md extension is added when omitted.' },
         folder: { type: 'string', description: 'Optional templates folder, relative to the vault. Defaults to Forge settings or Templates.' },
-        content: { type: 'string', description: 'Template Markdown content. Supports {{title}}, {{date}}, {{time}}, {{datetime}}, {{vault}}, and {{template}}.' },
+        content: { type: 'string', description: 'Template Markdown content. Supports built-ins like {{title}}, {{date}}, {{time}}, {{datetime}}, {{vault}}, {{template}}, plus custom variables supplied when creating from the template.' },
         overwrite: { type: 'boolean', description: 'Allow replacing an existing template.' }
       }
     }
@@ -171,6 +171,18 @@ const tools = [
         template: { type: 'string', description: 'Template name or path.' },
         path: { type: 'string', description: 'Destination note path. The .md extension is added when omitted.' },
         title: { type: 'string', description: 'Optional title used for {{title}}.' },
+        variables: {
+          type: 'object',
+          description: 'Template variable values. Keys replace matching {{key}} placeholders. Values also fill {{prompt:key}} and {{select:key|Option A,Option B}} placeholders.',
+          additionalProperties: {
+            oneOf: [
+              { type: 'string' },
+              { type: 'number' },
+              { type: 'boolean' },
+              { type: 'null' }
+            ]
+          }
+        },
         folder: { type: 'string', description: 'Optional templates folder, relative to the vault. Defaults to Forge settings or Templates.' },
         overwrite: { type: 'boolean', description: 'Allow replacing an existing note.' }
       }
@@ -331,6 +343,7 @@ async function callTool(name, args = {}) {
         template: input.template,
         path: input.path,
         title: input.title,
+        variables: input.variables,
         folder: input.folder,
         overwrite: Boolean(input.overwrite)
       })

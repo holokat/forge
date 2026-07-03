@@ -1,7 +1,8 @@
 import { FilePlus2, LayoutTemplate, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { baseName, isMarkdown } from '../lib/parse'
-import { useStore } from '../store'
+import { parseTemplateVariables } from '../lib/templates'
+import { STARTER_TEMPLATE_KINDS, useStore } from '../store'
 import { ModalOverlay } from './CommandPalette'
 
 function templateFolderPrefix(folder: string): string {
@@ -15,6 +16,7 @@ function templateName(path: string, templatesFolder: string): string {
 }
 
 export default function TemplatePicker(): React.JSX.Element {
+  const vault = useStore((s) => s.vault)
   const files = useStore((s) => s.files)
   const folders = useStore((s) => s.folders)
   const templatesFolder = useStore((s) => s.templatesFolder)
@@ -25,6 +27,8 @@ export default function TemplatePicker(): React.JSX.Element {
   const [selectedTemplate, setSelectedTemplate] = useState('')
   const [title, setTitle] = useState('')
   const [folder, setFolder] = useState('')
+  const [templateFields, setTemplateFields] = useState<ReturnType<typeof parseTemplateVariables>>([])
+  const [variables, setVariables] = useState<Record<string, string>>({})
   const [isCreating, setIsCreating] = useState(false)
 
   const templateFiles = useMemo(() => {
@@ -47,6 +51,32 @@ export default function TemplatePicker(): React.JSX.Element {
     }
   }, [selectedTemplate, templateFiles])
 
+  useEffect(() => {
+    let cancelled = false
+    setTemplateFields([])
+    setVariables({})
+
+    if (!vault || !selectedTemplate) return
+
+    window.forge
+      .readFile(vault, selectedTemplate)
+      .then((content) => {
+        if (cancelled) return
+        const fields = parseTemplateVariables(content)
+        setTemplateFields(fields)
+        setVariables(
+          Object.fromEntries(fields.map((field) => [field.id, field.kind === 'select' ? field.options[0] ?? '' : '']))
+        )
+      })
+      .catch((error) => {
+        if (!cancelled) console.error('Template preview failed.', error)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedTemplate, vault])
+
   const selectedLabel = selectedTemplate ? templateName(selectedTemplate, templatesFolder) : ''
 
   const create = async (): Promise<void> => {
@@ -55,7 +85,8 @@ export default function TemplatePicker(): React.JSX.Element {
     try {
       await createNoteFromTemplate(selectedTemplate, {
         title: title.trim() || baseName(selectedTemplate),
-        folder
+        folder,
+        variables
       })
       setModal(null)
     } catch (error) {
@@ -68,7 +99,7 @@ export default function TemplatePicker(): React.JSX.Element {
   const seedStarterTemplates = async (): Promise<void> => {
     setIsCreating(true)
     try {
-      for (const kind of ['daily', 'meeting', 'project', 'person', 'research'] as const) {
+      for (const kind of STARTER_TEMPLATE_KINDS) {
         await createStarterTemplate(kind)
       }
     } catch (error) {
@@ -147,6 +178,40 @@ export default function TemplatePicker(): React.JSX.Element {
                   ))}
                 </datalist>
               </label>
+              {templateFields.length > 0 && (
+                <div className="template-variable-fields">
+                  <div className="template-variable-heading">
+                    <span>Template fields</span>
+                    <small>{templateFields.length}</small>
+                  </div>
+                  {templateFields.map((field) => (
+                    <label className="template-field" key={field.id}>
+                      <span>{field.label}</span>
+                      {field.kind === 'select' ? (
+                        <select
+                          value={variables[field.id] ?? field.options[0] ?? ''}
+                          onChange={(event) => setVariables((current) => ({ ...current, [field.id]: event.target.value }))}
+                        >
+                          {field.options.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          value={variables[field.id] ?? ''}
+                          placeholder={field.label}
+                          onChange={(event) => setVariables((current) => ({ ...current, [field.id]: event.target.value }))}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') create().catch(console.error)
+                          }}
+                        />
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
               <button className="btn btn-primary template-create-btn" disabled={!selectedTemplate || isCreating} onClick={() => create()}>
                 <FilePlus2 size={14} />
                 {isCreating ? 'Creating' : 'Create note'}
@@ -157,7 +222,7 @@ export default function TemplatePicker(): React.JSX.Element {
           <div className="template-empty-state">
             <LayoutTemplate size={22} />
             <h3>No templates yet</h3>
-            <p>Create starter templates for daily notes, meetings, projects, people, and research.</p>
+            <p>Create starter templates for planning, research, product, SEO, agent tasks, releases, and publishing.</p>
             <button className="btn btn-primary" disabled={isCreating} onClick={() => seedStarterTemplates()}>
               <FilePlus2 size={14} />
               {isCreating ? 'Creating' : 'Create starter templates'}

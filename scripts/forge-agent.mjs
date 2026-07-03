@@ -33,7 +33,7 @@ Commands:
   templates [--folder <path>] [--json] List Markdown templates
   create-template <name> [--folder <path>] [--stdin|--content <s>|--content-file <file>] [--overwrite]
                                         Create a Markdown template
-  create-from-template <template> <path> [--title <title>] [--folder <path>] [--overwrite]
+  create-from-template <template> <path> [--title <title>] [--folder <path>] [--vars <json>] [--var <key=value>] [--overwrite]
                                         Create a note from a template
   create-folder <path>                  Create a folder
   move <from> <to>                      Move or rename a file or folder
@@ -49,9 +49,15 @@ Batch shape:
     "operations": [
       {"action": "createFolder", "path": "Projects"},
       {"action": "createDoc", "path": "Projects/Plan.md", "title": "Plan"},
+      {"action": "createFromTemplate", "template": "Brief", "path": "Projects/Brief.md", "variables": {"client": "Acme"}},
       {"action": "append", "path": "Projects/Plan.md", "content": "\\nNext step"}
     ]
   }
+
+Template variables:
+  Built-ins: {{title}}, {{date}}, {{time}}, {{datetime}}, {{vault}}, {{template}}, {{folder}}
+  Custom variables: {{client}}, {{prompt:Audience}}, {{select:Status|Draft,Final}}
+  CLI examples: --vars '{"client":"Acme"}' --var Audience=Developers
 `
 
 function parseArgv(argv) {
@@ -84,6 +90,14 @@ function parseOptions(args) {
   const positional = []
   const options = {}
 
+  function addOption(key, value) {
+    if (Object.hasOwn(options, key)) {
+      options[key] = Array.isArray(options[key]) ? [...options[key], value] : [options[key], value]
+    } else {
+      options[key] = value
+    }
+  }
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (!arg.startsWith('--')) {
@@ -93,16 +107,16 @@ function parseOptions(args) {
 
     const eq = arg.indexOf('=')
     if (eq > -1) {
-      options[arg.slice(2, eq)] = arg.slice(eq + 1)
+      addOption(arg.slice(2, eq), arg.slice(eq + 1))
       continue
     }
 
     const key = arg.slice(2)
     const next = args[i + 1]
     if (!next || next.startsWith('--')) {
-      options[key] = true
+      addOption(key, true)
     } else {
-      options[key] = next
+      addOption(key, next)
       i++
     }
   }
@@ -220,17 +234,69 @@ function formatDateParts(date = new Date()) {
   return { date: dateValue, time, datetime: `${dateValue} ${time}` }
 }
 
-function renderTemplateContent(template, { title, vault, templateName }) {
+function normalizeTemplateVariableKey(key) {
+  return String(key ?? '').trim().toLowerCase()
+}
+
+function normalizeTemplateVariables(variables = {}) {
+  if (!variables || typeof variables !== 'object' || Array.isArray(variables)) return {}
+  const normalized = {}
+  for (const [key, value] of Object.entries(variables)) {
+    const cleanKey = String(key).trim()
+    if (!cleanKey) continue
+    normalized[cleanKey] = value == null ? '' : String(value)
+  }
+  return normalized
+}
+
+function lookupTemplateKeys(rawKey) {
+  const key = String(rawKey ?? '').trim()
+  const prompt = /^prompt\s*:\s*(.+)$/i.exec(key)
+  if (prompt) return [key, prompt[1].trim()]
+
+  const select = /^select\s*:\s*([^|]+)(?:\|.*)?$/i.exec(key)
+  if (select) return [key, select[1].trim()]
+
+  return [key]
+}
+
+function firstSelectOption(rawOptions = '') {
+  return String(rawOptions)
+    .split(/[|,]/)
+    .map((option) => option.trim())
+    .filter(Boolean)[0] ?? ''
+}
+
+function renderTemplateContent(template, { title, vault, templateName, folder = '', variables = {} }) {
   const parts = formatDateParts()
-  const values = {
+  const builtInValues = {
     title,
     date: parts.date,
     time: parts.time,
     datetime: parts.datetime,
     vault: path.basename(vault),
-    template: templateName
+    template: templateName,
+    folder
   }
-  return template.replace(/\{\{\s*(title|date|time|datetime|vault|template)\s*\}\}/gi, (_match, key) => values[key.toLowerCase()] ?? '')
+  const values = new Map()
+  for (const [key, value] of Object.entries(builtInValues)) {
+    values.set(normalizeTemplateVariableKey(key), value)
+  }
+  for (const [key, value] of Object.entries(normalizeTemplateVariables(variables))) {
+    values.set(normalizeTemplateVariableKey(key), value)
+  }
+
+  return template.replace(/\{\{\s*([^{}\n]+?)\s*\}\}/g, (match, key) => {
+    const prompt = /^prompt\s*:\s*(.+)$/i.exec(String(key).trim())
+    const select = /^select\s*:\s*([^|]+)(?:\|(.*))?$/i.exec(String(key).trim())
+    for (const lookupKey of lookupTemplateKeys(key)) {
+      const normalized = normalizeTemplateVariableKey(lookupKey)
+      if (values.has(normalized)) return values.get(normalized)
+    }
+    if (prompt) return ''
+    if (select) return firstSelectOption(select[2])
+    return match
+  })
 }
 
 function templateDisplayName(templatePath, folder) {
@@ -262,6 +328,60 @@ async function readContent(options) {
     return fs.readFile(expandHome(options['content-file']), 'utf8')
   }
   return ''
+}
+
+async function readJsonOption(value, label) {
+  if (typeof value !== 'string') throw new Error(`${label} must be a JSON object.`)
+  const source = value.startsWith('@') ? await fs.readFile(expandHome(value.slice(1)), 'utf8') : value
+  const parsed = JSON.parse(source)
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`${label} must be a JSON object.`)
+  }
+  return parsed
+}
+
+function asArray(value) {
+  if (value == null || value === false) return []
+  return Array.isArray(value) ? value : [value]
+}
+
+function parseVarEntry(entry) {
+  if (typeof entry !== 'string') throw new Error('--var expects key=value.')
+  const eq = entry.indexOf('=')
+  if (eq < 1) throw new Error(`Invalid --var value: ${entry}. Use key=value.`)
+  return [entry.slice(0, eq).trim(), entry.slice(eq + 1)]
+}
+
+async function parseTemplateVariables(options = {}) {
+  const variables = {}
+
+  for (const source of asArray(options.vars)) {
+    Object.assign(variables, await readJsonOption(source, '--vars'))
+  }
+
+  for (const entry of asArray(options.var)) {
+    const [key, value] = parseVarEntry(entry)
+    if (!key) throw new Error(`Invalid --var value: ${entry}. Use key=value.`)
+    variables[key] = value
+  }
+
+  return normalizeTemplateVariables(variables)
+}
+
+function operationTemplateVariables(op = {}) {
+  const variables = op.variables ?? op.vars
+  if (variables == null) return {}
+  if (typeof variables === 'string') {
+    const parsed = JSON.parse(variables)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('Template variables must be a JSON object.')
+    }
+    return normalizeTemplateVariables(parsed)
+  }
+  if (!variables || typeof variables !== 'object' || Array.isArray(variables)) {
+    throw new Error('Template variables must be an object.')
+  }
+  return normalizeTemplateVariables(variables)
 }
 
 async function walkVault(vault) {
@@ -482,19 +602,24 @@ async function createFromTemplateCommand(
   vault,
   template,
   rel,
-  { title = '', folder = '', overwrite = false } = {}
+  { title = '', folder = '', overwrite = false, variables = {} } = {}
 ) {
   const templatePath = await resolveTemplatePath(vault, template, { folder })
   const templateFile = await readCommand(vault, templatePath)
   const docPath = normalizeDocPath(rel)
+  const docFolder = path.posix.dirname(docPath) === '.' ? '' : path.posix.dirname(docPath)
   const cleanTitle = String(title || baseName(docPath)).replace(/[\\/:*?"<>|]/g, '').trim() || baseName(docPath)
+  const resolvedVariables = normalizeTemplateVariables(variables)
   const content = renderTemplateContent(templateFile.content || '# {{title}}\n', {
     title: cleanTitle,
     vault,
-    templateName: baseName(templatePath)
+    templateName: baseName(templatePath),
+    folder: docFolder,
+    variables: resolvedVariables
   })
   const result = await createDocCommand(vault, docPath, { title: cleanTitle, content, overwrite })
-  return { ...result, template: templatePath }
+  const variableKeys = Object.keys(resolvedVariables).sort((a, b) => a.localeCompare(b))
+  return { ...result, template: templatePath, variables: variableKeys }
 }
 
 async function createFolderCommand(vault, rel) {
@@ -669,7 +794,8 @@ async function runOperation(vault, op) {
       return createFromTemplateCommand(vault, op.template, op.path, {
         title: op.title,
         folder: op.folder ?? op.templatesFolder,
-        overwrite: Boolean(op.overwrite)
+        overwrite: Boolean(op.overwrite),
+        variables: operationTemplateVariables(op)
       })
     case 'createFolder':
     case 'create-folder':
@@ -806,7 +932,8 @@ async function main() {
           await createFromTemplateCommand(vault, positional[0], positional[1], {
             title: options.title,
             folder: options.folder || options.templatesFolder,
-            overwrite: Boolean(options.overwrite)
+            overwrite: Boolean(options.overwrite),
+            variables: await parseTemplateVariables(options)
           }),
           { json }
         )

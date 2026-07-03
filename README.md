@@ -11,7 +11,7 @@ Forge is open source under the MIT License.
 - Autosave notes as plain `.md` files.
 - Use wikilinks, backlinks, tags, outlines, and a graph view.
 - Search notes, titles, aliases, tags, and frontmatter properties.
-- Create daily notes and reusable notes from Markdown templates.
+- Create daily notes and reusable notes from Markdown templates with variables.
 - Show unlinked mentions to help connect related notes.
 - Play local audio attachments from voice notes.
 - Pair with Forge Buddy, the iOS companion recorder.
@@ -31,7 +31,7 @@ Implemented foundations:
 - Wikilinks, backlinks, tags, outlines, graph view, and search.
 - Frontmatter properties and aliases.
 - Daily notes and templates.
-- Template picker plus CLI/MCP template tools.
+- Template picker plus CLI/MCP template tools with variable filling.
 - Local agent CLI.
 - MCP server for agent tools.
 - Static HTML publisher.

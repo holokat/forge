@@ -31,6 +31,7 @@ forge --vault /path/to/vault create-doc Projects/Plan --title "Plan"
 forge --vault /path/to/vault templates --json
 forge --vault /path/to/vault create-template Meeting --content "# {{title}}\n\n## Notes\n"
 forge --vault /path/to/vault create-from-template Meeting Projects/Kickoff --title "Kickoff"
+forge --vault /path/to/vault create-from-template "Client Brief" Clients/Acme --title "Acme Brief" --vars '{"client":"Acme"}' --var Status=Draft
 printf '\n## Next\n- Ship it\n' | forge --vault /path/to/vault append Projects/Plan.md --stdin
 forge --vault /path/to/vault read Projects/Plan.md
 forge --vault /path/to/vault search "Ship it" --json
@@ -53,7 +54,11 @@ The MCP server exposes tools for listing, reading, writing, appending, creating 
 
 Templates are Markdown files in the configured templates folder, usually `Templates/`. Agents can list them with `forge templates --json`, create reusable templates with `forge create-template`, and create notes with `forge create-from-template`.
 
-Supported placeholders are `{{title}}`, `{{date}}`, `{{time}}`, `{{datetime}}`, `{{vault}}`, and `{{template}}`.
+Supported placeholders are `{{title}}`, `{{date}}`, `{{time}}`, `{{datetime}}`, `{{vault}}`, `{{template}}`, `{{folder}}`, and custom variables such as `{{client}}`, `{{prompt:Audience}}`, or `{{select:Status|Draft,Review,Final}}`.
+
+Pass template variables with CLI `--vars` JSON, `--vars @file.json`, or repeatable `--var key=value` flags. Batch operations and MCP tools should pass them as a `variables` object.
+
+If a `prompt:` value is not supplied, Forge inserts an empty string. If a `select:` value is not supplied, Forge uses the first listed option. Unknown plain placeholders are preserved.
 
 ## Batch Operations
 
@@ -65,7 +70,7 @@ Batch mode is best when an agent needs multiple changes to stay ordered:
   "operations": [
     { "action": "createFolder", "path": "Projects" },
     { "action": "createTemplate", "name": "Project.md", "content": "# {{title}}\n\n## Goal\n" },
-    { "action": "createFromTemplate", "template": "Project", "path": "Projects/Plan.md", "title": "Plan" },
+    { "action": "createFromTemplate", "template": "Project", "path": "Projects/Plan.md", "title": "Plan", "variables": { "Status": "Draft" } },
     { "action": "append", "path": "Projects/Plan.md", "content": "\n## Next\n- Define scope\n" },
     { "action": "analyze" },
     { "action": "publish", "outDir": "/path/to/site", "clean": true }

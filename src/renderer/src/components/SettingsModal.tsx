@@ -21,7 +21,7 @@ import {
 import QRCode from 'qrcode'
 import { useEffect, useMemo, useState } from 'react'
 import type { AgentAccessInfo, MobilePairingInfo, ThemeMode, UpdateStatus } from '../../../shared/types'
-import { useStore } from '../store'
+import { STARTER_TEMPLATE_CATALOG, useStore } from '../store'
 import ExtensionMarketplace from './ExtensionMarketplace'
 
 const THEMES: { mode: ThemeMode; label: string; icon: React.ReactNode }[] = [
@@ -613,13 +613,7 @@ export default function SettingsModal(): React.JSX.Element {
       : ''
   const publishDir = vault ? defaultPublishDir(vault) : ''
   const activeSettingsTab = settingsTabs.find((tab) => tab.id === activeTab) ?? settingsTabs[0]
-  const starterTemplates = [
-    { kind: 'daily' as const, label: 'Daily', detail: 'Date-based planning' },
-    { kind: 'meeting' as const, label: 'Meeting', detail: 'Agenda and action items' },
-    { kind: 'project' as const, label: 'Project', detail: 'Goal, scope, milestones' },
-    { kind: 'person' as const, label: 'Person', detail: 'Relationship notes' },
-    { kind: 'research' as const, label: 'Research', detail: 'Sources and findings' }
-  ]
+  const starterTemplates = STARTER_TEMPLATE_CATALOG
   const groupedTabs = settingsTabs.reduce<Record<SettingsNavGroup, SettingsNavItem[]>>(
     (groups, tab) => {
       groups[tab.group].push(tab)

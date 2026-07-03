@@ -9,10 +9,42 @@ import {
   withExtensionInstalled
 } from './extensions/preferences'
 import { baseName, isMarkdown, noteDisplayTitle, parseNote, resolveLink, wordCount, type NoteMeta } from './lib/parse'
+import { formatTemplateDateParts, renderTemplate } from './lib/templates'
 
 export type TabKind = 'note' | 'graph' | 'empty'
 export type ViewMode = 'edit' | 'read'
-export type StarterTemplateKind = 'daily' | 'meeting' | 'project' | 'person' | 'research'
+export const STARTER_TEMPLATE_KINDS = [
+  'daily',
+  'meeting',
+  'project',
+  'person',
+  'research',
+  'agentTask',
+  'seoBrief',
+  'productSpec',
+  'bugReport',
+  'decision',
+  'releaseNotes',
+  'changelog',
+  'publishPage'
+] as const
+export type StarterTemplateKind = (typeof STARTER_TEMPLATE_KINDS)[number]
+
+export const STARTER_TEMPLATE_CATALOG: { kind: StarterTemplateKind; label: string; detail: string }[] = [
+  { kind: 'daily', label: 'Daily', detail: 'Date-based planning' },
+  { kind: 'meeting', label: 'Meeting', detail: 'Agenda and action items' },
+  { kind: 'project', label: 'Project', detail: 'Goals, scope, milestones' },
+  { kind: 'person', label: 'Person', detail: 'Relationship notes' },
+  { kind: 'research', label: 'Research', detail: 'Questions, sources, findings' },
+  { kind: 'agentTask', label: 'Agent task', detail: 'Precise AI work briefs' },
+  { kind: 'seoBrief', label: 'SEO brief', detail: 'Search-focused content planning' },
+  { kind: 'productSpec', label: 'Product spec', detail: 'PRD and launch scope' },
+  { kind: 'bugReport', label: 'Bug report', detail: 'Repro, impact, fix notes' },
+  { kind: 'decision', label: 'Decision log', detail: 'Options and rationale' },
+  { kind: 'releaseNotes', label: 'Release notes', detail: 'User-facing changes' },
+  { kind: 'changelog', label: 'Changelog', detail: 'Forge-style product entries' },
+  { kind: 'publishPage', label: 'Publish page', detail: 'Public Markdown pages' }
+]
 
 export interface Tab {
   id: string
@@ -87,7 +119,10 @@ export interface ForgeState {
   updateContent(path: string, content: string): void
   createNote(folder?: string): Promise<void>
   createNoteNamed(name: string): Promise<string | null>
-  createNoteFromTemplate(templatePath: string, opts?: { title?: string; folder?: string }): Promise<string | null>
+  createNoteFromTemplate(
+    templatePath: string,
+    opts?: { title?: string; folder?: string; variables?: Record<string, string> }
+  ): Promise<string | null>
   createStarterTemplate(kind: StarterTemplateKind): Promise<string | null>
   createDailyNote(): Promise<string | null>
   createFolder(parent: string, name: string): Promise<void>
@@ -154,35 +189,6 @@ function folderAncestors(folder: string): string[] {
   return parts.map((_part, index) => parts.slice(0, index + 1).join('/'))
 }
 
-function formatDateParts(date: Date): { date: string; time: string; datetime: string } {
-  const yyyy = date.getFullYear()
-  const mm = String(date.getMonth() + 1).padStart(2, '0')
-  const dd = String(date.getDate()).padStart(2, '0')
-  const hh = String(date.getHours()).padStart(2, '0')
-  const min = String(date.getMinutes()).padStart(2, '0')
-  const dateValue = `${yyyy}-${mm}-${dd}`
-  const time = `${hh}:${min}`
-  return { date: dateValue, time, datetime: `${dateValue} ${time}` }
-}
-
-function renderTemplate(
-  template: string,
-  context: { title: string; vaultName: string; templateName: string; now?: Date }
-): string {
-  const parts = formatDateParts(context.now ?? new Date())
-  const values: Record<string, string> = {
-    title: context.title,
-    date: parts.date,
-    time: parts.time,
-    datetime: parts.datetime,
-    vault: context.vaultName,
-    template: context.templateName
-  }
-  return template.replace(/\{\{\s*(title|date|time|datetime|vault|template)\s*\}\}/gi, (_match, key: string) => {
-    return values[key.toLowerCase()] ?? ''
-  })
-}
-
 const STARTER_TEMPLATES: Record<StarterTemplateKind, { file: string; content: string }> = {
   daily: {
     file: 'Daily.md',
@@ -195,6 +201,9 @@ const STARTER_TEMPLATES: Record<StarterTemplateKind, { file: string; content: st
       '# {{date}}',
       '',
       '## Focus',
+      '{{prompt:Focus}}',
+      '',
+      '## Schedule',
       '',
       '## Notes',
       '',
@@ -214,8 +223,10 @@ const STARTER_TEMPLATES: Record<StarterTemplateKind, { file: string; content: st
       '# {{title}}',
       '',
       '## Attendees',
+      '{{prompt:Attendees}}',
       '',
       '## Agenda',
+      '{{prompt:Agenda}}',
       '',
       '## Notes',
       '',
@@ -230,13 +241,14 @@ const STARTER_TEMPLATES: Record<StarterTemplateKind, { file: string; content: st
     content: [
       '---',
       'type: project',
-      'status: active',
+      'status: {{select:Status|Planning,Active,Paused,Done}}',
       'tags: [project]',
       '---',
       '',
       '# {{title}}',
       '',
       '## Goal',
+      '{{prompt:Goal}}',
       '',
       '## Scope',
       '',
@@ -255,6 +267,9 @@ const STARTER_TEMPLATES: Record<StarterTemplateKind, { file: string; content: st
       '---',
       '',
       '# {{title}}',
+      '',
+      '## Role',
+      '{{prompt:Role}}',
       '',
       '## Context',
       '',
@@ -276,12 +291,259 @@ const STARTER_TEMPLATES: Record<StarterTemplateKind, { file: string; content: st
       '# {{title}}',
       '',
       '## Question',
+      '{{prompt:Research question}}',
       '',
       '## Sources',
       '',
       '## Findings',
       '',
       '## Synthesis',
+      ''
+    ].join('\n')
+  },
+  agentTask: {
+    file: 'Agent Task Brief.md',
+    content: [
+      '---',
+      'type: agent-task',
+      'status: {{select:Status|Ready,In progress,Blocked,Done}}',
+      'created: {{date}}',
+      'tags: [agent, task]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Objective',
+      '{{prompt:Objective}}',
+      '',
+      '## Context',
+      '- Vault: {{vault}}',
+      '- Folder: {{folder}}',
+      '- Related notes: {{prompt:Related notes}}',
+      '',
+      '## Constraints',
+      '- Preserve existing user changes.',
+      '- Keep paths relative to the vault.',
+      '- Prefer small, reviewable edits.',
+      '',
+      '## Checklist',
+      '- [ ] Inspect current state',
+      '- [ ] Implement the requested change',
+      '- [ ] Verify behavior',
+      '- [ ] Summarize outcome',
+      '',
+      '## Result',
+      ''
+    ].join('\n')
+  },
+  seoBrief: {
+    file: 'SEO Content Brief.md',
+    content: [
+      '---',
+      'type: seo-brief',
+      'status: {{select:Status|Brief,Drafting,Review,Published}}',
+      'created: {{date}}',
+      'tags: [seo, content]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Search Target',
+      '- Primary keyword: {{prompt:Primary keyword}}',
+      '- Secondary keywords: {{prompt:Secondary keywords}}',
+      '- Audience: {{prompt:Audience}}',
+      '- Search intent: {{select:Search intent|Informational,Commercial,Transactional,Navigational}}',
+      '',
+      '## Angle',
+      '{{prompt:Angle}}',
+      '',
+      '## Outline',
+      '- H1: {{title}}',
+      '- H2:',
+      '- H2:',
+      '- H2:',
+      '',
+      '## Internal Links',
+      '- ',
+      '',
+      '## Notes for Agent',
+      '- Preserve factual uncertainty.',
+      '- Suggest sources before drafting claims.',
+      '- Keep headings scannable.',
+      ''
+    ].join('\n')
+  },
+  productSpec: {
+    file: 'Product Spec.md',
+    content: [
+      '---',
+      'type: product-spec',
+      'status: {{select:Status|Draft,Ready,Building,Shipped}}',
+      'created: {{date}}',
+      'tags: [product, spec]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Problem',
+      '{{prompt:Problem}}',
+      '',
+      '## User',
+      '{{prompt:User}}',
+      '',
+      '## Goals',
+      '- ',
+      '',
+      '## Non-goals',
+      '- ',
+      '',
+      '## Requirements',
+      '- ',
+      '',
+      '## Open Questions',
+      '- ',
+      '',
+      '## Launch Notes',
+      ''
+    ].join('\n')
+  },
+  bugReport: {
+    file: 'Bug Report.md',
+    content: [
+      '---',
+      'type: bug',
+      "status: {{select:Status|New,Triaged,Fixing,Fixed,Won't fix}}",
+      'severity: {{select:Severity|Low,Medium,High,Critical}}',
+      'created: {{date}}',
+      'tags: [bug]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Summary',
+      '{{prompt:Summary}}',
+      '',
+      '## Environment',
+      '{{prompt:Environment}}',
+      '',
+      '## Steps to Reproduce',
+      '1. ',
+      '2. ',
+      '3. ',
+      '',
+      '## Expected',
+      '',
+      '## Actual',
+      '',
+      '## Notes / Fix',
+      ''
+    ].join('\n')
+  },
+  decision: {
+    file: 'Decision Log.md',
+    content: [
+      '---',
+      'type: decision',
+      'status: {{select:Status|Proposed,Accepted,Rejected,Revisited}}',
+      'date: {{date}}',
+      'tags: [decision]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Decision',
+      '{{prompt:Decision}}',
+      '',
+      '## Context',
+      '',
+      '## Options',
+      '- Option A:',
+      '- Option B:',
+      '',
+      '## Rationale',
+      '',
+      '## Consequences',
+      '- ',
+      ''
+    ].join('\n')
+  },
+  releaseNotes: {
+    file: 'Release Notes.md',
+    content: [
+      '---',
+      'type: release-notes',
+      'version: {{prompt:Version}}',
+      'date: {{date}}',
+      'tags: [release]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Highlights',
+      '- ',
+      '',
+      '## Added',
+      '- ',
+      '',
+      '## Improved',
+      '- ',
+      '',
+      '## Fixed',
+      '- ',
+      '',
+      '## Notes',
+      ''
+    ].join('\n')
+  },
+  changelog: {
+    file: 'Forge Changelog Entry.md',
+    content: [
+      '---',
+      'type: changelog',
+      'date: {{datetime}}',
+      'change_type: {{select:Change type|Feature,Improvement,Fix,Docs,Internal}}',
+      'tags: [forge, changelog]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Summary',
+      '{{prompt:Summary}}',
+      '',
+      '## User Impact',
+      '{{prompt:User impact}}',
+      '',
+      '## Website Copy Notes',
+      '',
+      '## Implementation Notes',
+      ''
+    ].join('\n')
+  },
+  publishPage: {
+    file: 'Publish Page.md',
+    content: [
+      '---',
+      'type: publish-page',
+      'status: {{select:Status|Draft,Review,Published}}',
+      'slug: {{prompt:Slug}}',
+      'created: {{date}}',
+      'tags: [publish]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Summary',
+      '{{prompt:Summary}}',
+      '',
+      '## Body',
+      '',
+      '## Assets',
+      '- ',
+      '',
+      '## Publishing Checklist',
+      '- [ ] Check links',
+      '- [ ] Check images and media',
+      '- [ ] Export static site',
       ''
     ].join('\n')
   }
@@ -537,7 +799,9 @@ export const useStore = create<ForgeState>((set, get) => ({
     const content = renderTemplate(template || `# {{title}}\n`, {
       title,
       vaultName,
-      templateName: baseName(templatePath)
+      templateName: baseName(templatePath),
+      folder,
+      variables: opts?.variables
     })
 
     const created = await window.forge.createFile(vault, rel, content)
@@ -573,7 +837,7 @@ export const useStore = create<ForgeState>((set, get) => ({
   async createDailyNote() {
     const { vault, dailyNotesFolder, templatesFolder } = get()
     if (!vault) return null
-    const today = formatDateParts(new Date())
+    const today = formatTemplateDateParts(new Date())
     const rel = `${dailyNotesFolder || 'Daily'}/${today.date}.md`
     const existing = get().files.find((file) => file.toLowerCase() === rel.toLowerCase())
     if (existing) {
@@ -603,7 +867,8 @@ export const useStore = create<ForgeState>((set, get) => ({
     const content = renderTemplate(template, {
       title: today.date,
       vaultName: get().vaultName,
-      templateName: 'Daily'
+      templateName: 'Daily',
+      folder: dailyNotesFolder || 'Daily'
     })
 
     const created = await window.forge.createFile(vault, rel, content)

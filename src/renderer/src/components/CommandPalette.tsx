@@ -1,11 +1,68 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { getActiveEditor } from '../editor/active'
 import { fuzzyFilter } from '../lib/fuzzy'
+import { baseName } from '../lib/parse'
 import { activeTab, useStore } from '../store'
 
 interface Command {
   name: string
   hint?: string
   action: () => void
+}
+
+function cleanNoteTitle(value: string): string {
+  return value.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim()
+}
+
+function parentFolder(path: string): string {
+  return path.includes('/') ? path.split('/').slice(0, -1).join('/') : ''
+}
+
+function defaultExtractTitle(markdown: string): string {
+  const firstLine =
+    markdown
+      .split('\n')
+      .map((line) => line.replace(/^#{1,6}\s+/, '').replace(/^[-*+]\s+/, '').trim())
+      .find(Boolean) ?? 'Extracted Note'
+  return cleanNoteTitle(firstLine.slice(0, 64)) || 'Extracted Note'
+}
+
+async function extractSelectionToNote(sourcePath: string): Promise<void> {
+  const store = useStore.getState()
+  const view = getActiveEditor()
+  if (!store.vault || !view) return
+
+  const selection = view.state.selection.main
+  if (selection.empty) {
+    window.alert('Select text in the editor before extracting a note.')
+    return
+  }
+
+  const selectedText = view.state.doc.sliceString(selection.from, selection.to).trim()
+  if (!selectedText) {
+    window.alert('Select text in the editor before extracting a note.')
+    return
+  }
+
+  const suggestedTitle = defaultExtractTitle(selectedText)
+  const requestedTitle = window.prompt('New note title', suggestedTitle)
+  if (requestedTitle === null) return
+
+  const title = cleanNoteTitle(requestedTitle) || suggestedTitle
+  const folder = parentFolder(sourcePath)
+  const requestedPath = `${folder ? folder + '/' : ''}${title}.md`
+  const content = selectedText.startsWith('#') ? `${selectedText}\n` : `# ${title}\n\n${selectedText}\n`
+  const created = await window.forge.createFile(store.vault, requestedPath, content)
+  const link = `[[${baseName(created)}]]`
+
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: link },
+    selection: { anchor: selection.from + link.length }
+  })
+  view.focus()
+
+  await store.refreshVault()
+  store.openFile(created, { newTab: true })
 }
 
 export function useListNav(count: number, onPick: (index: number) => void): {
@@ -74,6 +131,11 @@ export default function CommandPalette(): React.JSX.Element {
     ]
     if (tab?.kind === 'note' && tab.path) {
       const path = tab.path
+      const editor = getActiveEditor()
+      const hasSelection = Boolean(editor && !editor.state.selection.main.empty)
+      if (hasSelection) {
+        list.push({ name: 'Extract selection to new note', action: close(() => extractSelectionToNote(path).catch(console.error)) })
+      }
       list.push(
         { name: 'Reveal current note in Finder', action: close(() => window.forge.reveal(store.vault!, path)) },
         { name: 'Delete current note', action: close(() => store.trashPath(path)) }

@@ -33,6 +33,10 @@ forge --vault /path/to/vault create-doc Projects/Plan --title "Plan"
 forge --vault /path/to/vault templates --json
 forge --vault /path/to/vault create-template Meeting --content "# {{title}}\n\n## Notes\n"
 forge --vault /path/to/vault create-from-template Meeting Projects/Kickoff --title "Kickoff"
+forge --vault /path/to/vault create-from-template "SEO Brief" Content/Draft \
+  --title "Launch post" \
+  --vars '{"keyword":"local markdown notes","audience":"developers"}' \
+  --var Status=Draft
 printf '\n## Next\n- Define scope\n' | forge --vault /path/to/vault append Projects/Plan.md --stdin
 forge --vault /path/to/vault search "Define scope" --json
 forge --vault /path/to/vault analyze --json
@@ -136,5 +140,36 @@ Supported placeholders:
 - `{{datetime}}`
 - `{{vault}}`
 - `{{template}}`
+- `{{folder}}`
+- Custom variables such as `{{client}}`, `{{keyword}}`, or `{{status}}`
+- Prompt-style variables such as `{{prompt:Audience}}`
+- Select-style variables such as `{{select:Status|Draft,Review,Final}}`
+
+Pass values from the CLI with `--vars` JSON, an `@file.json`, or repeatable `--var key=value` flags:
+
+```bash
+forge --vault /path/to/vault create-from-template "Client Brief" Clients/Acme \
+  --title "Acme Brief" \
+  --vars '{"client":"Acme","audience":"Founders"}' \
+  --var Status=Draft
+```
+
+Batch operations and MCP use the same values as a `variables` object:
+
+```json
+{
+  "action": "createFromTemplate",
+  "template": "Client Brief",
+  "path": "Clients/Acme.md",
+  "title": "Acme Brief",
+  "variables": {
+    "client": "Acme",
+    "audience": "Founders",
+    "Status": "Draft"
+  }
+}
+```
+
+If a `prompt:` value is not supplied, Forge inserts an empty string. If a `select:` value is not supplied, Forge uses the first listed option. Unknown plain placeholders are preserved.
 
 Agents should call `forge templates --json` or `forge_templates` before creating from a template, then use `forge create-from-template` or `forge_create_from_template` so generated notes preserve the user’s preferred structure.
