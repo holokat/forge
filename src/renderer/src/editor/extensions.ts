@@ -1,4 +1,4 @@
-import { autocompletion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete'
+import { autocompletion, type Completion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { indentOnInput, syntaxHighlighting, HighlightStyle } from '@codemirror/language'
@@ -19,11 +19,14 @@ import {
 import { tags as t } from '@lezer/highlight'
 import { linkTarget } from '../lib/parse'
 
+export type SlashCommandId = 'template' | 'image' | 'gallery' | 'callout' | 'table' | 'today' | 'ai' | 'publish'
+
 export interface EditorCallbacks {
   onChange(content: string): void
   onNavigate(target: string): void
   onDropFiles(paths: string[], files: File[]): Promise<string>
   getLinkTargets(): { label: string; detail?: string }[]
+  onSlashCommand(command: SlashCommandId, view: EditorView, from: number, to: number): void
 }
 
 // ---------- typography ----------
@@ -217,6 +220,46 @@ function wikiCompletionSource(getLinkTargets: EditorCallbacks['getLinkTargets'])
   }
 }
 
+// ---------- slash commands ----------
+
+const SLASH_COMMANDS: Array<{
+  id: SlashCommandId
+  label: string
+  detail: string
+}> = [
+  { id: 'template', label: 'template', detail: 'Insert template' },
+  { id: 'image', label: 'image', detail: 'Add or embed media' },
+  { id: 'gallery', label: 'gallery', detail: 'Create media gallery' },
+  { id: 'callout', label: 'callout', detail: 'Insert callout block' },
+  { id: 'table', label: 'table', detail: 'Insert Markdown table' },
+  { id: 'today', label: 'today', detail: 'Insert today’s date' },
+  { id: 'ai', label: 'ai', detail: 'Prompt current note' },
+  { id: 'publish', label: 'publish', detail: 'Insert publish metadata' }
+]
+
+function slashCompletionSource(onSlashCommand: EditorCallbacks['onSlashCommand']) {
+  return (context: CompletionContext): CompletionResult | null => {
+    const match = context.matchBefore(/\/[\w-]*$/)
+    if (!match) return null
+
+    const line = context.state.doc.lineAt(match.from)
+    const beforeSlash = context.state.doc.sliceString(line.from, match.from)
+    if (beforeSlash.trim()) return null
+
+    return {
+      from: match.from + 1,
+      options: SLASH_COMMANDS.map((command): Completion => ({
+        label: command.label,
+        displayLabel: `/${command.label}`,
+        detail: command.detail,
+        type: 'keyword',
+        apply: (view, _completion, from, to) => onSlashCommand(command.id, view, Math.max(0, from - 1), to)
+      })),
+      validFor: /^[\w-]*$/
+    }
+  }
+}
+
 // ---------- assembly ----------
 
 export function createEditorState(content: string, callbacks: EditorCallbacks): EditorState {
@@ -235,7 +278,10 @@ export function createEditorState(content: string, callbacks: EditorCallbacks): 
       decoratorPlugin(tagDecorator),
       wikilinkClick(callbacks.onNavigate),
       fileDropHandler(callbacks.onDropFiles),
-      autocompletion({ override: [wikiCompletionSource(callbacks.getLinkTargets)], icons: false }),
+      autocompletion({
+        override: [wikiCompletionSource(callbacks.getLinkTargets), slashCompletionSource(callbacks.onSlashCommand)],
+        icons: false
+      }),
       keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) callbacks.onChange(update.state.doc.toString())
