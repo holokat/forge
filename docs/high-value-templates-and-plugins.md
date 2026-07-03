@@ -65,10 +65,10 @@ Verified locally:
 
 ## Wave 6: Vault Intelligence Baseline
 
-- [x] Add a vault-wide Tasks workspace view for open, done, and all Markdown checklist items.
+- [x] Remove the vault-wide Tasks workspace view by product decision; Markdown checklist metadata remains available.
 - [x] Make task navigation line-aware so task clicks open the source note at the matching line.
 - [x] Harden task parsing to skip fenced code blocks and support ordered checklist syntax.
-- [x] Expose the Tasks workspace as a safe declarative `forge.views` contribution.
+- [x] Remove the Tasks workspace as a declarative `forge.views` contribution.
 - [x] Add a first-class vault-health workspace view and `forge.views` contribution for broken links, duplicate titles, orphan notes, untagged/empty notes, tasks, and inbox counts.
 - [x] Add local extension examples for vault health, metadata dashboards, static publishing workflows, and agent handoff workflows.
 - [x] Add incident postmortem, technical RFC, API spec, launch plan, customer profile, content calendar, learning plan, and decision review starter templates.
@@ -108,4 +108,4 @@ Verified locally:
 - Workflow examples such as `query-dashboard`, `saved-query-scaffold`, `publish-prep`, `static-publishing-workflow`, and `agent-handoff-workflow` are valid declarative scaffolds over supported metadata, widgets, transforms, and views. They are not dedicated workflow engines yet.
 - A built-in `vault-health` view now includes stale-note detection, duplicate-title checks, create-missing-note repair actions, and CLI/MCP parity. Broader repair automation and saved health reports are still roadmap work.
 - Bookmarks currently persist note paths only. Saved searches and saved query dashboards are still roadmap work.
-- The validator currently accepts `graph-insights`, `tasks`, and `vault-health` view contribution values. Do not encode new values such as saved-query result views, board/kanban views, publish pipeline commands, or agent workflow launchers until validation and runtime routing support them.
+- The validator currently accepts `graph-insights` and `vault-health` view contribution values. Do not encode new values such as saved-query result views, board/kanban views, tasks views, publish pipeline commands, or agent workflow launchers until validation and runtime routing support them.

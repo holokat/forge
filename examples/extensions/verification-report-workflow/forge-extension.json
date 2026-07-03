@@ -3,7 +3,7 @@
   "id": "example.verification-report-workflow",
   "name": "verification-report-workflow",
   "displayName": "Verification Report Workflow Example",
-  "description": "Example declarative extension that scaffolds agent verification reports with supported vault health, task, publish, frontmatter, outline, and Markdown transform contributions.",
+  "description": "Example declarative extension that scaffolds agent verification reports with supported vault health, task metadata, publish, frontmatter, outline, and Markdown transform contributions.",
   "version": "0.1.0",
   "publisher": "Example",
   "license": "MIT",
@@ -111,14 +111,6 @@
       "label": "Vault health",
       "description": "Declares Forge's supported vault-health view for verification checks that span notes.",
       "view": "vault-health"
-    },
-    {
-      "id": "example.verification-report-workflow.tasks-view",
-      "kind": "view",
-      "extensionPoint": "forge.views",
-      "label": "Tasks",
-      "description": "Declares Forge's supported tasks view for verification follow-up queues.",
-      "view": "tasks"
     },
     {
       "id": "example.verification-report-workflow.template",

@@ -11,7 +11,7 @@ import {
 import { baseName, isMarkdown, noteDisplayTitle, parseNote, resolveLink, wordCount, type NoteMeta } from './lib/parse'
 import { formatTemplateDateParts, renderTemplate } from './lib/templates'
 
-export type TabKind = 'note' | 'graph' | 'tasks' | 'vaultHealth' | 'empty'
+export type TabKind = 'note' | 'graph' | 'vaultHealth' | 'empty'
 export type ViewMode = 'edit' | 'read'
 export const STARTER_TEMPLATE_KINDS = [
   'daily',
@@ -177,7 +177,6 @@ export interface ForgeState {
   openFile(path: string, opts?: { newTab?: boolean; line?: number }): void
   consumePendingEditorNavigation(path: string): number | null
   openGraph(): void
-  openTasks(): void
   openVaultHealth(): void
   newTab(): void
   closeTab(id: string): void
@@ -2659,17 +2658,6 @@ export const useStore = create<ForgeState>((set, get) => ({
     set({ tabs: [...tabs, tab], activeTabId: tab.id })
   },
 
-  openTasks() {
-    const { tabs } = get()
-    const existing = tabs.find((t) => t.kind === 'tasks')
-    if (existing) {
-      set({ activeTabId: existing.id })
-      return
-    }
-    const tab: Tab = { id: newTabId(), kind: 'tasks', path: null, mode: 'edit' }
-    set({ tabs: [...tabs, tab], activeTabId: tab.id })
-  },
-
   openVaultHealth() {
     const { tabs } = get()
     const existing = tabs.find((t) => t.kind === 'vaultHealth')
@@ -3084,7 +3072,6 @@ export function activeTab(state: ForgeState): Tab | null {
 
 export function tabTitle(tab: Tab): string {
   if (tab.kind === 'graph') return 'Graph'
-  if (tab.kind === 'tasks') return 'Tasks'
   if (tab.kind === 'vaultHealth') return 'Vault Health'
   if (tab.kind === 'empty' || !tab.path) return 'New tab'
   return baseName(tab.path)

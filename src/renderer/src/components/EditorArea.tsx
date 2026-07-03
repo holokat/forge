@@ -9,7 +9,6 @@ import {
   Plus,
   Search,
   ShieldCheck,
-  SquareCheckBig,
   Waypoints,
   X
 } from 'lucide-react'
@@ -18,7 +17,6 @@ import Editor from './Editor'
 import { ForgeHexagonMark } from './ForgeLogo'
 import GraphView from './GraphView'
 import Reading from './Reading'
-import TasksView from './TasksView'
 import VaultHealthView from './VaultHealthView'
 import { baseName, isMarkdown } from '../lib/parse'
 import { activeTab, tabTitle, useStore, type Tab } from '../store'
@@ -55,8 +53,6 @@ function TabBar(): React.JSX.Element {
           >
             {tab.kind === 'graph' ? (
               <Waypoints size={13} className="tab-icon" />
-            ) : tab.kind === 'tasks' ? (
-              <SquareCheckBig size={13} className="tab-icon" />
             ) : tab.kind === 'vaultHealth' ? (
               <ShieldCheck size={13} className="tab-icon" />
             ) : (
@@ -134,7 +130,6 @@ function EmptyTab(): React.JSX.Element {
   const createNote = useStore((s) => s.createNote)
   const setModal = useStore((s) => s.setModal)
   const openGraph = useStore((s) => s.openGraph)
-  const openTasks = useStore((s) => s.openTasks)
   const openVaultHealth = useStore((s) => s.openVaultHealth)
 
   return (
@@ -163,10 +158,6 @@ function EmptyTab(): React.JSX.Element {
           Open graph view
           <kbd>⌘⇧G</kbd>
         </button>
-        <button className="empty-tab-action" onClick={() => openTasks()}>
-          <SquareCheckBig size={15} />
-          Open tasks
-        </button>
         <button className="empty-tab-action" onClick={() => openVaultHealth()}>
           <ShieldCheck size={15} />
           Open vault health
@@ -189,7 +180,6 @@ function StatusBar(): React.JSX.Element | null {
 
 function TabContent({ tab }: { tab: Tab }): React.JSX.Element {
   if (tab.kind === 'graph') return <GraphView />
-  if (tab.kind === 'tasks') return <TasksView />
   if (tab.kind === 'vaultHealth') return <VaultHealthView />
   if (tab.kind === 'empty' || !tab.path) return <EmptyTab />
   if (!isMarkdown(tab.path)) {

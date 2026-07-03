@@ -2744,7 +2744,7 @@ export const BUILT_IN_EXTENSION_MANIFESTS = [
     id: 'forge.task-summary',
     name: 'task-summary',
     displayName: 'Task Summary',
-    description: 'Shows open, completed, and total Markdown checkbox tasks for active notes and the full vault.',
+    description: 'Shows open, completed, and total Markdown checkbox tasks for active notes.',
     version: '0.1.0',
     publisher: 'Forge',
     license: 'MIT',
@@ -2755,8 +2755,7 @@ export const BUILT_IN_EXTENSION_MANIFESTS = [
     runtime: declarativeRuntime,
     extensionPoints: [
       { id: 'forge.note.metadata', label: 'Note metadata' },
-      { id: 'forge.sidebar.widgets', label: 'Sidebar widgets' },
-      { id: 'forge.views', label: 'Views' }
+      { id: 'forge.sidebar.widgets', label: 'Sidebar widgets' }
     ],
     permissions: [
       {
@@ -2778,13 +2777,6 @@ export const BUILT_IN_EXTENSION_MANIFESTS = [
         extensionPoint: 'forge.sidebar.widgets',
         label: 'Task summary',
         widget: 'tasks'
-      },
-      {
-        id: 'forge.task-summary.view',
-        kind: 'view',
-        extensionPoint: 'forge.views',
-        label: 'Tasks view',
-        view: 'tasks'
       }
     ],
     defaultInstalled: true,

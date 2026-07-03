@@ -86,7 +86,7 @@ export interface SidebarWidgetContribution extends BaseContribution {
 
 export interface ViewContribution extends BaseContribution {
   kind: 'view'
-  view: 'graph-insights' | 'tasks' | 'vault-health'
+  view: 'graph-insights' | 'vault-health'
 }
 
 export type ExtensionContribution =

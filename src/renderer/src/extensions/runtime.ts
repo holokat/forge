@@ -167,11 +167,6 @@ const BUILT_IN_RUNTIME_ROUTES: Record<
     implementation: 'SidebarRight.TaskSummary',
     status: 'wired'
   },
-  'forge.task-summary.view': {
-    surface: 'workspace-view',
-    implementation: 'store.openTasks',
-    status: 'wired'
-  },
   'forge.vault-health.metadata': {
     surface: 'workspace-view',
     implementation: 'VaultHealthView.localMetrics',
@@ -230,9 +225,6 @@ function routeByContributionValue(
   if (contribution.kind !== 'view') return null
   if (contribution.view === 'graph-insights') {
     return { surface: 'workspace-view', implementation: 'store.openGraph', status: 'wired' }
-  }
-  if (contribution.view === 'tasks') {
-    return { surface: 'workspace-view', implementation: 'store.openTasks', status: 'wired' }
   }
   if (contribution.view === 'vault-health') {
     return { surface: 'workspace-view', implementation: 'store.openVaultHealth', status: 'wired' }

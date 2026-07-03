@@ -23,8 +23,7 @@
   "extensionPoints": [
     { "id": "forge.note.metadata", "label": "Note metadata" },
     { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
-    { "id": "forge.markdown.transforms", "label": "Markdown transforms" },
-    { "id": "forge.views", "label": "Views" }
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" }
   ],
   "permissions": [
     {
@@ -69,14 +68,6 @@
       "label": "Properties",
       "description": "Declares Forge's supported frontmatter properties sidebar widget for handoff context.",
       "widget": "frontmatter"
-    },
-    {
-      "id": "example.agent-handoff-workflow.tasks-view",
-      "kind": "view",
-      "extensionPoint": "forge.views",
-      "label": "Tasks view",
-      "description": "Declares Forge's supported vault-wide tasks view for handoff queues.",
-      "view": "tasks"
     },
     {
       "id": "example.agent-handoff-workflow.checklist",

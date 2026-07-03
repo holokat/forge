@@ -8,7 +8,6 @@ import {
   Search,
   Settings,
   ShieldCheck,
-  SquareCheckBig,
   Vault,
   Waypoints,
   X
@@ -73,7 +72,6 @@ export default function SidebarLeft(): React.JSX.Element {
   const createNote = useStore((s) => s.createNote)
   const createFolder = useStore((s) => s.createFolder)
   const openGraph = useStore((s) => s.openGraph)
-  const openTasks = useStore((s) => s.openTasks)
   const openVaultHealth = useStore((s) => s.openVaultHealth)
   const setModal = useStore((s) => s.setModal)
   const active = useStore(activeTab)
@@ -141,9 +139,6 @@ export default function SidebarLeft(): React.JSX.Element {
         <div className="sidebar-footer-actions">
           <button className="icon-btn" title="Graph view (⌘⇧G)" onClick={() => openGraph()}>
             <Waypoints size={15} />
-          </button>
-          <button className="icon-btn" title="Tasks" onClick={() => openTasks()}>
-            <SquareCheckBig size={15} />
           </button>
           <button className="icon-btn" title="Vault health" onClick={() => openVaultHealth()}>
             <ShieldCheck size={15} />
