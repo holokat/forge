@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forge — Your thoughts, connected.</title>
+  <meta name="description" content="Forge is a fast, beautiful, local-first knowledge base for macOS. Plain Markdown, wikilinks, backlinks, and a graph that lights up as your ideas do." />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff7a1f'><path d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/></svg>" />
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="cursor-glow" id="cursorGlow" aria-hidden="true"></div>
+
+  <!-- ======================= NAV ======================= -->
+  <nav class="nav" id="nav">
+    <a class="nav-logo" href="#top">
+      <span class="bolt" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+      </span>
+      Forge
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#demo">Demo</a>
+      <a href="#graph">Graph</a>
+      <a href="#shortcuts">Shortcuts</a>
+    </div>
+    <div class="nav-actions">
+      <button class="kbd-hint" id="paletteHint" title="Open command palette">⌘K</button>
+      <a class="btn btn-small" href="#download" data-magnet>Download</a>
+    </div>
+  </nav>
+
+  <!-- ======================= HERO ======================= -->
+  <header class="hero" id="top">
+    <div class="hero-inner">
+      <p class="eyebrow" data-reveal>
+        <span class="eyebrow-dot"></span> A second brain that lives on your Mac
+      </p>
+      <h1 class="hero-title">
+        <span class="word" style="--i:0">Your</span>
+        <span class="word" style="--i:1">thoughts,</span>
+        <br />
+        <span class="word word-accent" style="--i:2">connected.<svg class="scribble" viewBox="0 0 320 24" preserveAspectRatio="none" aria-hidden="true"><path d="M4 16 C 60 6, 120 20, 180 12 S 280 8, 316 14" /></svg></span>
+      </h1>
+      <p class="hero-sub" data-reveal style="--d:.55s">
+        Forge is a fast, beautiful, <em>local-first</em> knowledge base.
+        Plain Markdown files, wikilinks, backlinks — and a graph that
+        lights up as your ideas do.
+      </p>
+      <div class="hero-ctas" data-reveal style="--d:.7s">
+        <a class="btn btn-primary btn-big" href="#download" data-magnet>
+          <svg viewBox="0 0 24 24" fill="currentColor" width="17" height="17"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+          Download for macOS
+        </a>
+        <a class="btn btn-ghost btn-big" href="#demo" data-magnet>See it in action ↓</a>
+      </div>
+      <p class="hero-fineprint" data-reveal style="--d:.85s">Free & open · No account · Your files stay yours</p>
+    </div>
+
+    <!-- App window mockup -->
+    <div class="mockup-wrap" data-reveal style="--d:.5s">
+      <div class="mockup" id="mockup" data-tilt>
+        <div class="mockup-chrome">
+          <span class="tl red"></span><span class="tl yellow"></span><span class="tl green"></span>
+          <span class="mockup-tab"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg> Ideas</span>
+        </div>
+        <div class="mockup-body">
+          <div class="mockup-sidebar">
+            <div class="ms-row active"><span class="ms-ic">▾</span>Projects</div>
+            <div class="ms-row indent">Forge Roadmap</div>
+            <div class="ms-row indent glow-row">Ideas</div>
+            <div class="ms-row indent">Reading Notes</div>
+            <div class="ms-row"><span class="ms-ic">▸</span>Journal</div>
+          </div>
+          <div class="mockup-editor">
+            <div class="me-title">Ideas</div>
+            <div class="me-line"><span class="me-h"># Ideas</span></div>
+            <div class="me-line">A staging ground for half-formed thoughts. <span class="me-tag">#inbox</span></div>
+            <div class="me-line">· Spaced repetition for <span class="me-link">[[Reading Notes]]</span></div>
+            <div class="me-line">· A weekly review — see <span class="me-link">[[Forge Roadmap]]</span></div>
+            <div class="me-line">· What would a <i>perfect</i> morning look like?<span class="me-caret"></span></div>
+          </div>
+          <div class="mockup-graph">
+            <svg viewBox="0 0 120 150" aria-hidden="true">
+              <line x1="60" y1="40" x2="30" y2="85"/><line x1="60" y1="40" x2="90" y2="80"/>
+              <line x1="30" y1="85" x2="55" y2="120"/><line x1="90" y1="80" x2="55" y2="120"/>
+              <circle class="gn gn-a" cx="60" cy="40" r="7"/><circle class="gn" cx="30" cy="85" r="5"/>
+              <circle class="gn" cx="90" cy="80" r="5"/><circle class="gn" cx="55" cy="120" r="4"/>
+            </svg>
+            <span class="mockup-graph-label">graph view</span>
+          </div>
+        </div>
+      </div>
+      <div class="mockup-glow" aria-hidden="true"></div>
+    </div>
+  </header>
+
+  <!-- ======================= MARQUEE ======================= -->
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee-track" id="marqueeTrack">
+      <span>Local-first</span><b>⚡</b><span>Plain Markdown</span><b>⚡</b><span>No servers</span><b>⚡</b>
+      <span>Wikilinks</span><b>⚡</b><span>Backlinks</span><b>⚡</b><span>Graph view</span><b>⚡</b>
+      <span>Blazing fast</span><b>⚡</b><span>Yours forever</span><b>⚡</b>
+    </div>
+  </div>
+
+  <!-- ======================= FEATURES ======================= -->
+  <section class="section" id="features">
+    <p class="section-eyebrow" data-reveal>Everything you need, nothing you don't</p>
+    <h2 class="section-title" data-reveal style="--d:.1s">Built for speed.<br /><span class="accent-text">Designed for joy.</span></h2>
+    <div class="features">
+      <article class="card" data-reveal data-glow style="--d:.05s">
+        <div class="card-icon">🔗</div>
+        <h3>Wikilinks & backlinks</h3>
+        <p>Type <code>[[</code> and connect anything to everything. Forge tracks every mention, so no idea is ever orphaned.</p>
+      </article>
+      <article class="card" data-reveal data-glow style="--d:.12s">
+        <div class="card-icon">✍️</div>
+        <h3>An editor that flows</h3>
+        <p>Live Markdown styling as you type, plus a gorgeous reading view one keystroke away. <kbd>⌘E</kbd> and you're there.</p>
+      </article>
+      <article class="card" data-reveal data-glow style="--d:.19s">
+        <div class="card-icon">🕸️</div>
+        <h3>Graph view</h3>
+        <p>Your vault as a linked map. Zoom, pan, drag — watch clusters of thought emerge from the dark.</p>
+      </article>
+      <article class="card" data-reveal data-glow style="--d:.26s">
+        <div class="card-icon">⚙️</div>
+        <h3>Agent-ready vaults</h3>
+        <p>Point a local agent at your vault folder to create, update, search, organize, and analyze notes as plain Markdown.</p>
+      </article>
+      <article class="card" data-reveal data-glow style="--d:.33s">
+        <div class="card-icon">🌗</div>
+        <h3>Dark, light & system</h3>
+        <p>A meticulous design system with three themes. It looks like it shipped with your Mac — but warmer.</p>
+      </article>
+      <article class="card" data-reveal data-glow style="--d:.4s">
+        <div class="card-icon">📁</div>
+        <h3>Own your words</h3>
+        <p>Notes are plain <code>.md</code> files in a folder. No lock-in, no sync tax, no server between you and your brain.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ======================= TYPING DEMO ======================= -->
+  <section class="section" id="demo">
+    <p class="section-eyebrow" data-reveal>Watch it work</p>
+    <h2 class="section-title" data-reveal style="--d:.1s">Link at the speed<br />of <span class="accent-text">thought.</span></h2>
+    <div class="demo-window" data-reveal data-tilt style="--d:.2s">
+      <div class="mockup-chrome">
+        <span class="tl red"></span><span class="tl yellow"></span><span class="tl green"></span>
+        <span class="mockup-tab">Morning pages</span>
+      </div>
+      <div class="demo-editor">
+        <div class="demo-text" id="demoText"></div>
+        <div class="demo-complete" id="demoComplete" hidden>
+          <div class="dc-item selected" data-note="Reading Notes">Reading Notes</div>
+          <div class="dc-item" data-note="Reading list 2026">Reading list 2026</div>
+          <div class="dc-item" data-note="Roadmap">Roadmap</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= GRAPH ======================= -->
+  <section class="section section-wide" id="graph">
+    <p class="section-eyebrow" data-reveal>Interactive — go on, grab a node</p>
+    <h2 class="section-title" data-reveal style="--d:.1s">Watch your ideas<br /><span class="accent-text">find each other.</span></h2>
+    <div class="graph-stage" data-reveal style="--d:.2s">
+      <canvas id="graphCanvas"></canvas>
+      <div class="graph-stage-hint">drag the nodes · they remember their friends</div>
+    </div>
+  </section>
+
+  <!-- ======================= SHORTCUTS ======================= -->
+  <section class="section" id="shortcuts">
+    <p class="section-eyebrow" data-reveal>Hands on the keyboard</p>
+    <h2 class="section-title" data-reveal style="--d:.1s">Fly through<br /><span class="accent-text">your vault.</span></h2>
+    <p class="section-sub" data-reveal style="--d:.15s">These keys light up when you press them. Yes, right now. Try <b>⌘K</b>.</p>
+    <div class="shortcuts" data-reveal style="--d:.2s">
+      <div class="shortcut"><span class="keys"><span class="keycap" data-key="meta">⌘</span><span class="keycap" data-key="o">O</span></span><span class="shortcut-label">Quick switcher</span></div>
+      <div class="shortcut"><span class="keys"><span class="keycap" data-key="meta">⌘</span><span class="keycap" data-key="p">P</span></span><span class="shortcut-label">Command palette</span></div>
+      <div class="shortcut"><span class="keys"><span class="keycap" data-key="meta">⌘</span><span class="keycap" data-key="n">N</span></span><span class="shortcut-label">New note</span></div>
+      <div class="shortcut"><span class="keys"><span class="keycap" data-key="meta">⌘</span><span class="keycap" data-key="e">E</span></span><span class="shortcut-label">Reading view</span></div>
+      <div class="shortcut"><span class="keys"><span class="keycap" data-key="meta">⌘</span><span class="keycap" data-key="shift">⇧</span><span class="keycap" data-key="g">G</span></span><span class="shortcut-label">Graph view</span></div>
+      <div class="shortcut"><span class="keys"><span class="keycap" data-key="meta">⌘</span><span class="keycap" data-key="k">K</span></span><span class="shortcut-label">…a surprise</span></div>
+    </div>
+  </section>
+
+  <!-- ======================= CTA ======================= -->
+  <section class="cta" id="download">
+    <div class="cta-inner" data-reveal>
+      <div class="cta-bolt" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+      </div>
+      <h2>Forge your ideas<br /><span class="accent-text">into links.</span></h2>
+      <a class="btn btn-primary btn-huge" href="#download" data-magnet id="downloadBtn">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+        Download for macOS
+      </a>
+      <p class="cta-fineprint">Free · macOS 13+ · about 90 MB of pure lightning</p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>Built with plain text.</span>
+    <span class="footer-logo">⚡ Forge</span>
+    <span>No cookies, no trackers, no kidding.</span>
+  </footer>
+
+  <!-- ======================= COMMAND PALETTE ======================= -->
+  <div class="palette-overlay" id="paletteOverlay" hidden>
+    <div class="palette" role="dialog" aria-label="Command palette">
+      <input class="palette-input" id="paletteInput" placeholder="Type a command…" autocomplete="off" spellcheck="false" />
+      <div class="palette-list" id="paletteList"></div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>

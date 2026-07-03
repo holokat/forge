@@ -1,0 +1,70 @@
+{
+  "name": "forge",
+  "productName": "Forge",
+  "version": "0.1.0",
+  "description": "Forge — a fast, beautiful local knowledge base for macOS",
+  "main": "./out/main/index.js",
+  "author": "Forge",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "dev:web": "vite --config vite.web.config.ts",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "agent": "node scripts/forge-agent.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "dist": "electron-vite build && electron-builder --mac"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.18.4",
+    "@codemirror/commands": "^6.8.0",
+    "@codemirror/lang-markdown": "^6.3.2",
+    "@codemirror/language": "^6.10.8",
+    "@codemirror/language-data": "^6.5.1",
+    "@codemirror/search": "^6.5.8",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.36.2",
+    "@lezer/highlight": "^1.2.1",
+    "@types/qrcode": "^1.5.6",
+    "dompurify": "^3.2.4",
+    "lucide-react": "^0.474.0",
+    "marked": "^15.0.6",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.4.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "typescript": "^5.7.3",
+    "vite": "^5.4.14"
+  },
+  "build": {
+    "appId": "com.forge.notes",
+    "productName": "Forge",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.icns",
+      "target": [
+        "dmg"
+      ]
+    }
+  }
+}

@@ -1,0 +1,431 @@
+import { AlertCircle, Check, Clipboard, Monitor, Moon, RefreshCw, Smartphone, Sun, X } from 'lucide-react'
+import QRCode from 'qrcode'
+import { useEffect, useMemo, useState } from 'react'
+import type { MobilePairingInfo, ThemeMode } from '../../../shared/types'
+import { useStore } from '../store'
+
+const THEMES: { mode: ThemeMode; label: string; icon: React.ReactNode }[] = [
+  { mode: 'light', label: 'Light', icon: <Sun size={15} /> },
+  { mode: 'dark', label: 'Dark', icon: <Moon size={15} /> },
+  { mode: 'system', label: 'System', icon: <Monitor size={15} /> }
+]
+
+function ThemePreview({ mode }: { mode: ThemeMode }): React.JSX.Element {
+  if (mode === 'system') {
+    return (
+      <div className="theme-preview split">
+        <div className="theme-preview-half light" />
+        <div className="theme-preview-half dark" />
+      </div>
+    )
+  }
+  return (
+    <div className={`theme-preview ${mode}`}>
+      <div className="theme-preview-bar" />
+      <div className="theme-preview-line w60" />
+      <div className="theme-preview-line w80" />
+      <div className="theme-preview-line w40 accent" />
+    </div>
+  )
+}
+
+function copyViaSelection(value: string): void {
+  const textarea = document.createElement('textarea')
+  textarea.value = value
+  textarea.readOnly = true
+  textarea.style.position = 'fixed'
+  textarea.style.left = '-9999px'
+  textarea.style.top = '0'
+  document.body.appendChild(textarea)
+  textarea.focus()
+  textarea.select()
+  const copied = document.execCommand('copy')
+  textarea.remove()
+  if (!copied) throw new Error('Copy command was rejected')
+}
+
+async function writeClipboardText(value: string): Promise<void> {
+  const forge = window.forge as typeof window.forge & { copyText?: (text: string) => Promise<void> }
+
+  if (typeof forge.copyText === 'function') {
+    try {
+      await forge.copyText(value)
+      return
+    } catch (error) {
+      console.warn('Electron clipboard copy failed, trying renderer fallback.', error)
+    }
+  }
+
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value)
+      return
+    } catch (error) {
+      console.warn('Navigator clipboard copy failed, trying selection fallback.', error)
+    }
+  }
+
+  copyViaSelection(value)
+}
+
+function CopyButton({
+  value,
+  label = 'Copy',
+  disabled = false
+}: {
+  value: string
+  label?: string
+  disabled?: boolean
+}): React.JSX.Element {
+  const [state, setState] = useState<'idle' | 'copying' | 'copied' | 'failed'>('idle')
+
+  const copy = async (): Promise<void> => {
+    if (disabled) return
+    setState('copying')
+    try {
+      await writeClipboardText(value)
+      setState('copied')
+      window.setTimeout(() => setState('idle'), 1600)
+    } catch (error) {
+      console.error('Copy failed.', error)
+      setState('failed')
+      window.setTimeout(() => setState('idle'), 2200)
+    }
+  }
+
+  const icon =
+    state === 'copied' ? <Check size={14} /> : state === 'failed' ? <AlertCircle size={14} /> : <Clipboard size={14} />
+  const text = state === 'copying' ? 'Copying' : state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed' : label
+
+  return (
+    <button
+      className={`btn btn-compact copy-btn ${state}`}
+      disabled={disabled || state === 'copying'}
+      aria-live="polite"
+      onClick={() => copy()}
+    >
+      {icon}
+      {text}
+    </button>
+  )
+}
+
+async function createPairingQr(pairingUrl: string | undefined): Promise<string> {
+  if (!pairingUrl) return ''
+  return QRCode.toDataURL(pairingUrl, {
+    width: 184,
+    margin: 1,
+    errorCorrectionLevel: 'M',
+    color: {
+      dark: '#1d1d21',
+      light: '#ffffff'
+    }
+  })
+}
+
+function pairingErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error'
+  if (/No handler registered|not a function|getMobilePairingInfo|setMobileVault/i.test(message)) {
+    return 'Restart Forge so the desktop pairing service is loaded.'
+  }
+  return `Could not start mobile pairing: ${message}`
+}
+
+function MobileRecorderCard({ vault }: { vault: string }): React.JSX.Element {
+  const [pairing, setPairing] = useState<MobilePairingInfo | null>(null)
+  const [qrDataUrl, setQrDataUrl] = useState('')
+  const [qrError, setQrError] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isResetting, setIsResetting] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadPairing = async (): Promise<void> => {
+      setIsLoading(true)
+      try {
+        setQrError('')
+        await window.forge.setMobileVault(vault)
+        const info = await window.forge.getMobilePairingInfo()
+        if (!cancelled) {
+          setPairing(info)
+        }
+
+        try {
+          const qr = await createPairingQr(info.pairingUrl)
+          if (!cancelled) setQrDataUrl(qr)
+        } catch (error) {
+          console.error('Mobile pairing QR failed.', error)
+          if (!cancelled) {
+            setQrDataUrl('')
+            setQrError('QR failed. Copy the pairing link instead.')
+          }
+        }
+      } catch (error) {
+        console.error('Mobile pairing failed.', error)
+        if (!cancelled) {
+          setPairing({ available: false, reason: pairingErrorMessage(error) })
+          setQrDataUrl('')
+          setQrError('')
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    loadPairing()
+    return () => {
+      cancelled = true
+    }
+  }, [vault])
+
+  const resetPairing = async (): Promise<void> => {
+    setIsResetting(true)
+    try {
+      setQrError('')
+      await window.forge.setMobileVault(vault)
+      const info = await window.forge.resetMobilePairingToken()
+      setPairing(info)
+      try {
+        setQrDataUrl(await createPairingQr(info.pairingUrl))
+      } catch (error) {
+        console.error('Mobile pairing QR failed.', error)
+        setQrDataUrl('')
+        setQrError('QR failed. Copy the pairing link instead.')
+      }
+    } catch (error) {
+      console.error('Mobile pairing reset failed.', error)
+      setPairing({ available: false, reason: pairingErrorMessage(error) })
+      setQrDataUrl('')
+      setQrError('')
+    } finally {
+      setIsResetting(false)
+    }
+  }
+
+  const pairingUrl = pairing?.pairingUrl ?? ''
+
+  return (
+    <div className="mobile-pairing-card">
+      <div className="mobile-pairing-qr" aria-busy={isLoading}>
+        {qrDataUrl ? (
+          <img src={qrDataUrl} alt="Forge Buddy pairing QR code" />
+        ) : (
+          <div className="mobile-pairing-qr-empty">{isLoading ? 'Loading' : pairing?.available ? 'Copy link' : 'Unavailable'}</div>
+        )}
+      </div>
+
+      <div className="mobile-pairing-details">
+        <div className="mobile-pairing-title">
+          <Smartphone size={15} />
+          <span>Forge Buddy for iPhone</span>
+        </div>
+        <div className="settings-row-desc">
+          Scan this once from Forge Buddy. Folders, recordings, and transcripts sync directly into this vault.
+        </div>
+        {qrError && <div className="settings-row-desc">{qrError}</div>}
+
+        {pairing?.available ? (
+          <div className="mobile-pairing-meta">
+            <div>
+              <span>Desktop</span>
+              <strong>{pairing.desktopName}</strong>
+            </div>
+            <div>
+              <span>Vault</span>
+              <strong>{pairing.vaultName}</strong>
+            </div>
+            <div>
+              <span>Address</span>
+              <strong>{pairing.baseUrl}</strong>
+            </div>
+            <div>
+              <span>Anywhere</span>
+              {pairing.hasTailscale ? (
+                <strong title={pairing.altUrls?.join(', ')}>On — via Tailscale</strong>
+              ) : (
+                <strong title="Install Tailscale on this Mac and your iPhone, then re-pair. The recorder will reach this Mac from anywhere, privately.">
+                  Wi-Fi only — add Tailscale
+                </strong>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="settings-row-desc">{pairing?.reason ?? 'Open a vault before pairing.'}</div>
+        )}
+
+        <div className="mobile-pairing-actions">
+          <CopyButton value={pairingUrl} label="Copy link" disabled={!pairing?.available} />
+          <button
+            className="btn btn-compact"
+            disabled={!pairing?.available || isResetting}
+            onClick={() => resetPairing()}
+          >
+            <RefreshCw size={14} />
+            {isResetting ? 'Resetting' : 'Reset pairing'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function SettingsModal(): React.JSX.Element {
+  const theme = useStore((s) => s.theme)
+  const fontSize = useStore((s) => s.fontSize)
+  const lineWidth = useStore((s) => s.lineWidth)
+  const vault = useStore((s) => s.vault)
+  const setTheme = useStore((s) => s.setTheme)
+  const setFontSize = useStore((s) => s.setFontSize)
+  const setLineWidth = useStore((s) => s.setLineWidth)
+  const setModal = useStore((s) => s.setModal)
+  const openVaultDialog = useStore((s) => s.openVaultDialog)
+  const agentBrief = useMemo(
+    () =>
+      vault
+        ? [
+            `Use this Forge vault: ${vault}`,
+            '',
+            'Treat it as a plain Markdown knowledge base. You may create folders and .md notes, update existing notes, retrieve files, search, organize, and analyze links or tags.',
+            'Keep paths relative to the vault, preserve existing content unless asked, and use wikilinks like [[Note Name]] for connections.'
+          ].join('\n')
+        : '',
+    [vault]
+  )
+  const cliCommand = vault ? `npm run agent -- --vault ${JSON.stringify(vault)} analyze --json` : ''
+
+  return (
+    <div className="modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && setModal(null)}>
+      <div className="settings-panel">
+        <div className="settings-header">
+          <h2>Settings</h2>
+          <button className="icon-btn" onClick={() => setModal(null)}>
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="settings-body">
+          <section>
+            <h3>Appearance</h3>
+            <div className="theme-cards">
+              {THEMES.map(({ mode, label, icon }) => (
+                <button
+                  key={mode}
+                  className={`theme-card${theme === mode ? ' active' : ''}`}
+                  onClick={() => setTheme(mode)}
+                >
+                  <ThemePreview mode={mode} />
+                  <span className="theme-card-label">
+                    {icon}
+                    {label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h3>Editor</h3>
+            <div className="settings-row">
+              <div>
+                <div className="settings-row-label">Font size</div>
+                <div className="settings-row-desc">Base size for editor and reading view</div>
+              </div>
+              <div className="settings-row-control">
+                <input
+                  type="range"
+                  min={13}
+                  max={22}
+                  value={fontSize}
+                  onChange={(e) => setFontSize(Number(e.target.value))}
+                />
+                <span className="settings-value">{fontSize}px</span>
+              </div>
+            </div>
+            <div className="settings-row">
+              <div>
+                <div className="settings-row-label">Line width</div>
+                <div className="settings-row-desc">Maximum width of note content</div>
+              </div>
+              <div className="settings-row-control">
+                <input
+                  type="range"
+                  min={560}
+                  max={960}
+                  step={20}
+                  value={lineWidth}
+                  onChange={(e) => setLineWidth(Number(e.target.value))}
+                />
+                <span className="settings-value">{lineWidth}px</span>
+              </div>
+            </div>
+          </section>
+
+          {vault && (
+            <section>
+              <h3>Vault</h3>
+              <div className="settings-row">
+                <div>
+                  <div className="settings-row-label">{vault.split('/').pop()}</div>
+                  <div className="settings-row-desc">{vault}</div>
+                </div>
+                <div className="settings-row-control">
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      setModal(null)
+                      openVaultDialog()
+                    }}
+                  >
+                    Switch vault…
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {vault && (
+            <section>
+              <h3>Forge Buddy</h3>
+              <MobileRecorderCard vault={vault} />
+            </section>
+          )}
+
+          {vault && (
+            <section>
+              <h3>Agent access</h3>
+              <div className="settings-callout">
+                <div>
+                  <div className="settings-row-label">Vault path</div>
+                  <div className="settings-row-desc">Give this folder to a local agent. Forge will pick up file changes.</div>
+                </div>
+                <div className="settings-code-row">
+                  <code>{vault}</code>
+                  <CopyButton value={vault} label="Copy path" />
+                </div>
+              </div>
+              <div className="settings-row">
+                <div>
+                  <div className="settings-row-label">Agent brief</div>
+                  <div className="settings-row-desc">A short instruction block for agents that can read and write local files.</div>
+                </div>
+                <div className="settings-row-control">
+                  <CopyButton value={agentBrief} label="Copy brief" />
+                </div>
+              </div>
+              <div className="settings-row">
+                <div>
+                  <div className="settings-row-label">Developer CLI</div>
+                  <div className="settings-row-desc">For agents running from this Forge source checkout.</div>
+                </div>
+                <div className="settings-row-control">
+                  <CopyButton value={cliCommand} label="Copy command" />
+                </div>
+              </div>
+            </section>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

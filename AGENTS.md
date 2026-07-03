@@ -1,0 +1,72 @@
+# Forge Agent Access
+
+Forge vaults are plain folders of Markdown files. Agents should use the local CLI in this repo instead of driving the UI.
+
+## Quick Start
+
+Use a vault path explicitly:
+
+```bash
+npm run agent -- --vault /path/to/vault analyze --json
+```
+
+Or set it once for a shell session:
+
+```bash
+export FORGE_VAULT=/path/to/vault
+npm run agent -- list
+```
+
+If the Forge desktop app is open on the same vault, its file watcher will pick up agent edits.
+
+## Common Tasks
+
+```bash
+npm run agent -- --vault /path/to/vault create-folder Projects
+npm run agent -- --vault /path/to/vault create-doc Projects/Plan --title "Plan"
+printf '\n## Next\n- Ship it\n' | npm run agent -- --vault /path/to/vault append Projects/Plan.md --stdin
+npm run agent -- --vault /path/to/vault read Projects/Plan.md
+npm run agent -- --vault /path/to/vault search "Ship it" --json
+npm run agent -- --vault /path/to/vault move Projects/Plan.md Projects/Active/Plan.md
+npm run agent -- --vault /path/to/vault analyze --json
+```
+
+## Batch Operations
+
+Batch mode is best when an agent needs multiple changes to stay ordered:
+
+```json
+{
+  "vault": "/path/to/vault",
+  "operations": [
+    { "action": "createFolder", "path": "Projects" },
+    { "action": "createDoc", "path": "Projects/Plan.md", "title": "Plan" },
+    { "action": "append", "path": "Projects/Plan.md", "content": "\n## Next\n- Define scope\n" },
+    { "action": "analyze" }
+  ]
+}
+```
+
+Run it with:
+
+```bash
+npm run agent -- batch batch.json --json
+```
+
+## Safety Rules
+
+- Paths are always relative to the selected vault.
+- Absolute paths and `..` escapes are rejected.
+- Hidden folders and `node_modules` are ignored during scans.
+- `create-doc` will not overwrite an existing note unless `--overwrite` is passed.
+- There is no delete command; move or rewrite content intentionally instead.
+
+## Capabilities
+
+The CLI can list, read, create, overwrite, append, move, search, and analyze Markdown notes. `analyze --json` returns totals, tags, wikilinks, backlinks, broken links, empty notes, notes without tags, inbox notes, and orphan notes for organization workflows.
+
+## Changelog Rule
+
+Forge product changes are tracked as individual Markdown notes in the active Forge vault under `Forge Changelog/`. Any time an agent makes a substantial user-facing, architectural, workflow, or companion-app change, it must create a new changelog note instead of appending to or editing a shared changelog file. Use the active vault from `~/Library/Application Support/Forge/forge-settings.json` unless the user specifies another vault.
+
+Name each entry `YYYY-MM-DD HH.mm - Short title.md` so entries sort chronologically and can later power a Forge website. Each entry should include date, type, summary, user impact, and website-copy notes. Do not edit previous changelog entries unless the user explicitly asks for a correction or migration.
