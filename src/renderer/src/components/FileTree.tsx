@@ -1,4 +1,15 @@
-import { ChevronRight, FileAudio, FileText, Image } from 'lucide-react'
+import {
+  ChevronRight,
+  ExternalLink,
+  FileAudio,
+  FilePlus2,
+  FileText,
+  FolderOpen,
+  FolderPlus,
+  Image,
+  Pencil,
+  Trash2
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { baseName, isAudio, isMarkdown } from '../lib/parse'
 import { buildTree, type TreeNode } from '../lib/tree'
@@ -107,12 +118,13 @@ function TreeItem({
     const store = useStore.getState()
     const items = node.isFolder
       ? [
-          { label: 'New note', action: () => store.createNote(node.path) },
-          { label: 'New folder', action: () => store.createFolder(node.path, 'Untitled folder') },
-          { label: 'Rename…', action: () => setRenaming(node.path) },
-          { label: 'Reveal in Finder', action: () => window.forge.reveal(store.vault!, node.path) },
+          { label: 'New note', icon: <FilePlus2 size={14} />, action: () => store.createNote(node.path) },
+          { label: 'New folder', icon: <FolderPlus size={14} />, action: () => store.createFolder(node.path, 'Untitled folder') },
+          { label: 'Rename…', icon: <Pencil size={14} />, action: () => setRenaming(node.path) },
+          { label: 'Reveal in Finder', icon: <FolderOpen size={14} />, action: () => window.forge.reveal(store.vault!, node.path) },
           {
             label: 'Delete',
+            icon: <Trash2 size={14} />,
             danger: true,
             action: () => {
               if (confirmFolderTrash(node)) store.trashPath(node.path).catch(console.error)
@@ -120,10 +132,10 @@ function TreeItem({
           }
         ]
       : [
-          { label: 'Open in new tab', action: () => store.openFile(node.path, { newTab: true }) },
-          { label: 'Rename…', action: () => setRenaming(node.path) },
-          { label: 'Reveal in Finder', action: () => window.forge.reveal(store.vault!, node.path) },
-          { label: 'Delete', danger: true, action: () => store.trashPath(node.path) }
+          { label: 'Open in new tab', icon: <ExternalLink size={14} />, action: () => store.openFile(node.path, { newTab: true }) },
+          { label: 'Rename…', icon: <Pencil size={14} />, action: () => setRenaming(node.path) },
+          { label: 'Reveal in Finder', icon: <FolderOpen size={14} />, action: () => window.forge.reveal(store.vault!, node.path) },
+          { label: 'Delete', icon: <Trash2 size={14} />, danger: true, action: () => store.trashPath(node.path) }
         ]
     setContextMenu({ x: e.clientX, y: e.clientY, items })
   }

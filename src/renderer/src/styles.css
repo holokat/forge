@@ -1818,12 +1818,36 @@ button.tag:hover {
 }
 
 .context-menu-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   text-align: left;
-  padding: 5px 11px;
+  min-height: 28px;
+  padding: 5px 10px;
   border-radius: 6px;
   font-size: 13px;
+}
+
+.context-menu-item-icon {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: currentColor;
+  opacity: 0.72;
+}
+
+.context-menu-item:hover .context-menu-item-icon {
+  opacity: 1;
+}
+
+.context-menu-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .context-menu-item:hover {

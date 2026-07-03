@@ -42,7 +42,8 @@ export default function ContextMenu({ x, y, items }: ContextMenuState): React.JS
             item.action()
           }}
         >
-          {item.label}
+          {item.icon && <span className="context-menu-item-icon">{item.icon}</span>}
+          <span className="context-menu-item-label">{item.label}</span>
         </button>
       ))}
     </div>

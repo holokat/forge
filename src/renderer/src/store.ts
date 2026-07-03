@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { ReactNode } from 'react'
 import { DEFAULT_SETTINGS, type Settings, type ThemeMode } from '../../shared/types'
 import { baseName, isMarkdown, parseNote, resolveLink, wordCount, type NoteMeta } from './lib/parse'
 
@@ -14,6 +15,7 @@ export interface Tab {
 
 export interface ContextMenuItem {
   label: string
+  icon?: ReactNode
   danger?: boolean
   action: () => void
 }
