@@ -851,7 +851,7 @@ body.resizing .pane-resizer::after {
 }
 
 /* The title and reading view mirror the CodeMirror geometry exactly:
-   48px gutter on the scroller, centered content column, 2px line inset. */
+   48px gutter on the scroller and a centered content column. */
 .inline-title-wrap {
   width: 100%;
   margin-top: 26px;
@@ -873,7 +873,7 @@ body.resizing .pane-resizer::after {
   font-weight: 700;
   letter-spacing: -0.015em;
   color: var(--text-normal);
-  padding: 0 2px 4px;
+  padding: 0 0 4px;
 }
 
 .editor-host {

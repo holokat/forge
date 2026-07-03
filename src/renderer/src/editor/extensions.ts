@@ -68,6 +68,7 @@ const editorTheme = EditorView.theme({
   '.cm-scroller': {
     fontFamily: 'var(--font-text)',
     lineHeight: '1.65',
+    letterSpacing: '0',
     padding: '0 48px'
   },
   '.cm-content': {
@@ -77,8 +78,8 @@ const editorTheme = EditorView.theme({
     position: 'relative',
     caretColor: 'var(--accent)'
   },
-  '.cm-line': { padding: '1px 2px' },
-  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--accent)', borderLeftWidth: '2px' },
+  '.cm-line': { padding: '1px 0' },
+  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--accent)', borderLeftWidth: '1px' },
   '.cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
     background: 'var(--selection) !important'
   },
@@ -86,7 +87,7 @@ const editorTheme = EditorView.theme({
   '&.cm-empty .cm-line:first-child::before': {
     content: '"Start writing…"',
     position: 'absolute',
-    left: '2px',
+    left: '0',
     top: '0',
     color: 'var(--text-faint)',
     pointerEvents: 'none',
