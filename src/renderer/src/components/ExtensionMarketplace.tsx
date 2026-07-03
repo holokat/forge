@@ -13,7 +13,7 @@ import { useMemo, useState } from 'react'
 import type { ExtensionInstallPreference } from '../../../shared/types'
 import type { ExtensionManifest } from '../extensions/manifest'
 import { extensionEntry } from '../extensions/preferences'
-import { LOCAL_EXTENSION_MANIFESTS, LOCAL_EXTENSION_POINTS, searchLocalExtensions } from '../extensions/registry'
+import { LOCAL_EXTENSION_MANIFESTS, LOCAL_EXTENSION_POINTS, registryDiagnostics, searchLocalExtensions } from '../extensions/registry'
 import { useStore } from '../store'
 
 type ExtensionFilter = 'all' | 'installed' | 'available'
@@ -57,6 +57,7 @@ function ExtensionCard({
 }): React.JSX.Element {
   const permissions = manifest.permissions.map((permission) => permission.kind).join(', ')
   const extensionPoints = manifest.extensionPoints.map((point) => point.label).join(', ')
+  const runtime = manifest.runtime.arbitraryCode ? 'Code runtime' : `${manifest.runtime.kind} runtime`
 
   return (
     <article className={`extension-card ${statusClass(entry)}`}>
@@ -94,6 +95,14 @@ function ExtensionCard({
             <ShieldCheck size={13} />
             <span>{permissions || 'No elevated permissions'}</span>
           </div>
+          <div title={`${manifest.contributes.length} declared contributions`}>
+            <PackageCheck size={13} />
+            <span>{manifest.contributes.length} contributions</span>
+          </div>
+          <div title={runtime}>
+            <Puzzle size={13} />
+            <span>{runtime}</span>
+          </div>
         </div>
       </div>
 
@@ -130,6 +139,7 @@ export default function ExtensionMarketplace({ className = '' }: ExtensionMarket
   const extensionSettings = useStore((state) => state.extensionSettings)
   const setExtensionInstalled = useStore((state) => state.setExtensionInstalled)
   const setExtensionEnabled = useStore((state) => state.setExtensionEnabled)
+  const diagnostics = useMemo(() => registryDiagnostics(), [])
 
   const visibleExtensions = useMemo(() => {
     return searchLocalExtensions(query, LOCAL_EXTENSION_MANIFESTS).filter((manifest) =>
@@ -159,6 +169,9 @@ export default function ExtensionMarketplace({ className = '' }: ExtensionMarket
           </span>
           <span>
             <strong>{LOCAL_EXTENSION_POINTS.length}</strong> points
+          </span>
+          <span title={diagnostics.length ? diagnostics.join('\n') : 'Registry manifests passed local validation'}>
+            <strong>{diagnostics.length}</strong> diagnostics
           </span>
         </div>
       </header>

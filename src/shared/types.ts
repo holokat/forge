@@ -17,6 +17,7 @@ export interface Settings {
   lineWidth: number
   templatesFolder: string
   dailyNotesFolder: string
+  bookmarks: Record<string, string[]>
   enabledExtensions: string[]
   extensionSettings: ExtensionSettings
 }
@@ -105,6 +106,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lineWidth: 700,
   templatesFolder: 'Templates',
   dailyNotesFolder: 'Daily',
+  bookmarks: {},
   enabledExtensions: [],
   extensionSettings: {
     schemaVersion: 1,

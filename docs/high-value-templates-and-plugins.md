@@ -15,16 +15,18 @@ This checklist tracks the first practical wave of Obsidian-like Forge features t
 
 ## Wave 2: Next Best Features
 
-- [ ] Backlinks panel improvements: linked mentions, unlinked mentions, and quick link insertion.
-- [ ] Bookmarks: pin notes and searches for fast workspace navigation.
+- [x] Backlinks panel improvements: linked mentions, unlinked mentions, and quick link insertion.
+- [x] Bookmarks: pin notes and searches for fast workspace navigation.
 - [ ] Template gallery UI: start a note from template directly from empty states and file creation.
-- [ ] Slash command or command palette template insertion inside an existing note.
+- [x] Slash command or command palette template insertion inside an existing note.
 - [ ] Canvas/light board for linking notes visually.
 
 ## Wave 3: Extension Platform
 
-- [ ] Stabilize real extension points before remote installs.
-- [ ] Add a safe local extension manifest format for open-source contributors.
+- [ ] Stabilize real runtime hooks for command, markdown transform, metadata, sidebar widget, and view contributions before remote installs.
+- [x] Add a safe local extension manifest format for open-source contributors.
+- [ ] Add local folder extension discovery for open-source contributors.
 - [ ] Add extension package validation and permissions review.
+- [x] Show local extension contribution counts and registry diagnostics in Settings.
 - [ ] Add signed remote extension registry support.
 - [ ] Publish a minimal extension SDK with examples.

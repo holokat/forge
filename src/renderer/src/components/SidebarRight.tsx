@@ -1,15 +1,100 @@
-import { useMemo } from 'react'
-import { FileAudio } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { FileAudio, Link2 } from 'lucide-react'
 import { getActiveEditor } from '../editor/active'
 import { scrollToLine } from '../editor/extensions'
-import { WIKILINK_RE, baseName, isAudio, linkTarget, resolveLink, type PropertyValue } from '../lib/parse'
+import {
+  WIKILINK_RE,
+  baseName,
+  isAudio,
+  linkTarget,
+  noteDisplayTitle,
+  resolveLink,
+  type PropertyValue
+} from '../lib/parse'
 import { activeTab, backlinksFor, noteContents, unlinkedMentionsFor, useStore } from '../store'
+
+interface MentionMatch {
+  start: number
+  end: number
+  text: string
+  line: string
+  lineNumber: number
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function lineContext(content: string, start: number): { line: string; lineNumber: number } {
+  const lineStart = content.lastIndexOf('\n', Math.max(0, start - 1)) + 1
+  const nextBreak = content.indexOf('\n', start)
+  const lineEnd = nextBreak === -1 ? content.length : nextBreak
+  const lineNumber = content.slice(0, lineStart).split('\n').length
+  return { line: content.slice(lineStart, lineEnd).trim(), lineNumber }
+}
+
+function isInsideRange(start: number, end: number, ranges: Array<[number, number]>): boolean {
+  return ranges.some(([rangeStart, rangeEnd]) => start >= rangeStart && end <= rangeEnd)
+}
+
+function protectedRanges(content: string): Array<[number, number]> {
+  const ranges: Array<[number, number]> = []
+  for (const match of content.matchAll(WIKILINK_RE)) {
+    if (match.index !== undefined) ranges.push([match.index, match.index + match[0].length])
+  }
+  for (const match of content.matchAll(/\[[^\]]+?\]\([^)]+?\)/g)) {
+    if (match.index !== undefined) ranges.push([match.index, match.index + match[0].length])
+  }
+  for (const match of content.matchAll(/`[^`\n]+?`/g)) {
+    if (match.index !== undefined) ranges.push([match.index, match.index + match[0].length])
+  }
+  return ranges
+}
+
+function mentionNamesFor(path: string): string[] {
+  const meta = useStore.getState().index[path]
+  return [noteDisplayTitle(path, meta), baseName(path), ...(meta?.aliases ?? [])]
+    .map((name) => name.trim())
+    .filter(
+      (name, index, all) =>
+        name.length >= 3 && all.findIndex((other) => other.toLowerCase() === name.toLowerCase()) === index
+    )
+}
+
+function findMentionMatch(content: string, names: string[]): MentionMatch | null {
+  const ranges = protectedRanges(content)
+  const matches: MentionMatch[] = []
+
+  for (const name of names) {
+    const pattern = new RegExp(`(^|[^\\p{L}\\p{N}_])(${escapeRegExp(name)})(?=[^\\p{L}\\p{N}_]|$)`, 'giu')
+    for (const match of content.matchAll(pattern)) {
+      if (match.index === undefined) continue
+      const start = match.index + match[1].length
+      const end = start + match[2].length
+      if (isInsideRange(start, end, ranges)) continue
+      matches.push({ start, end, text: match[2], ...lineContext(content, start) })
+    }
+  }
+
+  return matches.sort((a, b) => a.start - b.start)[0] ?? null
+}
+
+function findBacklinkLine(content: string, targetPath: string, files: string[]): string {
+  for (const line of content.split('\n')) {
+    for (const match of line.matchAll(WIKILINK_RE)) {
+      const target = linkTarget(match[1])
+      if (resolveLink(target, files) === targetPath) return line.trim()
+    }
+  }
+  return ''
+}
 
 function Backlinks({ path }: { path: string }): React.JSX.Element {
   const files = useStore((s) => s.files)
   const index = useStore((s) => s.index)
   const openFile = useStore((s) => s.openFile)
-  const backlinks = useMemo(() => backlinksFor(path, files, index), [path, files, index])
+  const contentVersion = useStore((s) => s.contentVersion)
+  const backlinks = useMemo(() => backlinksFor(path, files, index), [path, files, index, contentVersion])
 
   return (
     <div className="panel-section">
@@ -22,9 +107,7 @@ function Backlinks({ path }: { path: string }): React.JSX.Element {
       ) : (
         backlinks.map((source) => {
           const content = noteContents.get(source) ?? ''
-          const target = baseName(path)
-          const lineWithLink =
-            content.split('\n').find((line) => line.toLowerCase().includes(`[[${target.toLowerCase()}`)) ?? ''
+          const lineWithLink = findBacklinkLine(content, path, files)
           return (
             <button key={source} className="backlink-item" onClick={() => openFile(source)}>
               <span className="backlink-name">{baseName(source)}</span>
@@ -41,7 +124,29 @@ function UnlinkedMentions({ path }: { path: string }): React.JSX.Element | null 
   const files = useStore((s) => s.files)
   const index = useStore((s) => s.index)
   const openFile = useStore((s) => s.openFile)
-  const mentions = useMemo(() => unlinkedMentionsFor(path, files, index), [path, files, index])
+  const updateContent = useStore((s) => s.updateContent)
+  const contentVersion = useStore((s) => s.contentVersion)
+  const [linkedSource, setLinkedSource] = useState<string | null>(null)
+  const names = useMemo(() => mentionNamesFor(path), [path, index])
+  const mentions = useMemo(
+    () =>
+      unlinkedMentionsFor(path, files, index).map((source) => ({
+        source,
+        match: findMentionMatch(noteContents.get(source) ?? '', names)
+      })),
+    [path, files, index, names, contentVersion]
+  )
+
+  const linkMention = (source: string, match: MentionMatch | null): void => {
+    if (!match) return
+    const content = noteContents.get(source) ?? ''
+    if (content.slice(match.start, match.end) !== match.text) return
+
+    const target = path.replace(/\.md$/i, '')
+    const replacement = `[[${target}|${match.text}]]`
+    updateContent(source, content.slice(0, match.start) + replacement + content.slice(match.end))
+    setLinkedSource(source)
+  }
 
   if (mentions.length === 0) return null
 
@@ -51,16 +156,28 @@ function UnlinkedMentions({ path }: { path: string }): React.JSX.Element | null 
         Unlinked mentions
         <span className="panel-count">{mentions.length}</span>
       </div>
-      {mentions.map((source) => {
-        const title = baseName(path).toLowerCase()
-        const line = (noteContents.get(source) ?? '')
-          .split('\n')
-          .find((value) => value.toLowerCase().includes(title))
+      {mentions.map(({ source, match }) => {
+        const linked = linkedSource === source
         return (
-          <button key={source} className="backlink-item" onClick={() => openFile(source)}>
-            <span className="backlink-name">{baseName(source)}</span>
-            {line && <span className="backlink-snippet">{line.trim().slice(0, 120)}</span>}
-          </button>
+          <div key={source} className="backlink-item unlinked-mention-item">
+            <button className="unlinked-mention-open" onClick={() => openFile(source)}>
+              <span className="backlink-name">{baseName(source)}</span>
+              {match && (
+                <span className="backlink-snippet">
+                  Line {match.lineNumber}: {match.line.slice(0, 120)}
+                </span>
+              )}
+            </button>
+            <button
+              className="unlinked-mention-link"
+              disabled={!match || linked}
+              title={match ? `Insert wikilink in ${baseName(source)}` : 'No safe plain-text mention found'}
+              onClick={() => linkMention(source, match)}
+            >
+              <Link2 size={13} />
+              <span>{linked ? 'Linked' : 'Link'}</span>
+            </button>
+          </div>
         )
       })}
     </div>

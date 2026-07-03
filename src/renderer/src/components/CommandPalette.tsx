@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getActiveEditor } from '../editor/active'
 import { fuzzyFilter } from '../lib/fuzzy'
-import { baseName } from '../lib/parse'
+import { baseName, isMarkdown } from '../lib/parse'
+import { parseTemplateVariables, renderTemplate, type TemplateVariable } from '../lib/templates'
 import { activeTab, useStore } from '../store'
 
 interface Command {
@@ -16,6 +17,79 @@ function cleanNoteTitle(value: string): string {
 
 function parentFolder(path: string): string {
   return path.includes('/') ? path.split('/').slice(0, -1).join('/') : ''
+}
+
+function templateFolderPrefix(folder: string): string {
+  return folder.replaceAll('\\', '/').replace(/^\/+|\/+$/g, '')
+}
+
+function templateName(path: string, templatesFolder: string): string {
+  const prefix = templateFolderPrefix(templatesFolder)
+  const rel = prefix && path.startsWith(prefix + '/') ? path.slice(prefix.length + 1) : path
+  return rel.replace(/\.md$/i, '')
+}
+
+function templateFiles(files: string[], templatesFolder: string): string[] {
+  const prefix = templateFolderPrefix(templatesFolder)
+  return files
+    .filter(isMarkdown)
+    .filter((file) => !prefix || file === `${prefix}.md` || file.startsWith(prefix + '/'))
+    .sort((a, b) => templateName(a, templatesFolder).localeCompare(templateName(b, templatesFolder)))
+}
+
+function promptTemplatePath(templates: string[], templatesFolder: string): string | null {
+  if (templates.length === 0) {
+    window.alert(`No templates found in ${templatesFolder || 'Templates'}.`)
+    return null
+  }
+
+  const options = templates.map((template, index) => `${index + 1}. ${templateName(template, templatesFolder)}`).join('\n')
+  const answer = window.prompt(`Insert which template?\n\n${options}`, '1')
+  if (answer === null) return null
+
+  const value = answer.trim()
+  const index = Number.parseInt(value, 10)
+  if (Number.isInteger(index) && index >= 1 && index <= templates.length) {
+    return templates[index - 1]
+  }
+
+  const normalized = value.toLowerCase()
+  const match = templates.find((template) => {
+    return templateName(template, templatesFolder).toLowerCase() === normalized || template.toLowerCase() === normalized
+  })
+
+  if (!match) window.alert('No matching template.')
+  return match ?? null
+}
+
+function promptTemplateVariables(
+  fields: TemplateVariable[],
+  defaults: Record<string, string> = {}
+): Record<string, string> | null {
+  const variables: Record<string, string> = { ...defaults }
+
+  for (const field of fields) {
+    const fallback = defaults[field.id] ?? defaults[field.label] ?? (field.kind === 'select' ? field.options[0] ?? '' : '')
+    const label =
+      field.kind === 'select'
+        ? `${field.label}\n\n${field.options.map((option, index) => `${index + 1}. ${option}`).join('\n')}`
+        : field.label
+    const answer = window.prompt(label, fallback)
+    if (answer === null) return null
+
+    let value = answer.trim()
+    if (field.kind === 'select') {
+      const index = Number.parseInt(value, 10)
+      if (Number.isInteger(index) && index >= 1 && index <= field.options.length) {
+        value = field.options[index - 1]
+      }
+    }
+
+    variables[field.id] = value
+    variables[field.label] = value
+  }
+
+  return variables
 }
 
 function defaultExtractTitle(markdown: string): string {
@@ -63,6 +137,43 @@ async function extractSelectionToNote(sourcePath: string): Promise<void> {
 
   await store.refreshVault()
   store.openFile(created, { newTab: true })
+}
+
+async function insertTemplateAtCursor(sourcePath: string): Promise<void> {
+  const store = useStore.getState()
+  const view = getActiveEditor()
+  if (!store.vault || !view) {
+    window.alert('Open a note before inserting a template.')
+    return
+  }
+
+  const templates = templateFiles(store.files, store.templatesFolder)
+  const templatePath = promptTemplatePath(templates, store.templatesFolder)
+  if (!templatePath) return
+
+  const template = await window.forge.readFile(store.vault, templatePath)
+  const selection = view.state.selection.main
+  const selectedText = view.state.doc.sliceString(selection.from, selection.to)
+  const fields = parseTemplateVariables(template)
+  const variables = promptTemplateVariables(fields, {
+    selection: selectedText,
+    selected_text: selectedText
+  })
+  if (!variables) return
+
+  const content = renderTemplate(template, {
+    title: baseName(sourcePath),
+    vaultName: store.vaultName,
+    templateName: baseName(templatePath),
+    folder: parentFolder(sourcePath),
+    variables
+  })
+
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: content },
+    selection: { anchor: selection.from + content.length }
+  })
+  view.focus()
 }
 
 export function useListNav(count: number, onPick: (index: number) => void): {
@@ -137,6 +248,7 @@ export default function CommandPalette(): React.JSX.Element {
         list.push({ name: 'Extract selection to new note', action: close(() => extractSelectionToNote(path).catch(console.error)) })
       }
       list.push(
+        { name: 'Insert template at cursor', action: close(() => insertTemplateAtCursor(path).catch(console.error)) },
         { name: 'Reveal current note in Finder', action: close(() => window.forge.reveal(store.vault!, path)) },
         { name: 'Delete current note', action: close(() => store.trashPath(path)) }
       )

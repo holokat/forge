@@ -90,6 +90,8 @@ export interface ForgeState {
   lineWidth: number
   templatesFolder: string
   dailyNotesFolder: string
+  bookmarks: string[]
+  bookmarkSettings: Record<string, string[]>
   enabledExtensions: string[]
   extensionSettings: ExtensionSettings
   recentVaults: string[]
@@ -136,6 +138,8 @@ export interface ForgeState {
   setLineWidth(width: number): void
   setTemplatesFolder(folder: string): void
   setDailyNotesFolder(folder: string): void
+  toggleBookmark(path: string): void
+  removeBookmark(path: string): void
   setExtensionInstalled(extensionId: string, installed: boolean): void
   setExtensionEnabled(extensionId: string, enabled: boolean): void
   setLeftOpen(open: boolean): void
@@ -162,10 +166,42 @@ async function persistSettings(state: ForgeState): Promise<void> {
     lineWidth: state.lineWidth,
     templatesFolder: state.templatesFolder,
     dailyNotesFolder: state.dailyNotesFolder,
+    bookmarks: bookmarkSettingsForState(state),
     enabledExtensions: enabledExtensionIds(state.extensionSettings),
     extensionSettings: state.extensionSettings
   }
   await window.forge.writeSettings(settings)
+}
+
+function normalizeBookmarkList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return Array.from(
+    new Set(
+      value
+        .filter((path): path is string => typeof path === 'string')
+        .map((path) => path.replaceAll('\\', '/').trim())
+        .filter((path) => path.length > 0 && !path.startsWith('/') && !path.split('/').includes('..'))
+    )
+  )
+}
+
+function normalizeBookmarkSettings(value: unknown): Record<string, string[]> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const settings: Record<string, string[]> = {}
+  for (const [vault, bookmarks] of Object.entries(value)) {
+    if (typeof vault === 'string' && vault.trim()) settings[vault] = normalizeBookmarkList(bookmarks)
+  }
+  return settings
+}
+
+function bookmarkSettingsForState(state: ForgeState): Record<string, string[]> {
+  if (!state.vault) return state.bookmarkSettings
+  return { ...state.bookmarkSettings, [state.vault]: state.bookmarks }
+}
+
+function bookmarksForVault(settings: Record<string, string[]>, vault: string, files: string[]): string[] {
+  const existing = new Set(files)
+  return normalizeBookmarkList(settings[vault]).filter((path) => existing.has(path) && isMarkdown(path))
 }
 
 function normalizeFolderPath(value: string): string {
@@ -563,6 +599,8 @@ export const useStore = create<ForgeState>((set, get) => ({
   lineWidth: DEFAULT_SETTINGS.lineWidth,
   templatesFolder: DEFAULT_SETTINGS.templatesFolder,
   dailyNotesFolder: DEFAULT_SETTINGS.dailyNotesFolder,
+  bookmarks: [],
+  bookmarkSettings: DEFAULT_SETTINGS.bookmarks,
   enabledExtensions: DEFAULT_SETTINGS.enabledExtensions,
   extensionSettings: createDefaultExtensionSettings(),
   recentVaults: [],
@@ -577,12 +615,14 @@ export const useStore = create<ForgeState>((set, get) => ({
   async boot() {
     const settings = await window.forge.readSettings()
     const extensionSettings = normalizeExtensionSettings(settings.extensionSettings, settings.enabledExtensions)
+    const bookmarkSettings = normalizeBookmarkSettings(settings.bookmarks)
     set({
       theme: settings.theme,
       fontSize: settings.fontSize,
       lineWidth: settings.lineWidth,
       templatesFolder: settings.templatesFolder,
       dailyNotesFolder: settings.dailyNotesFolder,
+      bookmarkSettings,
       extensionSettings,
       enabledExtensions: enabledExtensionIds(extensionSettings),
       recentVaults: settings.recentVaults,
@@ -619,6 +659,7 @@ export const useStore = create<ForgeState>((set, get) => ({
     const recents = [vault, ...get().recentVaults.filter((v) => v !== vault)].slice(0, 8)
     const firstNote = files.find(isMarkdown) ?? null
     const tab: Tab = { id: newTabId(), kind: firstNote ? 'note' : 'empty', path: firstNote, mode: 'edit' }
+    const bookmarks = bookmarksForVault(get().bookmarkSettings, vault, files)
 
     set({
       vault,
@@ -626,6 +667,8 @@ export const useStore = create<ForgeState>((set, get) => ({
       files,
       folders: data.folders,
       index: buildIndex(data.contents),
+      bookmarks,
+      bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
       tabs: [tab],
       activeTabId: tab.id,
       recentVaults: recents,
@@ -642,7 +685,7 @@ export const useStore = create<ForgeState>((set, get) => ({
 
   closeVault() {
     noteContents.clear()
-    set({ vault: null, vaultName: '', files: [], folders: [], index: {}, tabs: [], activeTabId: null, modal: null })
+    set({ vault: null, vaultName: '', files: [], folders: [], index: {}, bookmarks: [], tabs: [], activeTabId: null, modal: null })
     window.forge.setMobileVault(null).catch(console.error)
     persistSettings({ ...get(), vault: null } as ForgeState)
   },
@@ -663,7 +706,16 @@ export const useStore = create<ForgeState>((set, get) => ({
     const tabs = get().tabs.map((t) =>
       t.kind === 'note' && t.path && !data.files.includes(t.path) ? { ...t, kind: 'empty' as TabKind, path: null } : t
     )
-    set({ files: data.files, folders: data.folders, index, tabs, contentVersion: get().contentVersion + 1 })
+    const bookmarks = bookmarksForVault(get().bookmarkSettings, vault, data.files)
+    set({
+      files: data.files,
+      folders: data.folders,
+      index,
+      bookmarks,
+      bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
+      tabs,
+      contentVersion: get().contentVersion + 1
+    })
   },
 
   openFile(path, opts) {
@@ -908,13 +960,17 @@ export const useStore = create<ForgeState>((set, get) => ({
     const index: Record<string, NoteMeta> = {}
     for (const [key, value] of Object.entries(get().index)) index[mapPath(key)] = value
 
+    const bookmarks = normalizeBookmarkList(get().bookmarks.map(mapPath))
     set({
       files: get().files.map(mapPath).sort(),
       folders: get().folders.map(mapPath).sort(),
       index,
+      bookmarks,
+      bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
       tabs: get().tabs.map((t) => (t.path ? { ...t, path: mapPath(t.path) } : t)),
       contentVersion: get().contentVersion + 1
     })
+    persistSettings(get())
   },
 
   async movePath(source, targetFolder) {
@@ -949,15 +1005,19 @@ export const useStore = create<ForgeState>((set, get) => ({
     for (const key of Array.from(noteContents.keys())) if (gone(key)) noteContents.delete(key)
     const index: Record<string, NoteMeta> = {}
     for (const [key, value] of Object.entries(get().index)) if (!gone(key)) index[key] = value
+    const bookmarks = get().bookmarks.filter((bookmark) => !gone(bookmark))
     set({
       files: get().files.filter((f) => !gone(f)),
       folders: get().folders.filter((f) => !gone(f)),
       index,
+      bookmarks,
+      bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
       tabs: get().tabs.map((t) =>
         t.path && gone(t.path) ? { ...t, kind: 'empty' as TabKind, path: null } : t
       ),
       contentVersion: get().contentVersion + 1
     })
+    persistSettings(get())
   },
 
   setTheme(theme) {
@@ -981,6 +1041,23 @@ export const useStore = create<ForgeState>((set, get) => ({
   },
   setDailyNotesFolder(dailyNotesFolder) {
     set({ dailyNotesFolder: dailyNotesFolder.trim() || DEFAULT_SETTINGS.dailyNotesFolder })
+    persistSettings(get())
+  },
+  toggleBookmark(path) {
+    const { files, vault } = get()
+    if (!vault || !files.includes(path) || !isMarkdown(path)) return
+    const current = get().bookmarks
+    const exists = current.includes(path)
+    const bookmarks = exists ? current.filter((bookmark) => bookmark !== path) : [...current, path]
+    set({ bookmarks, bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks } })
+    persistSettings(get())
+  },
+  removeBookmark(path) {
+    const { vault } = get()
+    if (!vault) return
+    const bookmarks = get().bookmarks.filter((bookmark) => bookmark !== path)
+    if (bookmarks.length === get().bookmarks.length) return
+    set({ bookmarks, bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks } })
     persistSettings(get())
   },
   setExtensionInstalled(extensionId, installed) {
