@@ -7,7 +7,6 @@ import { searchKeymap } from '@codemirror/search'
 import { EditorState, type Extension } from '@codemirror/state'
 import {
   Decoration,
-  drawSelection,
   dropCursor,
   EditorView,
   keymap,
@@ -225,7 +224,6 @@ export function createEditorState(content: string, callbacks: EditorCallbacks): 
     doc: content,
     extensions: [
       history(),
-      drawSelection(),
       dropCursor(),
       indentOnInput(),
       EditorView.lineWrapping,
