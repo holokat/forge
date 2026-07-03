@@ -69,17 +69,17 @@ Verified locally:
 - [x] Make task navigation line-aware so task clicks open the source note at the matching line.
 - [x] Harden task parsing to skip fenced code blocks and support ordered checklist syntax.
 - [x] Remove the Tasks workspace as a declarative `forge.views` contribution.
-- [x] Add a first-class vault-health workspace view and `forge.views` contribution for broken links, duplicate titles, orphan notes, untagged/empty notes, tasks, and inbox counts.
-- [x] Add local extension examples for vault health, metadata dashboards, static publishing workflows, and agent handoff workflows.
+- [x] Remove the previously shipped health workspace and its `forge.views` contribution by product decision.
+- [x] Keep local extension examples focused on metadata dashboards, static publishing workflows, and agent handoff workflows.
 - [x] Add incident postmortem, technical RFC, API spec, launch plan, customer profile, content calendar, learning plan, and decision review starter templates.
 - [x] Ship static publishing through the CLI, MCP, `forge-publish`, and the Settings generate-site workflow.
 
-## Wave 7: Vault Health and Repair
+## Wave 7: Local Analysis and Repair
 
-- [x] Add stale-note detection and explicit repair queues to the vault-health workspace.
+- [x] Keep stale-note detection and explicit repair queue data available through CLI/MCP analysis.
 - [ ] Add one-click repair actions for common safe fixes: create missing notes, insert wikilinks for unlinked mentions, open broken-link sources, and move orphan notes into review.
 - [x] Extend `analyze --json` and `forge_analyze` with stale-note and duplicate-title signals so agents can run the same health checks without the UI.
-- [x] Add a vault health audit starter template for agents to summarize findings, proposed repairs, and skipped risky changes.
+- [x] Remove the health audit starter template by product decision.
 
 ## Wave 8: Saved Searches and Queries
 
@@ -98,14 +98,14 @@ Verified locally:
 
 ## Wave 10: Agent-Facing Templates
 
-- [x] Add Vault Health Report, Task Review, Saved Query, Content Refresh Brief, Extension Spec, and Publish Runbook starter templates.
-- [x] Add implementation plan, verification report, refactor plan, vault maintenance, saved query catalog, and publish preflight starter templates.
+- [x] Add Task Review, Saved Query, Content Refresh Brief, Extension Spec, and Publish Runbook starter templates.
+- [x] Add implementation plan, verification report, refactor plan, saved query catalog, and publish preflight starter templates.
 - [ ] Give each agent template explicit fields for objective, owned files, allowed commands, verification, risks, and final handoff notes.
 - [ ] Mirror every new starter template in the UI starter gallery, `built-in-templates --json --content`, `seed-templates`, and MCP/CLI docs.
 
 ## Open Notes
 
 - Workflow examples such as `query-dashboard`, `saved-query-scaffold`, `publish-prep`, `static-publishing-workflow`, and `agent-handoff-workflow` are valid declarative scaffolds over supported metadata, widgets, transforms, and views. They are not dedicated workflow engines yet.
-- A built-in `vault-health` view now includes stale-note detection, duplicate-title checks, create-missing-note repair actions, and CLI/MCP parity. Broader repair automation and saved health reports are still roadmap work.
+- Local analysis still exposes stale-note, duplicate-title, and repair queue data through CLI/MCP. The separate health workspace has been removed.
 - Bookmarks currently persist note paths only. Saved searches and saved query dashboards are still roadmap work.
-- The validator currently accepts `graph-insights` and `vault-health` view contribution values. Do not encode new values such as saved-query result views, board/kanban views, tasks views, publish pipeline commands, or agent workflow launchers until validation and runtime routing support them.
+- The validator currently accepts `graph-insights` as the only view contribution value. Do not encode new values such as saved-query result views, board/kanban views, tasks views, health views, publish pipeline commands, or agent workflow launchers until validation and runtime routing support them.

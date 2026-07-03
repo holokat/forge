@@ -3,7 +3,7 @@
   "id": "example.publish-preflight",
   "name": "publish-preflight",
   "displayName": "Publish Preflight Example",
-  "description": "Example declarative extension that scaffolds a static-publish preflight using supported publish metadata, sidebar widgets, vault-health visibility, and safe Markdown transforms.",
+  "description": "Example declarative extension that scaffolds a static-publish preflight using supported publish metadata, sidebar widgets, link checks, and safe Markdown transforms.",
   "version": "0.1.0",
   "publisher": "Example",
   "license": "MIT",
@@ -23,8 +23,7 @@
   "extensionPoints": [
     { "id": "forge.note.metadata", "label": "Note metadata" },
     { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
-    { "id": "forge.markdown.transforms", "label": "Markdown transforms" },
-    { "id": "forge.views", "label": "Views" }
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" }
   ],
   "permissions": [
     {
@@ -92,14 +91,6 @@
       "label": "Link health",
       "description": "Declares Forge's supported link-health widget for unresolved wikilinks before publishing.",
       "widget": "link-health"
-    },
-    {
-      "id": "example.publish-preflight.view",
-      "kind": "view",
-      "extensionPoint": "forge.views",
-      "label": "Vault health",
-      "description": "Declares Forge's supported vault-health view for vault-wide link and structure checks before publishing.",
-      "view": "vault-health"
     },
     {
       "id": "example.publish-preflight.template",

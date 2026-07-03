@@ -7,7 +7,6 @@ import {
   Files,
   Search,
   Settings,
-  ShieldCheck,
   Vault,
   Waypoints,
   X
@@ -72,7 +71,6 @@ export default function SidebarLeft(): React.JSX.Element {
   const createNote = useStore((s) => s.createNote)
   const createFolder = useStore((s) => s.createFolder)
   const openGraph = useStore((s) => s.openGraph)
-  const openVaultHealth = useStore((s) => s.openVaultHealth)
   const setModal = useStore((s) => s.setModal)
   const active = useStore(activeTab)
   const bookmarks = useStore((s) => s.bookmarks)
@@ -139,9 +137,6 @@ export default function SidebarLeft(): React.JSX.Element {
         <div className="sidebar-footer-actions">
           <button className="icon-btn" title="Graph view (⌘⇧G)" onClick={() => openGraph()}>
             <Waypoints size={15} />
-          </button>
-          <button className="icon-btn" title="Vault health" onClick={() => openVaultHealth()}>
-            <ShieldCheck size={15} />
           </button>
           <button className="icon-btn" title="Settings (⌘,)" onClick={() => setModal('settings')}>
             <Settings size={15} />

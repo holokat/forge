@@ -3,12 +3,12 @@
   "id": "example.vault-reporting",
   "name": "vault-reporting",
   "displayName": "Vault Reporting Example",
-  "description": "Example declarative extension that combines vault-health metadata, local link widgets, task summaries, and the vault-health view for agent-readable reports.",
+  "description": "Example declarative extension that combines local link metadata, link widgets, and task summaries for agent-readable reports.",
   "version": "0.1.0",
   "publisher": "Example",
   "license": "MIT",
   "categories": ["navigation", "organization", "visualization"],
-  "keywords": ["vault health", "report", "links", "tasks", "publishing"],
+  "keywords": ["vault", "report", "links", "tasks", "publishing"],
   "source": {
     "kind": "local-folder",
     "label": "Local folder",
@@ -22,8 +22,7 @@
   },
   "extensionPoints": [
     { "id": "forge.note.metadata", "label": "Note metadata" },
-    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
-    { "id": "forge.views", "label": "Views" }
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" }
   ],
   "permissions": [
     {
@@ -78,14 +77,6 @@
       "label": "Task summary",
       "description": "Declares Forge's supported task summary sidebar widget for maintenance tasks.",
       "widget": "tasks"
-    },
-    {
-      "id": "example.vault-reporting.view",
-      "kind": "view",
-      "extensionPoint": "forge.views",
-      "label": "Vault health",
-      "description": "Declares Forge's supported vault-health workspace view as the visual scaffold for local reporting.",
-      "view": "vault-health"
     }
   ]
 }

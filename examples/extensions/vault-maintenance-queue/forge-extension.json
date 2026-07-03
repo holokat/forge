@@ -3,12 +3,12 @@
   "id": "example.vault-maintenance-queue",
   "name": "vault-maintenance-queue",
   "displayName": "Vault Maintenance Queue Example",
-  "description": "Example declarative extension that scaffolds a vault maintenance queue with Forge's supported vault-health view, local link widgets, task metadata, and safe Markdown transforms.",
+  "description": "Example declarative extension that scaffolds a vault maintenance queue with local link widgets, task metadata, and safe Markdown transforms.",
   "version": "0.1.0",
   "publisher": "Example",
   "license": "MIT",
   "categories": ["navigation", "organization", "visualization"],
-  "keywords": ["vault health", "maintenance", "repair queue", "links", "tasks"],
+  "keywords": ["vault", "maintenance", "repair queue", "links", "tasks"],
   "source": {
     "kind": "local-folder",
     "label": "Local folder",
@@ -23,8 +23,7 @@
   "extensionPoints": [
     { "id": "forge.note.metadata", "label": "Note metadata" },
     { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
-    { "id": "forge.markdown.transforms", "label": "Markdown transforms" },
-    { "id": "forge.views", "label": "Views" }
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" }
   ],
   "permissions": [
     {
@@ -91,14 +90,6 @@
       "label": "Tags",
       "description": "Declares Forge's supported tag sidebar widget for grouping cleanup work.",
       "widget": "tags"
-    },
-    {
-      "id": "example.vault-maintenance-queue.view",
-      "kind": "view",
-      "extensionPoint": "forge.views",
-      "label": "Vault health",
-      "description": "Declares Forge's supported vault-health workspace view as the repair queue surface.",
-      "view": "vault-health"
     },
     {
       "id": "example.vault-maintenance-queue.checklist",

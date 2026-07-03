@@ -3,12 +3,12 @@
   "id": "example.verification-report-workflow",
   "name": "verification-report-workflow",
   "displayName": "Verification Report Workflow Example",
-  "description": "Example declarative extension that scaffolds agent verification reports with supported vault health, task metadata, publish, frontmatter, outline, and Markdown transform contributions.",
+  "description": "Example declarative extension that scaffolds agent verification reports with task metadata, link checks, publish, frontmatter, outline, and Markdown transform contributions.",
   "version": "0.1.0",
   "publisher": "Example",
   "license": "MIT",
   "categories": ["editing", "organization", "publishing", "visualization"],
-  "keywords": ["verification", "report", "review", "publish", "vault health"],
+  "keywords": ["verification", "report", "review", "publish", "links"],
   "source": {
     "kind": "local-folder",
     "label": "Local folder",
@@ -23,8 +23,7 @@
   "extensionPoints": [
     { "id": "forge.note.metadata", "label": "Note metadata" },
     { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
-    { "id": "forge.markdown.transforms", "label": "Markdown transforms" },
-    { "id": "forge.views", "label": "Views" }
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" }
   ],
   "permissions": [
     {
@@ -103,14 +102,6 @@
       "label": "Outline",
       "description": "Declares Forge's supported outline widget for verification report structure.",
       "widget": "outline"
-    },
-    {
-      "id": "example.verification-report-workflow.vault-health",
-      "kind": "view",
-      "extensionPoint": "forge.views",
-      "label": "Vault health",
-      "description": "Declares Forge's supported vault-health view for verification checks that span notes.",
-      "view": "vault-health"
     },
     {
       "id": "example.verification-report-workflow.template",

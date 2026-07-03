@@ -11,7 +11,7 @@ import {
 import { baseName, isMarkdown, noteDisplayTitle, parseNote, resolveLink, wordCount, type NoteMeta } from './lib/parse'
 import { formatTemplateDateParts, renderTemplate } from './lib/templates'
 
-export type TabKind = 'note' | 'graph' | 'vaultHealth' | 'empty'
+export type TabKind = 'note' | 'graph' | 'empty'
 export type ViewMode = 'edit' | 'read'
 export const STARTER_TEMPLATE_KINDS = [
   'daily',
@@ -19,13 +19,11 @@ export const STARTER_TEMPLATE_KINDS = [
   'meeting',
   'sourceNote',
   'knowledgeMap',
-  'vaultHealthReport',
   'calloutLibrary',
   'agentTask',
   'agentReview',
   'taskReview',
   'savedQuery',
-  'vaultMaintenanceQueue',
   'publishPreflight',
   'savedQueryCatalog',
   'verificationReportWorkflow',
@@ -67,13 +65,11 @@ export const STARTER_TEMPLATE_CATALOG: { kind: StarterTemplateKind; label: strin
   { kind: 'meeting', label: 'Meeting notes', detail: 'Agenda, decisions, action items' },
   { kind: 'sourceNote', label: 'Source note', detail: 'Literature notes and source extraction' },
   { kind: 'knowledgeMap', label: 'Knowledge map', detail: 'MOC hub for linked notes and gaps' },
-  { kind: 'vaultHealthReport', label: 'Vault health report', detail: 'Broken links, orphans, tasks, and cleanup priorities' },
   { kind: 'calloutLibrary', label: 'Callout library / snippets', detail: 'Reusable note, tip, warning, question, and quote snippets' },
   { kind: 'agentTask', label: 'Agent task', detail: 'Precise AI work briefs' },
   { kind: 'agentReview', label: 'Agent review / QA', detail: 'Checklist for reviewing agent work' },
   { kind: 'taskReview', label: 'Task review', detail: 'Review open work, owners, blockers, and next actions' },
-  { kind: 'savedQuery', label: 'Saved query', detail: 'Reusable search, task, tag, or vault-health query' },
-  { kind: 'vaultMaintenanceQueue', label: 'Vault maintenance queue', detail: 'Triage vault health, cleanup, and repair work' },
+  { kind: 'savedQuery', label: 'Saved query', detail: 'Reusable search, task, tag, or link query' },
   { kind: 'publishPreflight', label: 'Publish preflight', detail: 'Readiness checks before static-site publishing' },
   { kind: 'savedQueryCatalog', label: 'Saved query catalog', detail: 'Index reusable queries, thresholds, and owners' },
   { kind: 'verificationReportWorkflow', label: 'Verification report', detail: 'Capture checks, evidence, risks, and handoff' },
@@ -177,7 +173,6 @@ export interface ForgeState {
   openFile(path: string, opts?: { newTab?: boolean; line?: number }): void
   consumePendingEditorNavigation(path: string): number | null
   openGraph(): void
-  openVaultHealth(): void
   newTab(): void
   closeTab(id: string): void
   activateTab(id: string): void
@@ -500,62 +495,6 @@ const STARTER_TEMPLATES: Record<StarterTemplateKind, { file: string; content: st
       '- [ ] Find unlinked mentions for this topic',
       '- [ ] Suggest notes that belong in this map',
       '- [ ] Summarize changes since last review'
-    ].join('\n')
-  },
-  vaultHealthReport: {
-    file: 'Vault Health Report.md',
-    content: [
-      '---',
-      'type: vault-health-report',
-      'status: {{select:Status|Draft,Review,Done}}',
-      'scope: {{prompt:Scope}}',
-      'created: {{date}}',
-      'tags: [vault-health, review]',
-      '---',
-      '',
-      '# {{title}}',
-      '',
-      '## Scope',
-      '- Vault: {{vault}}',
-      '- Folder or collection: {{prompt:Scope}}',
-      '- Report date: {{date}}',
-      '',
-      '## Snapshot',
-      '- Total notes:',
-      '- Broken links:',
-      '- Orphan notes:',
-      '- Untagged notes:',
-      '- Empty notes:',
-      '- Open tasks:',
-      '- Inbox notes:',
-      '',
-      '## Findings',
-      '### Link Health',
-      '- Broken wikilink:',
-      '- Missing backlink opportunity:',
-      '',
-      '### Structure',
-      '- Orphan note:',
-      '- Duplicate or confusing title:',
-      '- Folder or tag cleanup:',
-      '',
-      '### Tasks',
-      '- Stale task:',
-      '- Blocked owner:',
-      '- Follow-up needed:',
-      '',
-      '## Priority Repairs',
-      '- [ ] Owner:  Area:  Fix: ',
-      '',
-      '## Notes to Create or Merge',
-      '- Create: [[ ]]',
-      '- Merge:',
-      '- Archive:',
-      '',
-      '## Agent Follow-up',
-      '- [ ] Re-run vault analysis after repairs',
-      '- [ ] Open the highest-risk broken links',
-      '- [ ] Draft missing hub notes for repeated orphan clusters'
     ].join('\n')
   },
   calloutLibrary: {
@@ -938,71 +877,6 @@ const STARTER_TEMPLATES: Record<StarterTemplateKind, { file: string; content: st
       '- Keep the query narrow enough to act on.',
       '- Record false positives so future runs can refine the filter.',
       '- Link follow-up notes created from this query.'
-    ].join('\n')
-  },
-  vaultMaintenanceQueue: {
-    file: 'Vault Maintenance Queue.md',
-    content: [
-      '---',
-      'type: vault-maintenance-queue',
-      'category: vault',
-      'status: {{select:Status|Draft,Active,Blocked,Done}}',
-      'owner: {{prompt:Owner}}',
-      'created: {{date}}',
-      'tags: [vault, maintenance, agent]',
-      '---',
-      '',
-      '# {{title}}',
-      '',
-      '## Objective',
-      '{{prompt:Objective}}',
-      '',
-      '## Scope',
-      '- Vault: {{vault}}',
-      '- Folder or collection: {{prompt:Folder or collection}}',
-      '- Owned files: {{prompt:Owned files}}',
-      '- Out of scope:',
-      '',
-      '## Allowed Commands',
-      '```bash',
-      'forge --vault "{{vault}}" analyze --json',
-      'forge --vault "{{vault}}" search "{{prompt:Search text}}" --json',
-      '```',
-      '',
-      '## Queue',
-      '| Priority | Item | Source | Proposed fix | Safe to automate | Owner | Status |',
-      '| --- | --- | --- | --- | --- | --- | --- |',
-      '| High |  |  |  | No | {{prompt:Owner}} | Ready |',
-      '',
-      '## Repair Classes',
-      '- Broken links:',
-      '- Orphan notes:',
-      '- Untagged notes:',
-      '- Empty notes:',
-      '- Stale notes:',
-      '- Duplicate titles:',
-      '',
-      '## Agent Checklist',
-      '- [ ] Run vault analysis and paste the summary here',
-      '- [ ] Group related repair items before editing notes',
-      '- [ ] Separate safe mechanical fixes from judgment calls',
-      '- [ ] Preserve existing note intent and user edits',
-      '- [ ] Re-run analysis after completed repairs',
-      '',
-      '## Verification',
-      '- Commands run:',
-      '- Before counts:',
-      '- After counts:',
-      '- Remaining issues:',
-      '',
-      '## Risks',
-      '- Risk:  Mitigation:',
-      '',
-      '## Final Handoff Notes',
-      '- Completed:',
-      '- Skipped:',
-      '- Needs owner decision:',
-      '- Suggested next queue:'
     ].join('\n')
   },
   publishPreflight: {
@@ -2658,17 +2532,6 @@ export const useStore = create<ForgeState>((set, get) => ({
     set({ tabs: [...tabs, tab], activeTabId: tab.id })
   },
 
-  openVaultHealth() {
-    const { tabs } = get()
-    const existing = tabs.find((t) => t.kind === 'vaultHealth')
-    if (existing) {
-      set({ activeTabId: existing.id })
-      return
-    }
-    const tab: Tab = { id: newTabId(), kind: 'vaultHealth', path: null, mode: 'edit' }
-    set({ tabs: [...tabs, tab], activeTabId: tab.id })
-  },
-
   newTab() {
     const tab: Tab = { id: newTabId(), kind: 'empty', path: null, mode: 'edit' }
     set({ tabs: [...get().tabs, tab], activeTabId: tab.id })
@@ -3072,7 +2935,6 @@ export function activeTab(state: ForgeState): Tab | null {
 
 export function tabTitle(tab: Tab): string {
   if (tab.kind === 'graph') return 'Graph'
-  if (tab.kind === 'vaultHealth') return 'Vault Health'
   if (tab.kind === 'empty' || !tab.path) return 'New tab'
   return baseName(tab.path)
 }
