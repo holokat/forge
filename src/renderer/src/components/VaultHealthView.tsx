@@ -1,7 +1,9 @@
 import {
   AlertTriangle,
   Archive,
+  Clock3,
   CircleDot,
+  FilePlus2,
   Files,
   Inbox,
   Link2Off,
@@ -11,11 +13,14 @@ import {
   Tags
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import type { VaultFileStat } from '../../../shared/types'
 import { isMarkdown, noteDisplayTitle, parseNote, resolveLink, wordCount, type NoteMeta } from '../lib/parse'
 import { markdownTasks } from '../lib/tasks'
 import { noteContents, useStore } from '../store'
 
-type HealthIssueKind = 'broken' | 'orphan' | 'untagged' | 'empty' | 'duplicate'
+const STALE_NOTE_DAYS = 90
+
+type HealthIssueKind = 'broken' | 'stale' | 'orphan' | 'untagged' | 'empty' | 'duplicate'
 
 interface HealthIssue {
   kind: HealthIssueKind
@@ -23,6 +28,7 @@ interface HealthIssue {
   title: string
   detail: string
   lineNumber: number
+  target?: string
 }
 
 interface HealthNote {
@@ -30,9 +36,12 @@ interface HealthNote {
   title: string
   meta: NoteMeta
   content: string
+  stat?: VaultFileStat
 }
 
 type HealthFilter = 'all' | HealthIssueKind
+
+const ISSUE_ORDER: HealthIssueKind[] = ['broken', 'stale', 'duplicate', 'orphan', 'untagged', 'empty']
 
 function folderName(path: string): string {
   const parts = path.split('/')
@@ -54,8 +63,28 @@ function cleanedBodyWords(meta: NoteMeta): number {
   return wordCount(body).words
 }
 
+function daysSince(iso: string | undefined, now = Date.now()): number | null {
+  if (!iso) return null
+  const time = Date.parse(iso)
+  if (!Number.isFinite(time)) return null
+  return Math.max(0, Math.floor((now - time) / 86_400_000))
+}
+
 function isInboxPath(path: string): boolean {
   return /^inbox\//i.test(path) || /\/inbox\//i.test(path)
+}
+
+function missingNotePath(target: string | undefined): string | null {
+  const clean = String(target ?? '')
+    .replaceAll('\\', '/')
+    .split('#')[0]
+    .split('|')[0]
+    .trim()
+    .replace(/\.md$/i, '')
+  if (!clean || clean.startsWith('/')) return null
+  const parts = clean.split('/').map((part) => part.trim()).filter(Boolean)
+  if (parts.length === 0 || parts.some((part) => part === '.' || part === '..')) return null
+  return parts.join('/')
 }
 
 function issueMatches(issue: HealthIssue, query: string): boolean {
@@ -81,6 +110,8 @@ function HealthRow({ issue }: { issue: HealthIssue }): React.JSX.Element {
   const icon =
     issue.kind === 'broken' ? (
       <Link2Off size={15} />
+    ) : issue.kind === 'stale' ? (
+      <Clock3 size={15} />
     ) : issue.kind === 'orphan' ? (
       <CircleDot size={15} />
     ) : issue.kind === 'untagged' ? (
@@ -91,15 +122,34 @@ function HealthRow({ issue }: { issue: HealthIssue }): React.JSX.Element {
       <Files size={15} />
     )
 
+  const missingPath = issue.kind === 'broken' ? missingNotePath(issue.target) : null
+  const createMissing = (event: React.MouseEvent<HTMLButtonElement>): void => {
+    event.stopPropagation()
+    if (!missingPath) return
+    useStore.getState().createNoteNamed(missingPath).catch(console.error)
+  }
+
   return (
-    <button className={`vault-health-row is-${issue.kind}`} onClick={() => useStore.getState().openFile(issue.path, { line: issue.lineNumber })}>
-      <span className="vault-health-row-icon">{icon}</span>
-      <span className="vault-health-row-main">
-        <strong>{issue.title}</strong>
-        <span>{issue.detail}</span>
+    <div className={`vault-health-row is-${issue.kind}`}>
+      <button
+        className="vault-health-row-open"
+        onClick={() => useStore.getState().openFile(issue.path, { line: issue.lineNumber })}
+      >
+        <span className="vault-health-row-icon">{icon}</span>
+        <span className="vault-health-row-main">
+          <strong>{issue.title}</strong>
+          <span>{issue.detail}</span>
+        </span>
+        <span className="vault-health-folder">{folderName(issue.path)}</span>
+      </button>
+      <span className="vault-health-row-action-slot">
+        {missingPath && (
+          <button className="vault-health-row-action" title={`Create ${missingPath}.md`} onClick={createMissing}>
+            <FilePlus2 size={14} />
+          </button>
+        )}
       </span>
-      <span className="vault-health-folder">{folderName(issue.path)}</span>
-    </button>
+    </div>
   )
 }
 
@@ -125,6 +175,7 @@ function HealthSection({
 
 export default function VaultHealthView(): React.JSX.Element {
   const files = useStore((s) => s.files)
+  const fileStats = useStore((s) => s.fileStats)
   const index = useStore((s) => s.index)
   const contentVersion = useStore((s) => s.contentVersion)
   const [filter, setFilter] = useState<HealthFilter>('all')
@@ -140,7 +191,8 @@ export default function VaultHealthView(): React.JSX.Element {
         path,
         title: noteDisplayTitle(path, meta),
         meta,
-        content
+        content,
+        stat: fileStats[path]
       }
     })
     const incoming = new Map<string, number>()
@@ -170,7 +222,8 @@ export default function VaultHealthView(): React.JSX.Element {
             path: note.path,
             title: note.title,
             detail: `Missing [[${link}]]`,
-            lineNumber: lineForLink(note.content, link)
+            lineNumber: lineForLink(note.content, link),
+            target: link
           })
           continue
         }
@@ -178,6 +231,17 @@ export default function VaultHealthView(): React.JSX.Element {
         incoming.set(resolved, (incoming.get(resolved) ?? 0) + 1)
       }
     }
+
+    const stale: HealthIssue[] = notes
+      .map((note) => ({ note, days: daysSince(note.stat?.modified) }))
+      .filter((item): item is { note: HealthNote; days: number } => item.days !== null && item.days >= STALE_NOTE_DAYS)
+      .map(({ note, days }) => ({
+        kind: 'stale' as const,
+        path: note.path,
+        title: note.title,
+        detail: `Last modified ${days.toLocaleString()} days ago`,
+        lineNumber: 0
+      }))
 
     const orphaned: HealthIssue[] = notes
       .filter((note) => (incoming.get(note.path) ?? 0) === 0 && (outgoing.get(note.path)?.size ?? 0) === 0)
@@ -221,11 +285,8 @@ export default function VaultHealthView(): React.JSX.Element {
         }))
       )
 
-    const issues = [...broken, ...orphaned, ...untagged, ...empty, ...duplicates].sort(
-      (a, b) =>
-        ['broken', 'duplicate', 'orphan', 'untagged', 'empty'].indexOf(a.kind) -
-          ['broken', 'duplicate', 'orphan', 'untagged', 'empty'].indexOf(b.kind) ||
-        a.path.localeCompare(b.path)
+    const issues = [...broken, ...stale, ...orphaned, ...untagged, ...empty, ...duplicates].sort(
+      (a, b) => ISSUE_ORDER.indexOf(a.kind) - ISSUE_ORDER.indexOf(b.kind) || a.path.localeCompare(b.path)
     )
 
     return {
@@ -234,13 +295,14 @@ export default function VaultHealthView(): React.JSX.Element {
       completedTasks,
       inboxNotes,
       broken,
+      stale,
       orphaned,
       untagged,
       empty,
       duplicates,
       issues
     }
-  }, [contentVersion, files, index])
+  }, [contentVersion, fileStats, files, index])
 
   const visible = health.issues.filter((issue) => issueMatchesFilter(issue, filter) && issueMatches(issue, query))
 
@@ -257,9 +319,9 @@ export default function VaultHealthView(): React.JSX.Element {
         <div className="vault-health-stats" aria-label="Vault health summary">
           <HealthStat value={health.noteCount} label="Notes" />
           <HealthStat value={health.broken.length} label="Broken links" />
+          <HealthStat value={health.stale.length} label="Stale" />
           <HealthStat value={health.orphaned.length} label="Orphans" />
           <HealthStat value={health.openTasks} label="Open tasks" />
-          <HealthStat value={health.inboxNotes} label="Inbox" />
         </div>
       </div>
 
@@ -269,7 +331,7 @@ export default function VaultHealthView(): React.JSX.Element {
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search health checks" />
         </label>
         <div className="vault-health-filter" aria-label="Vault health filter">
-          {(['all', 'broken', 'orphan', 'untagged', 'empty', 'duplicate'] as const).map((item) => (
+          {(['all', 'broken', 'stale', 'duplicate', 'orphan', 'untagged', 'empty'] as const).map((item) => (
             <button key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)}>
               {item === 'orphan' ? 'orphans' : item}
             </button>
@@ -279,11 +341,13 @@ export default function VaultHealthView(): React.JSX.Element {
 
       <div className="vault-health-scroll">
         <div className="vault-health-grid">
-          <HealthSection title="Broken Links" count={health.broken.length}>
-            {health.broken.slice(0, 8).map((issue) => (
-              <HealthRow key={`broken:${issue.path}:${issue.detail}`} issue={issue} />
+          <HealthSection title="Repair Queue" count={health.broken.length + health.stale.length}>
+            {[...health.broken, ...health.stale].slice(0, 8).map((issue) => (
+              <HealthRow key={`repair:${issue.kind}:${issue.path}:${issue.detail}`} issue={issue} />
             ))}
-            {health.broken.length === 0 && <div className="vault-health-section-empty">No broken wikilinks</div>}
+            {health.broken.length + health.stale.length === 0 && (
+              <div className="vault-health-section-empty">No broken links or stale notes</div>
+            )}
           </HealthSection>
           <HealthSection title="Structure" count={health.orphaned.length + health.duplicates.length}>
             {[...health.duplicates, ...health.orphaned].slice(0, 8).map((issue) => (

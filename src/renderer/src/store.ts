@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { ReactNode } from 'react'
-import { DEFAULT_SETTINGS, type ExtensionSettings, type Settings, type ThemeMode } from '../../shared/types'
+import { DEFAULT_SETTINGS, type ExtensionSettings, type Settings, type ThemeMode, type VaultFileStat } from '../../shared/types'
 import {
   createDefaultExtensionSettings,
   enabledExtensionIds,
@@ -25,6 +25,12 @@ export const STARTER_TEMPLATE_KINDS = [
   'agentReview',
   'taskReview',
   'savedQuery',
+  'vaultMaintenanceQueue',
+  'publishPreflight',
+  'savedQueryCatalog',
+  'verificationReportWorkflow',
+  'implementationPlan',
+  'refactorPlan',
   'seoBrief',
   'contentRefreshBrief',
   'research',
@@ -67,6 +73,12 @@ export const STARTER_TEMPLATE_CATALOG: { kind: StarterTemplateKind; label: strin
   { kind: 'agentReview', label: 'Agent review / QA', detail: 'Checklist for reviewing agent work' },
   { kind: 'taskReview', label: 'Task review', detail: 'Review open work, owners, blockers, and next actions' },
   { kind: 'savedQuery', label: 'Saved query', detail: 'Reusable search, task, tag, or vault-health query' },
+  { kind: 'vaultMaintenanceQueue', label: 'Vault maintenance queue', detail: 'Triage vault health, cleanup, and repair work' },
+  { kind: 'publishPreflight', label: 'Publish preflight', detail: 'Readiness checks before static-site publishing' },
+  { kind: 'savedQueryCatalog', label: 'Saved query catalog', detail: 'Index reusable queries, thresholds, and owners' },
+  { kind: 'verificationReportWorkflow', label: 'Verification report', detail: 'Capture checks, evidence, risks, and handoff' },
+  { kind: 'implementationPlan', label: 'Implementation plan', detail: 'Scope, steps, commands, verification, and handoff' },
+  { kind: 'refactorPlan', label: 'Refactor plan', detail: 'Preserve behavior while changing structure safely' },
   { kind: 'seoBrief', label: 'SEO/content brief', detail: 'Audience, intent, outline, links' },
   { kind: 'contentRefreshBrief', label: 'Content refresh brief', detail: 'Audit and update stale content without losing intent' },
   { kind: 'research', label: 'Research brief', detail: 'Questions, sources, synthesis' },
@@ -132,6 +144,7 @@ export interface ForgeState {
   vaultName: string
   files: string[]
   folders: string[]
+  fileStats: Record<string, VaultFileStat>
   index: Record<string, NoteMeta>
   tabs: Tab[]
   activeTabId: string | null
@@ -210,6 +223,13 @@ function buildIndex(contents: Record<string, string>): Record<string, NoteMeta> 
     index[path] = parseNote(content)
   }
   return index
+}
+
+function fileStatForContent(content: string): VaultFileStat {
+  return {
+    size: new TextEncoder().encode(content).byteLength,
+    modified: new Date().toISOString()
+  }
 }
 
 async function persistSettings(state: ForgeState): Promise<void> {
@@ -920,6 +940,378 @@ const STARTER_TEMPLATES: Record<StarterTemplateKind, { file: string; content: st
       '- Keep the query narrow enough to act on.',
       '- Record false positives so future runs can refine the filter.',
       '- Link follow-up notes created from this query.'
+    ].join('\n')
+  },
+  vaultMaintenanceQueue: {
+    file: 'Vault Maintenance Queue.md',
+    content: [
+      '---',
+      'type: vault-maintenance-queue',
+      'category: vault',
+      'status: {{select:Status|Draft,Active,Blocked,Done}}',
+      'owner: {{prompt:Owner}}',
+      'created: {{date}}',
+      'tags: [vault, maintenance, agent]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Objective',
+      '{{prompt:Objective}}',
+      '',
+      '## Scope',
+      '- Vault: {{vault}}',
+      '- Folder or collection: {{prompt:Folder or collection}}',
+      '- Owned files: {{prompt:Owned files}}',
+      '- Out of scope:',
+      '',
+      '## Allowed Commands',
+      '```bash',
+      'forge --vault "{{vault}}" analyze --json',
+      'forge --vault "{{vault}}" search "{{prompt:Search text}}" --json',
+      '```',
+      '',
+      '## Queue',
+      '| Priority | Item | Source | Proposed fix | Safe to automate | Owner | Status |',
+      '| --- | --- | --- | --- | --- | --- | --- |',
+      '| High |  |  |  | No | {{prompt:Owner}} | Ready |',
+      '',
+      '## Repair Classes',
+      '- Broken links:',
+      '- Orphan notes:',
+      '- Untagged notes:',
+      '- Empty notes:',
+      '- Stale notes:',
+      '- Duplicate titles:',
+      '',
+      '## Agent Checklist',
+      '- [ ] Run vault analysis and paste the summary here',
+      '- [ ] Group related repair items before editing notes',
+      '- [ ] Separate safe mechanical fixes from judgment calls',
+      '- [ ] Preserve existing note intent and user edits',
+      '- [ ] Re-run analysis after completed repairs',
+      '',
+      '## Verification',
+      '- Commands run:',
+      '- Before counts:',
+      '- After counts:',
+      '- Remaining issues:',
+      '',
+      '## Risks',
+      '- Risk:  Mitigation:',
+      '',
+      '## Final Handoff Notes',
+      '- Completed:',
+      '- Skipped:',
+      '- Needs owner decision:',
+      '- Suggested next queue:'
+    ].join('\n')
+  },
+  publishPreflight: {
+    file: 'Publish Preflight.md',
+    content: [
+      '---',
+      'type: publish-preflight',
+      'category: publish',
+      'status: {{select:Status|Draft,Checking,Ready,Blocked,Published}}',
+      'target: {{prompt:Publish target}}',
+      'owner: {{prompt:Owner}}',
+      'created: {{date}}',
+      'tags: [publish, preflight, agent]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Objective',
+      '{{prompt:Objective}}',
+      '',
+      '## Scope',
+      '- Vault: {{vault}}',
+      '- Publish target: {{prompt:Publish target}}',
+      '- Owned files: {{prompt:Owned files}}',
+      '- Output directory:',
+      '- Out of scope:',
+      '',
+      '## Allowed Commands',
+      '```bash',
+      'forge --vault "{{vault}}" analyze --json',
+      'forge --vault "{{vault}}" publish --out "{{prompt:Publish target}}" --clean --json',
+      '```',
+      '',
+      '## Preflight Checklist',
+      '- [ ] Required pages have titles, slugs, and descriptions',
+      '- [ ] Draft or private pages are excluded or approved',
+      '- [ ] Broken wikilinks are resolved or accepted',
+      '- [ ] Image, video, PDF, and attachment references are present',
+      '- [ ] Navigation, tags, and index pages are reviewed',
+      '- [ ] Release notes or publish notes are ready',
+      '- [ ] Output directory and clean behavior are confirmed',
+      '',
+      '## Findings',
+      '| Area | Finding | Source | Required action | Owner |',
+      '| --- | --- | --- | --- | --- |',
+      '| Links |  |  |  | {{prompt:Owner}} |',
+      '',
+      '## Publish Decision',
+      '{{select:Decision|Ready to publish,Publish with notes,Blocked,Needs owner review}}',
+      '',
+      '## Verification',
+      '- Analyze result:',
+      '- Publish result:',
+      '- Pages generated:',
+      '- Broken links remaining:',
+      '- Assets checked:',
+      '',
+      '## Risks',
+      '- Risk:  Mitigation:',
+      '',
+      '## Final Handoff Notes',
+      '- Published output:',
+      '- Blockers:',
+      '- Follow-up owners:',
+      '- Next publish window:'
+    ].join('\n')
+  },
+  savedQueryCatalog: {
+    file: 'Saved Query Catalog.md',
+    content: [
+      '---',
+      'type: saved-query-catalog',
+      'category: query',
+      'status: {{select:Status|Draft,Active,Review,Archived}}',
+      'owner: {{prompt:Owner}}',
+      'created: {{date}}',
+      'tags: [query, catalog, agent]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Objective',
+      '{{prompt:Objective}}',
+      '',
+      '## Scope',
+      '- Vault: {{vault}}',
+      '- Folder or collection: {{prompt:Folder or collection}}',
+      '- Owned files: {{prompt:Owned files}}',
+      '- Out of scope:',
+      '',
+      '## Allowed Commands',
+      '```bash',
+      'forge --vault "{{vault}}" search "{{prompt:Search text}}" --json',
+      'forge --vault "{{vault}}" analyze --json',
+      '```',
+      '',
+      '## Catalog',
+      '| Name | Type | Query or command | Cadence | Owner | Action threshold |',
+      '| --- | --- | --- | --- | --- | --- |',
+      '|  | {{select:Query type|Search,Task,Tag,Link,Vault health,Publish}} |  | {{select:Cadence|Daily,Weekly,Monthly,Before publish,As needed}} | {{prompt:Owner}} |  |',
+      '',
+      '## Query Details',
+      '### {{prompt:Query name}}',
+      '- Purpose:',
+      '- Search text or filter: {{prompt:Search text}}',
+      '- Expected healthy result:',
+      '- False positives to ignore:',
+      '- Follow-up note or queue:',
+      '',
+      '## Agent Checklist',
+      '- [ ] Remove duplicate or stale saved queries',
+      '- [ ] Add owner, cadence, and threshold to every active query',
+      '- [ ] Link each query to the workflow it supports',
+      '- [ ] Record example output for ambiguous filters',
+      '',
+      '## Verification',
+      '- Commands run:',
+      '- Queries tested:',
+      '- Broken or noisy queries:',
+      '- Catalog changes:',
+      '',
+      '## Risks',
+      '- Risk:  Mitigation:',
+      '',
+      '## Final Handoff Notes',
+      '- Added:',
+      '- Updated:',
+      '- Archived:',
+      '- Needs owner decision:'
+    ].join('\n')
+  },
+  verificationReportWorkflow: {
+    file: 'Verification Report.md',
+    content: [
+      '---',
+      'type: verification-report',
+      'category: verification',
+      'status: {{select:Status|Draft,Verifying,Passed,Failed,Blocked}}',
+      'owner: {{prompt:Owner}}',
+      'created: {{date}}',
+      'tags: [verification, agent]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Objective',
+      '{{prompt:Objective}}',
+      '',
+      '## Work Reviewed',
+      '- Request or plan: {{prompt:Request or plan}}',
+      '- Owned files: {{prompt:Owned files}}',
+      '- Out of scope:',
+      '- Reviewer: {{prompt:Owner}}',
+      '',
+      '## Allowed Commands',
+      '```bash',
+      '{{prompt:Allowed verification command}}',
+      '```',
+      '',
+      '## Verification Matrix',
+      '| Check | Command or method | Expected | Actual | Status |',
+      '| --- | --- | --- | --- | --- |',
+      '|  |  |  |  | Pending |',
+      '',
+      '## Evidence',
+      '- Output summary:',
+      '- Files inspected:',
+      '- Screenshots or artifacts:',
+      '- Manual checks:',
+      '',
+      '## Agent Checklist',
+      '- [ ] Verify the requested behavior, not just command success',
+      '- [ ] Confirm no unrelated files were changed',
+      '- [ ] Capture failures with exact commands and next steps',
+      '- [ ] Re-check after fixes if any verification failed',
+      '',
+      '## Risks',
+      '- Risk:  Mitigation:',
+      '',
+      '## Final Handoff Notes',
+      '- Result: {{select:Result|Pass,Pass with caveats,Fail,Blocked}}',
+      '- Changed files reviewed:',
+      '- Tests or checks not run:',
+      '- Follow-up required:'
+    ].join('\n')
+  },
+  implementationPlan: {
+    file: 'Implementation Plan.md',
+    content: [
+      '---',
+      'type: implementation-plan',
+      'category: plan',
+      'status: {{select:Status|Draft,Ready,In progress,Blocked,Done}}',
+      'owner: {{prompt:Owner}}',
+      'created: {{date}}',
+      'tags: [implementation, plan, agent]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Objective',
+      '{{prompt:Objective}}',
+      '',
+      '## Context',
+      '- Vault: {{vault}}',
+      '- Related notes: {{prompt:Related notes}}',
+      '- Current behavior:',
+      '- Desired behavior:',
+      '',
+      '## Ownership Boundary',
+      '- Owned files: {{prompt:Owned files}}',
+      '- Do not touch:',
+      '- Dependencies:',
+      '- Out of scope:',
+      '',
+      '## Allowed Commands',
+      '```bash',
+      '{{prompt:Allowed command}}',
+      '```',
+      '',
+      '## Plan',
+      '- [ ] Inspect current state and existing dirty changes',
+      '- [ ] Identify the smallest behavior-preserving change',
+      '- [ ] Implement in scoped files',
+      '- [ ] Update related docs or templates',
+      '- [ ] Run targeted verification',
+      '- [ ] Summarize changed files and residual risks',
+      '',
+      '## Acceptance Criteria',
+      '- [ ] User-facing requirement is met',
+      '- [ ] Existing workflows still work',
+      '- [ ] Edge cases are covered or documented',
+      '- [ ] Handoff notes are specific enough for review',
+      '',
+      '## Verification',
+      '- Commands to run:',
+      '- Expected output:',
+      '- Manual checks:',
+      '- Not covered:',
+      '',
+      '## Risks',
+      '- Risk:  Mitigation:',
+      '',
+      '## Final Handoff Notes',
+      '- Completed:',
+      '- Changed files:',
+      '- Verification result:',
+      '- Follow-up:'
+    ].join('\n')
+  },
+  refactorPlan: {
+    file: 'Refactor Plan.md',
+    content: [
+      '---',
+      'type: refactor-plan',
+      'category: plan',
+      'status: {{select:Status|Draft,Ready,In progress,Blocked,Done}}',
+      'owner: {{prompt:Owner}}',
+      'created: {{date}}',
+      'tags: [refactor, plan, agent]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Objective',
+      '{{prompt:Objective}}',
+      '',
+      '## Behavior to Preserve',
+      '- User-visible behavior:',
+      '- Data or file format:',
+      '- Public commands or APIs:',
+      '- Known edge cases:',
+      '',
+      '## Ownership Boundary',
+      '- Owned files: {{prompt:Owned files}}',
+      '- Do not touch:',
+      '- Dependencies:',
+      '- Out of scope:',
+      '',
+      '## Allowed Commands',
+      '```bash',
+      '{{prompt:Allowed command}}',
+      '```',
+      '',
+      '## Refactor Steps',
+      '- [ ] Characterize current behavior with tests or examples',
+      '- [ ] Split mechanical moves from behavior changes',
+      '- [ ] Make one small structural change at a time',
+      '- [ ] Keep names and interfaces stable unless approved',
+      '- [ ] Run verification after each risky step',
+      '- [ ] Remove dead paths only when usage is checked',
+      '',
+      '## Verification',
+      '- Baseline command output:',
+      '- Post-refactor command output:',
+      '- Manual regression checks:',
+      '- Performance or size checks:',
+      '',
+      '## Risks',
+      '- Risk:  Mitigation:',
+      '- Rollback path:',
+      '',
+      '## Final Handoff Notes',
+      '- Behavior preserved:',
+      '- Structure changed:',
+      '- Tests or checks run:',
+      '- Follow-up refactors:'
     ].join('\n')
   },
   seoBrief: {
@@ -2089,6 +2481,7 @@ export const useStore = create<ForgeState>((set, get) => ({
   vaultName: '',
   files: [],
   folders: [],
+  fileStats: {},
   index: {},
   tabs: [],
   activeTabId: null,
@@ -2144,6 +2537,7 @@ export const useStore = create<ForgeState>((set, get) => ({
 
   async openVaultPath(vault) {
     const data = await window.forge.openVault(vault)
+    data.fileStats ??= {}
     noteContents.clear()
     for (const [path, content] of Object.entries(data.contents)) noteContents.set(path, content)
 
@@ -2153,6 +2547,7 @@ export const useStore = create<ForgeState>((set, get) => ({
       const welcome = await window.forge.createFile(vault, 'Welcome.md', WELCOME_NOTE)
       noteContents.set(welcome, WELCOME_NOTE)
       files = [...files, welcome].sort()
+      data.fileStats[welcome] = fileStatForContent(WELCOME_NOTE)
     }
 
     const recents = [vault, ...get().recentVaults.filter((v) => v !== vault)].slice(0, 8)
@@ -2165,6 +2560,7 @@ export const useStore = create<ForgeState>((set, get) => ({
       vaultName: vault.split('/').pop() ?? vault,
       files,
       folders: data.folders,
+      fileStats: data.fileStats ?? {},
       index: buildIndex(data.contents),
       bookmarks,
       bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
@@ -2184,7 +2580,7 @@ export const useStore = create<ForgeState>((set, get) => ({
 
   closeVault() {
     noteContents.clear()
-    set({ vault: null, vaultName: '', files: [], folders: [], index: {}, bookmarks: [], tabs: [], activeTabId: null, modal: null })
+    set({ vault: null, vaultName: '', files: [], folders: [], fileStats: {}, index: {}, bookmarks: [], tabs: [], activeTabId: null, modal: null })
     window.forge.setMobileVault(null).catch(console.error)
     persistSettings({ ...get(), vault: null } as ForgeState)
   },
@@ -2193,6 +2589,7 @@ export const useStore = create<ForgeState>((set, get) => ({
     const { vault } = get()
     if (!vault) return
     const data = await window.forge.openVault(vault)
+    data.fileStats ??= {}
     // Keep locally-edited content that hasn't hit disk yet
     for (const [path, content] of Object.entries(data.contents)) {
       if (!saveTimers.has(path)) noteContents.set(path, content)
@@ -2209,6 +2606,7 @@ export const useStore = create<ForgeState>((set, get) => ({
     set({
       files: data.files,
       folders: data.folders,
+      fileStats: data.fileStats ?? {},
       index,
       bookmarks,
       bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
@@ -2341,7 +2739,12 @@ export const useStore = create<ForgeState>((set, get) => ({
       path,
       setTimeout(() => {
         saveTimers.delete(path)
-        window.forge.writeFile(vault, path, content).catch(console.error)
+        window.forge
+          .writeFile(vault, path, content)
+          .then(() => {
+            set({ fileStats: { ...get().fileStats, [path]: fileStatForContent(content) } })
+          })
+          .catch(console.error)
       }, 500)
     )
 
@@ -2370,7 +2773,10 @@ export const useStore = create<ForgeState>((set, get) => ({
     noteContents.set(created, '')
     set({
       files: [...get().files, created].sort(),
-      index: { ...get().index, [created]: parseNote('') }
+      folders: [...new Set([...get().folders, ...folderAncestors(folder ?? '')])].sort(),
+      fileStats: { ...get().fileStats, [created]: fileStatForContent('') },
+      index: { ...get().index, [created]: parseNote('') },
+      contentVersion: get().contentVersion + 1
     })
     get().openFile(created)
   },
@@ -2382,9 +2788,13 @@ export const useStore = create<ForgeState>((set, get) => ({
     if (!clean) return null
     const created = await window.forge.createFile(vault, clean + '.md', '')
     noteContents.set(created, '')
+    const folder = created.split('/').slice(0, -1).join('/')
     set({
       files: [...get().files, created].sort(),
-      index: { ...get().index, [created]: parseNote('') }
+      folders: [...new Set([...get().folders, ...folderAncestors(folder)])].sort(),
+      fileStats: { ...get().fileStats, [created]: fileStatForContent('') },
+      index: { ...get().index, [created]: parseNote('') },
+      contentVersion: get().contentVersion + 1
     })
     get().openFile(created)
     return created
@@ -2411,6 +2821,7 @@ export const useStore = create<ForgeState>((set, get) => ({
     set({
       files: [...get().files, created].sort(),
       folders: [...new Set([...get().folders, ...folderAncestors(folder)])].sort(),
+      fileStats: { ...get().fileStats, [created]: fileStatForContent(content) },
       index: { ...get().index, [created]: parseNote(content) },
       contentVersion: get().contentVersion + 1
     })
@@ -2429,6 +2840,7 @@ export const useStore = create<ForgeState>((set, get) => ({
     set({
       files: [...get().files, created].sort(),
       folders: [...new Set([...get().folders, ...folderAncestors(folder)])].sort(),
+      fileStats: { ...get().fileStats, [created]: fileStatForContent(starter.content) },
       index: { ...get().index, [created]: parseNote(starter.content) },
       contentVersion: get().contentVersion + 1
     })
@@ -2478,6 +2890,7 @@ export const useStore = create<ForgeState>((set, get) => ({
     set({
       files: [...get().files, created].sort(),
       folders: [...new Set([...get().folders, dailyNotesFolder || 'Daily'])].sort(),
+      fileStats: { ...get().fileStats, [created]: fileStatForContent(content) },
       index: { ...get().index, [created]: parseNote(content) },
       contentVersion: get().contentVersion + 1
     })
@@ -2509,11 +2922,14 @@ export const useStore = create<ForgeState>((set, get) => ({
     }
     const index: Record<string, NoteMeta> = {}
     for (const [key, value] of Object.entries(get().index)) index[mapPath(key)] = value
+    const fileStats: Record<string, VaultFileStat> = {}
+    for (const [key, value] of Object.entries(get().fileStats)) fileStats[mapPath(key)] = value
 
     const bookmarks = normalizeBookmarkList(get().bookmarks.map(mapPath))
     set({
       files: get().files.map(mapPath).sort(),
       folders: get().folders.map(mapPath).sort(),
+      fileStats,
       index,
       bookmarks,
       bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
@@ -2555,10 +2971,13 @@ export const useStore = create<ForgeState>((set, get) => ({
     for (const key of Array.from(noteContents.keys())) if (gone(key)) noteContents.delete(key)
     const index: Record<string, NoteMeta> = {}
     for (const [key, value] of Object.entries(get().index)) if (!gone(key)) index[key] = value
+    const fileStats: Record<string, VaultFileStat> = {}
+    for (const [key, value] of Object.entries(get().fileStats)) if (!gone(key)) fileStats[key] = value
     const bookmarks = get().bookmarks.filter((bookmark) => !gone(bookmark))
     set({
       files: get().files.filter((f) => !gone(f)),
       folders: get().folders.filter((f) => !gone(f)),
+      fileStats,
       index,
       bookmarks,
       bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },

@@ -11,6 +11,7 @@ import { formatValidationResults, validateExtensionInputs } from './validate-ext
 const WIKILINK_RE = /\[\[([^[\]]+?)\]\]/g
 const TAG_RE = /(^|[\s([])#([A-Za-z][\w/-]*)/g
 const HEADING_RE = /^(#{1,6})\s+(.+)/
+const DEFAULT_STALE_NOTE_DAYS = 90
 
 const HELP = `Forge agent CLI
 
@@ -42,7 +43,7 @@ Commands:
   create-folder <path>                  Create a folder
   move <from> <to>                      Move or rename a file or folder
   search <query> [--limit <n>] [--json] Search Markdown filenames and contents
-  analyze [--json]                      Summarize notes, tags, links, backlinks, and gaps
+  analyze [--stale-days <n>] [--json]   Summarize notes, tags, links, backlinks, gaps, stale notes, and repair queues
   publish --out <folder> [--title <s>] [--clean] [--json]
                                         Export the vault to static HTML
   batch [file|-] [--json]               Run JSON operations in one transaction-like sequence
@@ -473,20 +474,60 @@ async function readMarkdownNotes(vault) {
   return { ...scan, notes }
 }
 
+function parseFrontmatter(content) {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(content)
+  if (!match) return { properties: {}, body: content }
+  const properties = {}
+  let listKey = ''
+  for (const line of match[1].split(/\r?\n/)) {
+    const listItem = /^\s*-\s+(.+)$/.exec(line)
+    if (listItem && listKey) {
+      const current = Array.isArray(properties[listKey]) ? properties[listKey] : []
+      current.push(listItem[1].trim())
+      properties[listKey] = current
+      continue
+    }
+    const pair = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(line)
+    if (!pair) continue
+    if (!pair[2].trim()) {
+      listKey = pair[1]
+      properties[listKey] = []
+      continue
+    }
+    listKey = ''
+    const value = pair[2].trim()
+    properties[pair[1]] =
+      value.startsWith('[') && value.endsWith(']')
+        ? value.slice(1, -1).split(',').map((item) => item.trim()).filter(Boolean)
+        : value.replace(/^["']|["']$/g, '')
+  }
+  return { properties, body: content.slice(match[0].length) }
+}
+
+function propertyStrings(value) {
+  if (value == null) return []
+  return Array.isArray(value) ? value.map(String) : [String(value)]
+}
+
 function parseNote(content) {
+  const frontmatter = parseFrontmatter(content)
   const links = []
   const tags = []
   const headings = []
-  const lines = content.split('\n')
+  const lines = frontmatter.body.split('\n')
   let inFence = false
 
-  for (const match of content.matchAll(WIKILINK_RE)) {
+  for (const match of frontmatter.body.matchAll(WIKILINK_RE)) {
     const target = linkTarget(match[1])
     if (target && !links.includes(target)) links.push(target)
   }
 
-  for (const match of content.matchAll(TAG_RE)) {
+  for (const match of frontmatter.body.matchAll(TAG_RE)) {
     if (!tags.includes(match[2])) tags.push(match[2])
+  }
+  for (const tag of propertyStrings(frontmatter.properties.tags)) {
+    const clean = tag.replace(/^#/, '').trim()
+    if (clean && !tags.includes(clean)) tags.push(clean)
   }
 
   lines.forEach((line, index) => {
@@ -500,7 +541,8 @@ function parseNote(content) {
     links,
     tags,
     headings,
-    words: content.split(/\s+/).filter(Boolean).length,
+    title: propertyStrings(frontmatter.properties.title)[0] ?? headings[0]?.text ?? null,
+    words: frontmatter.body.split(/\s+/).filter(Boolean).length,
     chars: content.length
   }
 }
@@ -699,7 +741,23 @@ async function searchCommand(vault, query, { limit = 20 } = {}) {
   return { query, count: results.length, results: results.slice(0, Number(limit) || 20) }
 }
 
-async function analyzeCommand(vault) {
+function noteTitle(note) {
+  return note.meta.title ?? note.meta.headings[0]?.text ?? baseName(note.path)
+}
+
+function daysSince(iso, now = Date.now()) {
+  const time = Date.parse(iso)
+  if (!Number.isFinite(time)) return null
+  return Math.max(0, Math.floor((now - time) / 86_400_000))
+}
+
+function staleDaysOption(value) {
+  if (value === undefined || value === null || value === '') return DEFAULT_STALE_NOTE_DAYS
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_STALE_NOTE_DAYS
+}
+
+async function analyzeCommand(vault, { staleDays = DEFAULT_STALE_NOTE_DAYS } = {}) {
   const scan = await readMarkdownNotes(vault)
   const filePaths = scan.notes.map((note) => note.path)
   const backlinks = Object.fromEntries(filePaths.map((file) => [file, []]))
@@ -707,6 +765,7 @@ async function analyzeCommand(vault) {
   const linkEdges = []
   const tagMap = new Map()
   const byFolder = new Map()
+  const titleMap = new Map()
 
   for (const note of scan.notes) {
     const folder = path.dirname(note.path) === '.' ? '(root)' : path.dirname(note.path)
@@ -730,7 +789,9 @@ async function analyzeCommand(vault) {
 
   const notes = scan.notes.map((note) => ({
     path: note.path,
-    title: note.meta.headings[0]?.text ?? baseName(note.path),
+    title: noteTitle(note),
+    size: note.size,
+    modified: note.modified,
     words: note.meta.words,
     chars: note.meta.chars,
     tags: note.meta.tags,
@@ -738,6 +799,23 @@ async function analyzeCommand(vault) {
     backlinks: backlinks[note.path] ?? [],
     headings: note.meta.headings
   }))
+
+  for (const note of notes) {
+    const key = note.title.trim().toLowerCase()
+    if (!key) continue
+    if (!titleMap.has(key)) titleMap.set(key, [])
+    titleMap.get(key).push(note.path)
+  }
+
+  const duplicateTitles = [...titleMap.entries()]
+    .filter(([, paths]) => paths.length > 1)
+    .map(([title, paths]) => ({ title, count: paths.length, paths: paths.sort() }))
+    .sort((a, b) => b.count - a.count || a.title.localeCompare(b.title))
+
+  const staleNotes = notes
+    .map((note) => ({ path: note.path, title: note.title, modified: note.modified, daysSinceModified: daysSince(note.modified) }))
+    .filter((note) => note.daysSinceModified !== null && note.daysSinceModified >= staleDays)
+    .sort((a, b) => b.daysSinceModified - a.daysSinceModified || a.path.localeCompare(b.path))
 
   const tags = [...tagMap.entries()]
     .map(([tag, paths]) => ({ tag, count: paths.length, paths: paths.sort() }))
@@ -759,7 +837,9 @@ async function analyzeCommand(vault) {
       chars: notes.reduce((sum, note) => sum + note.chars, 0),
       tags: tags.length,
       links: linkEdges.length,
-      brokenLinks: brokenLinks.length
+      brokenLinks: brokenLinks.length,
+      staleNotes: staleNotes.length,
+      duplicateTitleGroups: duplicateTitles.length
     },
     byFolder: Object.fromEntries([...byFolder.entries()].sort((a, b) => a[0].localeCompare(b[0]))),
     tags,
@@ -767,11 +847,21 @@ async function analyzeCommand(vault) {
     links: linkEdges,
     backlinks,
     brokenLinks,
+    duplicateTitles,
+    staleNotes,
     organizeCandidates: {
       emptyNotes,
       noTagNotes,
       orphanNotes,
-      inboxNotes: notes.filter((note) => note.tags.includes('inbox')).map((note) => note.path)
+      inboxNotes: notes.filter((note) => note.tags.includes('inbox')).map((note) => note.path),
+      staleNotes: staleNotes.map((note) => note.path),
+      duplicateTitleNotes: duplicateTitles.flatMap((group) => group.paths)
+    },
+    repairQueues: {
+      createMissingNotes: brokenLinks.map((link) => ({ target: link.target, source: link.source })),
+      reviewStaleNotes: staleNotes,
+      reviewDuplicateTitles: duplicateTitles,
+      reviewOrphans: orphanNotes
     }
   }
 }
@@ -981,7 +1071,7 @@ async function runOperation(vault, op) {
     case 'search':
       return searchCommand(vault, op.query, { limit: op.limit })
     case 'analyze':
-      return analyzeCommand(vault)
+      return analyzeCommand(vault, { staleDays: staleDaysOption(op.staleDays ?? op['stale-days']) })
     case 'publish':
       return publishCommand(vault, {
         output: op.output ?? op.outDir ?? op.out,
@@ -1166,7 +1256,7 @@ async function main() {
         })
         break
       case 'analyze':
-        printResult(await analyzeCommand(vault), {
+        printResult(await analyzeCommand(vault, { staleDays: staleDaysOption(options['stale-days'] ?? options.staleDays) }), {
           json,
           text: (analysis) => [
             `Vault: ${analysis.vault}`,
@@ -1175,6 +1265,8 @@ async function main() {
             `Tags: ${analysis.totals.tags}`,
             `Links: ${analysis.totals.links}`,
             `Broken links: ${analysis.totals.brokenLinks}`,
+            `Stale notes: ${analysis.totals.staleNotes}`,
+            `Duplicate title groups: ${analysis.totals.duplicateTitleGroups}`,
             `Orphan notes: ${analysis.organizeCandidates.orphanNotes.length}`,
             `Notes without tags: ${analysis.organizeCandidates.noTagNotes.length}`
           ].join('\n')

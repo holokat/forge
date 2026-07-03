@@ -104,10 +104,14 @@ const files: Record<string, string> = {
 let settings: Settings = { ...DEFAULT_SETTINGS, lastVault: '/Users/demo/Notes', recentVaults: ['/Users/demo/Notes'] }
 
 function vaultData(): VaultData {
+  const modified = new Date().toISOString()
   return {
     files: Object.keys(files).sort(),
     folders: ['Journal', 'Projects'],
-    contents: { ...files }
+    contents: { ...files },
+    fileStats: Object.fromEntries(
+      Object.entries(files).map(([path, content]) => [path, { size: new Blob([content]).size, modified }])
+    )
   }
 }
 

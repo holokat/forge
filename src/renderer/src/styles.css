@@ -4822,11 +4822,25 @@ button.tag:hover {
 .vault-health-row {
   min-height: 58px;
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) minmax(100px, 0.22fr);
+  grid-template-columns: minmax(0, 1fr) 40px;
   align-items: center;
   gap: 10px;
   width: 100%;
   padding: 10px 12px;
+  color: inherit;
+  text-align: left;
+  transition-property: box-shadow, background-color;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.vault-health-row-open {
+  min-width: 0;
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) minmax(100px, 0.22fr);
+  align-items: center;
+  gap: 10px;
   color: inherit;
   text-align: left;
   transition-property: transform, box-shadow, background-color;
@@ -4835,13 +4849,12 @@ button.tag:hover {
 }
 
 .vault-health-row:hover {
-  transform: translateY(-1px);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.07),
     0 12px 28px rgba(0, 0, 0, 0.08);
 }
 
-.vault-health-row:active {
+.vault-health-row-open:active {
   transform: scale(0.96);
 }
 
@@ -4853,6 +4866,7 @@ button.tag:hover {
 }
 
 .vault-health-row.is-broken .vault-health-row-icon,
+.vault-health-row.is-stale .vault-health-row-icon,
 .vault-health-row.is-duplicate .vault-health-row-icon {
   color: var(--text-normal);
 }
@@ -4892,6 +4906,38 @@ button.tag:hover {
   padding: 4px 7px;
   background: color-mix(in srgb, var(--bg) 82%, var(--text-normal) 5%);
   border-radius: 8px;
+}
+
+.vault-health-row-action-slot {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.vault-health-row-action {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--bg) 78%, var(--text-normal) 6%);
+  border-radius: 8px;
+  transition-property: background-color, color, transform;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.vault-health-row-action:hover {
+  color: var(--text-normal);
+  background: var(--bg-hover);
+}
+
+.vault-health-row-action:active {
+  transform: scale(0.96);
 }
 
 .vault-health-task-card {
@@ -5002,11 +5048,20 @@ button.tag:hover {
   }
 
   .vault-health-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .vault-health-row-open {
     grid-template-columns: 24px minmax(0, 1fr);
   }
 
   .vault-health-folder {
     grid-column: 2;
+    justify-self: start;
+  }
+
+  .vault-health-row-action-slot {
+    grid-column: 1;
     justify-self: start;
   }
 }

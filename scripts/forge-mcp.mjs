@@ -231,12 +231,13 @@ const tools = [
   },
   {
     name: 'forge_analyze',
-    description: 'Analyze notes, tags, links, backlinks, broken links, inbox notes, and orphan notes.',
+    description: 'Analyze notes, tags, links, backlinks, broken links, inbox notes, orphan notes, stale notes, duplicate titles, and repair queues.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
       properties: {
-        vault: { type: 'string', description: 'Optional explicit vault path.' }
+        vault: { type: 'string', description: 'Optional explicit vault path.' },
+        staleDays: { type: 'number', description: 'Days since modification before a note is considered stale. Defaults to 90.' }
       }
     }
   },
@@ -354,7 +355,7 @@ async function callTool(name, args = {}) {
     case 'forge_search':
       return runOperation(vault, { action: 'search', query: input.query, limit: input.limit })
     case 'forge_analyze':
-      return runOperation(vault, { action: 'analyze' })
+      return runOperation(vault, { action: 'analyze', staleDays: input.staleDays })
     case 'forge_publish': {
       const result = await publishVault({
         vault,

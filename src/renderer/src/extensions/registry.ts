@@ -492,7 +492,8 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
     id: 'forge.vault-health',
     name: 'vault-health',
     displayName: 'Vault Health',
-    description: 'Adds a local vault-wide health view for broken links, orphan notes, duplicate titles, task load, and inbox cleanup.',
+    description:
+      'Adds a local vault-wide health view for broken links, stale notes, repair queues, duplicate titles, task load, and inbox cleanup.',
     version: '0.1.0',
     publisher: 'Forge',
     license: 'MIT',
@@ -518,7 +519,17 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         extensionPoint: 'forge.note.metadata',
         label: 'Vault health metadata',
         description: 'Reports vault-wide cleanup signals derived from local Markdown notes.',
-        fields: ['brokenLinks', 'orphanNotes', 'untaggedNotes', 'emptyNotes', 'duplicateTitles', 'openTasks', 'inboxNotes']
+        fields: [
+          'brokenLinks',
+          'orphanNotes',
+          'untaggedNotes',
+          'emptyNotes',
+          'duplicateTitles',
+          'staleNotes',
+          'repairQueues',
+          'openTasks',
+          'inboxNotes'
+        ]
       },
       {
         id: 'forge.vault-health.view',

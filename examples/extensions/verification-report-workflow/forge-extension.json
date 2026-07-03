@@ -1,0 +1,156 @@
+{
+  "manifestVersion": 1,
+  "id": "example.verification-report-workflow",
+  "name": "verification-report-workflow",
+  "displayName": "Verification Report Workflow Example",
+  "description": "Example declarative extension that scaffolds agent verification reports with supported vault health, task, publish, frontmatter, outline, and Markdown transform contributions.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["editing", "organization", "publishing", "visualization"],
+  "keywords": ["verification", "report", "review", "publish", "vault health"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" },
+    { "id": "forge.views", "label": "Views" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:read",
+      "reason": "Reads local note metadata, tasks, links, publish readiness, headings, and frontmatter already available to Forge for verification notes."
+    },
+    {
+      "kind": "vault:write",
+      "reason": "Writes bounded verification scaffolds, checklist conversion, heading cleanup, and callout transforms into the current note when requested."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.verification-report-workflow.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Verification report metadata",
+      "description": "Declares fields useful for agent-readable verification reports and review handoff notes.",
+      "fields": [
+        "frontmatterProperties",
+        "aliases",
+        "title",
+        "tags",
+        "tagCount",
+        "headings",
+        "headingCount",
+        "backlinks",
+        "backlinkCount",
+        "unresolvedLinks",
+        "brokenLinkCount",
+        "openTasks",
+        "completedTasks",
+        "taskCompletionPercent",
+        "publishChecklistItems",
+        "publishReady",
+        "wordCount",
+        "estimatedReadingMinutes"
+      ]
+    },
+    {
+      "id": "example.verification-report-workflow.tasks",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Tasks",
+      "description": "Declares Forge's supported task widget for verification follow-ups.",
+      "widget": "tasks"
+    },
+    {
+      "id": "example.verification-report-workflow.link-health",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Link health",
+      "description": "Declares Forge's supported link-health widget for verification of local wikilinks.",
+      "widget": "link-health"
+    },
+    {
+      "id": "example.verification-report-workflow.publish",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Publish checklist",
+      "description": "Declares Forge's supported publish checklist widget for release-readiness notes.",
+      "widget": "publish-checklist"
+    },
+    {
+      "id": "example.verification-report-workflow.properties",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Properties",
+      "description": "Declares Forge's supported frontmatter widget for report status and review fields.",
+      "widget": "frontmatter"
+    },
+    {
+      "id": "example.verification-report-workflow.outline",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Outline",
+      "description": "Declares Forge's supported outline widget for verification report structure.",
+      "widget": "outline"
+    },
+    {
+      "id": "example.verification-report-workflow.vault-health",
+      "kind": "view",
+      "extensionPoint": "forge.views",
+      "label": "Vault health",
+      "description": "Declares Forge's supported vault-health view for verification checks that span notes.",
+      "view": "vault-health"
+    },
+    {
+      "id": "example.verification-report-workflow.tasks-view",
+      "kind": "view",
+      "extensionPoint": "forge.views",
+      "label": "Tasks",
+      "description": "Declares Forge's supported tasks view for verification follow-up queues.",
+      "view": "tasks"
+    },
+    {
+      "id": "example.verification-report-workflow.template",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Append verification report scaffold",
+      "description": "Declares the validator-supported append-template transform for report sections.",
+      "transform": "append-template"
+    },
+    {
+      "id": "example.verification-report-workflow.checklist",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Convert verification lines to checklist",
+      "description": "Declares the supported checklist transform for verification follow-ups.",
+      "transform": "lines-to-checklist"
+    },
+    {
+      "id": "example.verification-report-workflow.normalize",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Normalize report headings",
+      "description": "Declares the supported heading cleanup transform for verification notes.",
+      "transform": "normalize-headings"
+    },
+    {
+      "id": "example.verification-report-workflow.callout",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Wrap verification caveat as callout",
+      "description": "Declares the supported callout transform for warnings, caveats, and test notes.",
+      "transform": "callout"
+    }
+  ]
+}

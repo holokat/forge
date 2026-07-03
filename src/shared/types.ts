@@ -1,5 +1,10 @@
 export type ThemeMode = 'light' | 'dark' | 'system'
 
+export interface VaultFileStat {
+  size: number
+  modified: string
+}
+
 export interface VaultData {
   /** All non-hidden files in the vault, as relative paths */
   files: string[]
@@ -7,6 +12,8 @@ export interface VaultData {
   folders: string[]
   /** Contents of every markdown file, keyed by relative path */
   contents: Record<string, string>
+  /** File metadata keyed by relative path */
+  fileStats: Record<string, VaultFileStat>
 }
 
 export interface Settings {

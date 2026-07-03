@@ -1,0 +1,128 @@
+{
+  "manifestVersion": 1,
+  "id": "example.vault-maintenance-queue",
+  "name": "vault-maintenance-queue",
+  "displayName": "Vault Maintenance Queue Example",
+  "description": "Example declarative extension that scaffolds a vault maintenance queue with Forge's supported vault-health view, local link widgets, task metadata, and safe Markdown transforms.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["navigation", "organization", "visualization"],
+  "keywords": ["vault health", "maintenance", "repair queue", "links", "tasks"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" },
+    { "id": "forge.views", "label": "Views" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:metadata",
+      "reason": "Reads local link, tag, task, and publish metadata already indexed by Forge for maintenance triage."
+    },
+    {
+      "kind": "vault:write",
+      "reason": "Writes bounded checklist, sorting, and heading cleanup transforms into the current maintenance note when requested."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.vault-maintenance-queue.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Maintenance queue metadata",
+      "description": "Declares fields useful for Markdown repair queues and vault maintenance triage notes.",
+      "fields": [
+        "backlinks",
+        "backlinkCount",
+        "unlinkedMentions",
+        "unlinkedMentionCount",
+        "resolvedLinks",
+        "unresolvedLinks",
+        "brokenLinkCount",
+        "tags",
+        "tagCount",
+        "headingCount",
+        "openTasks",
+        "completedTasks",
+        "taskCompletionPercent",
+        "publishReady"
+      ]
+    },
+    {
+      "id": "example.vault-maintenance-queue.link-health",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Link health",
+      "description": "Declares Forge's supported link-health sidebar widget for broken-link triage.",
+      "widget": "link-health"
+    },
+    {
+      "id": "example.vault-maintenance-queue.backlinks",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Backlinks",
+      "description": "Declares Forge's supported backlinks sidebar widget for repair context.",
+      "widget": "backlinks"
+    },
+    {
+      "id": "example.vault-maintenance-queue.tasks",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Tasks",
+      "description": "Declares Forge's supported task sidebar widget for maintenance action items.",
+      "widget": "tasks"
+    },
+    {
+      "id": "example.vault-maintenance-queue.tags",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Tags",
+      "description": "Declares Forge's supported tag sidebar widget for grouping cleanup work.",
+      "widget": "tags"
+    },
+    {
+      "id": "example.vault-maintenance-queue.view",
+      "kind": "view",
+      "extensionPoint": "forge.views",
+      "label": "Vault health",
+      "description": "Declares Forge's supported vault-health workspace view as the repair queue surface.",
+      "view": "vault-health"
+    },
+    {
+      "id": "example.vault-maintenance-queue.checklist",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Convert repair lines to checklist",
+      "description": "Declares the supported checklist transform for turning repair notes into action items.",
+      "transform": "lines-to-checklist"
+    },
+    {
+      "id": "example.vault-maintenance-queue.sort",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Sort repair queue lines",
+      "description": "Declares the supported line sorting transform for queue cleanup.",
+      "transform": "sort-lines"
+    },
+    {
+      "id": "example.vault-maintenance-queue.normalize",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Normalize maintenance headings",
+      "description": "Declares the supported heading cleanup transform for maintenance reports.",
+      "transform": "normalize-headings"
+    }
+  ]
+}

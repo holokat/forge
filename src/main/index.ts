@@ -374,20 +374,23 @@ async function scanVault(vault: string): Promise<VaultData> {
   const files: string[] = []
   const folders: string[] = []
   const contents: Record<string, string> = {}
+  const fileStats: VaultData['fileStats'] = {}
 
   async function walk(dir: string): Promise<void> {
     const entries = await fs.readdir(dir, { withFileTypes: true })
     for (const entry of entries) {
       if (entry.name.startsWith('.') || entry.name === 'node_modules') continue
       const abs = path.join(dir, entry.name)
-      const rel = path.relative(vault, abs)
+      const rel = slash(path.relative(vault, abs))
       if (entry.isDirectory()) {
         folders.push(rel)
         await walk(abs)
       } else if (entry.isFile()) {
         const ext = path.extname(entry.name).toLowerCase()
+        const stat = await fs.stat(abs)
         if (ext === MD_EXT) {
           files.push(rel)
+          fileStats[rel] = { size: stat.size, modified: stat.mtime.toISOString() }
           try {
             contents[rel] = await fs.readFile(abs, 'utf8')
           } catch {
@@ -395,6 +398,7 @@ async function scanVault(vault: string): Promise<VaultData> {
           }
         } else if (ASSET_EXTS.has(ext)) {
           files.push(rel)
+          fileStats[rel] = { size: stat.size, modified: stat.mtime.toISOString() }
         }
       }
     }
@@ -403,7 +407,7 @@ async function scanVault(vault: string): Promise<VaultData> {
   await walk(vault)
   files.sort((a, b) => a.localeCompare(b))
   folders.sort((a, b) => a.localeCompare(b))
-  return { files, folders, contents }
+  return { files, folders, contents, fileStats }
 }
 
 function startWatching(vault: string): void {

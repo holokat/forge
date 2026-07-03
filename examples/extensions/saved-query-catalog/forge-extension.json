@@ -1,0 +1,121 @@
+{
+  "manifestVersion": 1,
+  "id": "example.saved-query-catalog",
+  "name": "saved-query-catalog",
+  "displayName": "Saved Query Catalog Example",
+  "description": "Example declarative extension that scaffolds a saved-query catalog as Markdown notes using supported metadata, widgets, transforms, and the outline-board view.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["navigation", "organization", "visualization"],
+  "keywords": ["query", "saved search", "catalog", "dashboard", "metadata"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" },
+    { "id": "forge.views", "label": "Views" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:metadata",
+      "reason": "Reads metadata already derived from local Markdown notes for saved-query catalog grouping and review."
+    },
+    {
+      "kind": "vault:write",
+      "reason": "Writes bounded catalog scaffolding, heading cleanup, and sorted criteria lists into the current note when requested."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.saved-query-catalog.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Saved query catalog metadata",
+      "description": "Declares supported fields that help agents document saved searches, review queues, and dashboard notes without executing a query language.",
+      "fields": [
+        "frontmatterProperties",
+        "aliases",
+        "title",
+        "tags",
+        "tagCount",
+        "headings",
+        "headingCount",
+        "wordCount",
+        "estimatedReadingMinutes",
+        "openTasks",
+        "completedTasks",
+        "publishStatus",
+        "publishReady",
+        "backlinkCount",
+        "brokenLinkCount"
+      ]
+    },
+    {
+      "id": "example.saved-query-catalog.tags",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Tags",
+      "description": "Declares Forge's supported tag sidebar widget for catalog filters and grouping tags.",
+      "widget": "tags"
+    },
+    {
+      "id": "example.saved-query-catalog.properties",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Properties",
+      "description": "Declares Forge's supported frontmatter widget for query catalog ownership, status, and criteria fields.",
+      "widget": "frontmatter"
+    },
+    {
+      "id": "example.saved-query-catalog.tasks",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Tasks",
+      "description": "Declares Forge's supported task widget for follow-up work linked to saved query definitions.",
+      "widget": "tasks"
+    },
+    {
+      "id": "example.saved-query-catalog.outline-board",
+      "kind": "view",
+      "extensionPoint": "forge.views",
+      "label": "Outline board",
+      "description": "Declares Forge's supported outline-board view as a safe catalog and dashboard scaffold.",
+      "view": "outline-board"
+    },
+    {
+      "id": "example.saved-query-catalog.template",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Append saved-query catalog scaffold",
+      "description": "Declares the validator-supported append-template transform for adding catalog sections to a note.",
+      "transform": "append-template"
+    },
+    {
+      "id": "example.saved-query-catalog.normalize",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Normalize catalog headings",
+      "description": "Declares the supported heading cleanup transform for catalog notes.",
+      "transform": "normalize-headings"
+    },
+    {
+      "id": "example.saved-query-catalog.sort",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Sort catalog criteria lines",
+      "description": "Declares the supported line sorting transform for criteria and result-review lists.",
+      "transform": "sort-lines"
+    }
+  ]
+}

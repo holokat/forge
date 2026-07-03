@@ -4,9 +4,9 @@ This checklist tracks the first practical wave of Obsidian-like Forge features t
 
 Verified locally:
 
-- `built-in-templates` currently exposes 38 starter templates.
+- `built-in-templates` currently exposes 44 starter templates.
 - `built-in-extensions` currently exposes 13 bundled manifests across 5 extension points, with 31 contributions.
-- `examples/extensions` currently contains 19 valid local-folder example manifests.
+- `examples/extensions` currently contains 23 valid local-folder example manifests.
 
 ## Wave 1: Ship Now
 
@@ -76,9 +76,9 @@ Verified locally:
 
 ## Wave 7: Vault Health and Repair
 
-- [ ] Add stale-note detection and explicit repair queues to the vault-health workspace.
+- [x] Add stale-note detection and explicit repair queues to the vault-health workspace.
 - [ ] Add one-click repair actions for common safe fixes: create missing notes, insert wikilinks for unlinked mentions, open broken-link sources, and move orphan notes into review.
-- [ ] Extend `analyze --json` and `forge_analyze` with stale-note and duplicate-title signals so agents can run the same health checks without the UI.
+- [x] Extend `analyze --json` and `forge_analyze` with stale-note and duplicate-title signals so agents can run the same health checks without the UI.
 - [x] Add a vault health audit starter template for agents to summarize findings, proposed repairs, and skipped risky changes.
 
 ## Wave 8: Saved Searches and Queries
@@ -99,13 +99,13 @@ Verified locally:
 ## Wave 10: Agent-Facing Templates
 
 - [x] Add Vault Health Report, Task Review, Saved Query, Content Refresh Brief, Extension Spec, and Publish Runbook starter templates.
-- [ ] Add implementation plan, verification report, refactor plan, vault maintenance, saved query catalog, and publish preflight starter templates.
+- [x] Add implementation plan, verification report, refactor plan, vault maintenance, saved query catalog, and publish preflight starter templates.
 - [ ] Give each agent template explicit fields for objective, owned files, allowed commands, verification, risks, and final handoff notes.
 - [ ] Mirror every new starter template in the UI starter gallery, `built-in-templates --json --content`, `seed-templates`, and MCP/CLI docs.
 
 ## Open Notes
 
 - Workflow examples such as `query-dashboard`, `saved-query-scaffold`, `publish-prep`, `static-publishing-workflow`, and `agent-handoff-workflow` are valid declarative scaffolds over supported metadata, widgets, transforms, and views. They are not dedicated workflow engines yet.
-- A built-in `vault-health` view now exists, but stale-note detection, repair automation, saved health reports, and CLI/MCP parity are still roadmap work.
+- A built-in `vault-health` view now includes stale-note detection, duplicate-title checks, create-missing-note repair actions, and CLI/MCP parity. Broader repair automation and saved health reports are still roadmap work.
 - Bookmarks currently persist note paths only. Saved searches and saved query dashboards are still roadmap work.
 - The validator currently accepts `graph-insights`, `outline-board`, `tasks`, and `vault-health` view contribution values. Do not encode new values such as saved-query result views, publish pipeline commands, or agent workflow launchers until validation and runtime routing support them.
