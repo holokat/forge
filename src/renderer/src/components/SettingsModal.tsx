@@ -1,4 +1,24 @@
-import { AlertCircle, Bot, Check, Clipboard, Code2, Download, Monitor, Moon, RefreshCw, Smartphone, Sun, Terminal, X } from 'lucide-react'
+import {
+  AlertCircle,
+  Bot,
+  Check,
+  Clipboard,
+  Code2,
+  Download,
+  FileText,
+  Globe2,
+  Monitor,
+  Moon,
+  Palette,
+  Plug,
+  RefreshCw,
+  Smartphone,
+  SquarePen,
+  Sun,
+  Terminal,
+  Vault as VaultIcon,
+  X
+} from 'lucide-react'
 import QRCode from 'qrcode'
 import { useEffect, useMemo, useState } from 'react'
 import type { AgentAccessInfo, MobilePairingInfo, ThemeMode, UpdateStatus } from '../../../shared/types'
@@ -10,6 +30,28 @@ const THEMES: { mode: ThemeMode; label: string; icon: React.ReactNode }[] = [
   { mode: 'dark', label: 'Dark', icon: <Moon size={15} /> },
   { mode: 'system', label: 'System', icon: <Monitor size={15} /> }
 ]
+
+type SettingsTabId =
+  | 'appearance'
+  | 'editor'
+  | 'notes'
+  | 'vault'
+  | 'publishing'
+  | 'forgeBuddy'
+  | 'agents'
+  | 'extensions'
+  | 'updates'
+
+type SettingsNavGroup = 'Workspace' | 'Connections' | 'System'
+
+interface SettingsNavItem {
+  id: SettingsTabId
+  label: string
+  description: string
+  group: SettingsNavGroup
+  icon: React.ReactNode
+  disabled?: boolean
+}
 
 function ThemePreview({ mode }: { mode: ThemeMode }): React.JSX.Element {
   if (mode === 'system') {
@@ -427,6 +469,7 @@ export default function SettingsModal(): React.JSX.Element {
   const setDailyNotesFolder = useStore((s) => s.setDailyNotesFolder)
   const setModal = useStore((s) => s.setModal)
   const openVaultDialog = useStore((s) => s.openVaultDialog)
+  const [activeTab, setActiveTab] = useState<SettingsTabId>('appearance')
   const [agentAccess, setAgentAccess] = useState<AgentAccessInfo | null>(null)
   const [publishState, setPublishState] = useState<{
     status: 'idle' | 'publishing' | 'done' | 'failed'
@@ -448,6 +491,86 @@ export default function SettingsModal(): React.JSX.Element {
       cancelled = true
     }
   }, [])
+
+  const settingsTabs = useMemo<SettingsNavItem[]>(
+    () => [
+      {
+        id: 'appearance',
+        label: 'Appearance',
+        description: 'Theme and interface color.',
+        group: 'Workspace',
+        icon: <Palette size={15} />
+      },
+      {
+        id: 'editor',
+        label: 'Editor',
+        description: 'Reading width and text scale.',
+        group: 'Workspace',
+        icon: <SquarePen size={15} />
+      },
+      {
+        id: 'notes',
+        label: 'Notes',
+        description: 'Daily note and template folders.',
+        group: 'Workspace',
+        icon: <FileText size={15} />
+      },
+      {
+        id: 'vault',
+        label: 'Vault',
+        description: 'Current local Markdown folder.',
+        group: 'Workspace',
+        icon: <VaultIcon size={15} />,
+        disabled: !vault
+      },
+      {
+        id: 'publishing',
+        label: 'Publishing',
+        description: 'Static site export.',
+        group: 'Connections',
+        icon: <Globe2 size={15} />,
+        disabled: !vault
+      },
+      {
+        id: 'forgeBuddy',
+        label: 'Forge Buddy',
+        description: 'Mobile recorder pairing.',
+        group: 'Connections',
+        icon: <Smartphone size={15} />,
+        disabled: !vault
+      },
+      {
+        id: 'agents',
+        label: 'Agents',
+        description: 'CLI and MCP access.',
+        group: 'Connections',
+        icon: <Bot size={15} />,
+        disabled: !vault
+      },
+      {
+        id: 'extensions',
+        label: 'Extensions',
+        description: 'Installed Forge add-ons.',
+        group: 'System',
+        icon: <Plug size={15} />
+      },
+      {
+        id: 'updates',
+        label: 'Updates',
+        description: 'Release checks and installs.',
+        group: 'System',
+        icon: <Download size={15} />
+      }
+    ],
+    [vault]
+  )
+
+  useEffect(() => {
+    const current = settingsTabs.find((tab) => tab.id === activeTab)
+    if (!current || current.disabled) {
+      setActiveTab(settingsTabs.find((tab) => !tab.disabled)?.id ?? 'appearance')
+    }
+  }, [activeTab, settingsTabs])
 
   const agentBrief = useMemo(
     () =>
@@ -485,6 +608,14 @@ export default function SettingsModal(): React.JSX.Element {
         ])
       : ''
   const publishDir = vault ? defaultPublishDir(vault) : ''
+  const activeSettingsTab = settingsTabs.find((tab) => tab.id === activeTab) ?? settingsTabs[0]
+  const groupedTabs = settingsTabs.reduce<Record<SettingsNavGroup, SettingsNavItem[]>>(
+    (groups, tab) => {
+      groups[tab.group].push(tab)
+      return groups
+    },
+    { Workspace: [], Connections: [], System: [] }
+  )
 
   const publishStaticSite = async (): Promise<void> => {
     if (!vault || !publishDir) return
@@ -506,241 +637,289 @@ export default function SettingsModal(): React.JSX.Element {
     <div className="modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && setModal(null)}>
       <div className="settings-panel">
         <div className="settings-header">
-          <h2>Settings</h2>
+          <div>
+            <h2>Settings</h2>
+            <div className="settings-header-subtitle">{vault ? vault.split('/').pop() : 'No vault open'}</div>
+          </div>
           <button className="icon-btn" onClick={() => setModal(null)}>
             <X size={16} />
           </button>
         </div>
 
-        <div className="settings-body">
-          <section>
-            <h3>Appearance</h3>
-            <div className="theme-cards">
-              {THEMES.map(({ mode, label, icon }) => (
-                <button
-                  key={mode}
-                  className={`theme-card${theme === mode ? ' active' : ''}`}
-                  onClick={() => setTheme(mode)}
-                >
-                  <ThemePreview mode={mode} />
-                  <span className="theme-card-label">
-                    {icon}
-                    {label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h3>Editor</h3>
-            <div className="settings-row">
-              <div>
-                <div className="settings-row-label">Font size</div>
-                <div className="settings-row-desc">Base size for editor and reading view</div>
-              </div>
-              <div className="settings-row-control">
-                <input
-                  type="range"
-                  min={13}
-                  max={22}
-                  value={fontSize}
-                  onChange={(e) => setFontSize(Number(e.target.value))}
-                />
-                <span className="settings-value">{fontSize}px</span>
-              </div>
-            </div>
-            <div className="settings-row">
-              <div>
-                <div className="settings-row-label">Line width</div>
-                <div className="settings-row-desc">Maximum width of note content</div>
-              </div>
-              <div className="settings-row-control">
-                <input
-                  type="range"
-                  min={560}
-                  max={960}
-                  step={20}
-                  value={lineWidth}
-                  onChange={(e) => setLineWidth(Number(e.target.value))}
-                />
-                <span className="settings-value">{lineWidth}px</span>
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <h3>Notes</h3>
-            <div className="settings-row">
-              <div>
-                <div className="settings-row-label">Daily notes folder</div>
-                <div className="settings-row-desc">Where Forge creates date-based notes</div>
-              </div>
-              <div className="settings-row-control">
-                <input
-                  className="settings-text-input"
-                  value={dailyNotesFolder}
-                  onChange={(event) => setDailyNotesFolder(event.target.value)}
-                />
-              </div>
-            </div>
-            <div className="settings-row">
-              <div>
-                <div className="settings-row-label">Templates folder</div>
-                <div className="settings-row-desc">Use Templates/Daily.md for daily note content</div>
-              </div>
-              <div className="settings-row-control">
-                <input
-                  className="settings-text-input"
-                  value={templatesFolder}
-                  onChange={(event) => setTemplatesFolder(event.target.value)}
-                />
-              </div>
-            </div>
-          </section>
-
-          {vault && (
-            <section>
-              <h3>Vault</h3>
-              <div className="settings-row">
-                <div>
-                  <div className="settings-row-label">{vault.split('/').pop()}</div>
-                  <div className="settings-row-desc">{vault}</div>
-                </div>
-                <div className="settings-row-control">
+        <div className="settings-shell">
+          <nav className="settings-nav" aria-label="Settings sections">
+            {(Object.keys(groupedTabs) as SettingsNavGroup[]).map((group) => (
+              <div className="settings-nav-group" key={group}>
+                <div className="settings-nav-title">{group}</div>
+                {groupedTabs[group].map((tab) => (
                   <button
-                    className="btn"
-                    onClick={() => {
-                      setModal(null)
-                      openVaultDialog()
-                    }}
+                    key={tab.id}
+                    className={`settings-nav-btn${activeTab === tab.id ? ' active' : ''}`}
+                    type="button"
+                    disabled={tab.disabled}
+                    aria-label={tab.label}
+                    aria-current={activeTab === tab.id ? 'page' : undefined}
+                    title={tab.disabled ? 'Open a vault to use this section' : tab.label}
+                    onClick={() => setActiveTab(tab.id)}
                   >
-                    Switch vault…
+                    <span className="settings-nav-icon">{tab.icon}</span>
+                    <span className="settings-nav-copy">
+                      <span>{tab.label}</span>
+                      <small>{tab.disabled ? 'Open a vault' : tab.description}</small>
+                    </span>
                   </button>
-                </div>
+                ))}
               </div>
-            </section>
-          )}
+            ))}
+          </nav>
 
-          {vault && (
-            <section>
-              <h3>Publishing</h3>
-              <div className="settings-callout static-publish-card">
-                <div>
-                  <div className="settings-row-label">Static site export</div>
-                  <div className="settings-row-desc">
-                    Generate local HTML from Markdown, wikilinks, tags, backlinks, and vault assets.
-                  </div>
-                </div>
-                <div className="settings-code-row">
-                  <code>{publishDir}</code>
-                  <CopyButton value={publishDir} label="Copy path" />
-                </div>
-                <div className="static-publish-actions">
-                  <button className="btn" disabled={publishState.status === 'publishing'} onClick={() => publishStaticSite()}>
-                    {publishState.status === 'publishing' ? <RefreshCw size={14} /> : <Code2 size={14} />}
-                    {publishState.status === 'publishing' ? 'Publishing' : 'Publish site'}
-                  </button>
-                  <button
-                    className="btn btn-compact"
-                    disabled={publishState.status !== 'done'}
-                    onClick={() => window.forge.reveal(vault, '.forge/publish/index.html')}
-                  >
-                    Reveal output
-                  </button>
-                </div>
-                {publishState.message && (
-                  <div className={`static-publish-status ${publishState.status}`}>
-                    {publishState.status === 'done' ? <Check size={14} /> : publishState.status === 'failed' ? <AlertCircle size={14} /> : <RefreshCw size={14} />}
-                    <span>{publishState.message}</span>
-                  </div>
-                )}
+          <main className="settings-content">
+            <div className="settings-content-header">
+              <div className="settings-content-icon">{activeSettingsTab?.icon}</div>
+              <div>
+                <h3>{activeSettingsTab?.label}</h3>
+                <p>{activeSettingsTab?.description}</p>
               </div>
-            </section>
-          )}
+            </div>
 
-          <section>
-            <h3>Updates</h3>
-            <UpdateCard />
-          </section>
-
-          {vault && (
-            <section>
-              <h3>Forge Buddy</h3>
-              <MobileRecorderCard vault={vault} />
-            </section>
-          )}
-
-          {vault && (
-            <section>
-              <h3>Agent access</h3>
-              <div className="settings-callout agent-access-summary">
-                <div>
-                  <div className="settings-row-label">Local agent bridge</div>
-                  <div className="settings-row-desc">
-                    Codex and Claude can use Forge through MCP. Terminal-based agents can use the same local CLI.
+            <div className="settings-pane">
+              {activeTab === 'appearance' && (
+                <section className="settings-section">
+                  <div className="theme-cards">
+                    {THEMES.map(({ mode, label, icon }) => (
+                      <button
+                        key={mode}
+                        className={`theme-card${theme === mode ? ' active' : ''}`}
+                        onClick={() => setTheme(mode)}
+                      >
+                        <ThemePreview mode={mode} />
+                        <span className="theme-card-label">
+                          {icon}
+                          {label}
+                        </span>
+                      </button>
+                    ))}
                   </div>
-                </div>
-                <div className="settings-code-row">
-                  <code>{vault}</code>
-                  <CopyButton value={vault} label="Copy path" />
-                </div>
-              </div>
+                </section>
+              )}
 
-              <div className="settings-row">
-                <div>
-                  <div className="settings-row-label">Agent brief</div>
-                  <div className="settings-row-desc">A short instruction block for agents that can read and write local files.</div>
-                </div>
-                <div className="settings-row-control">
-                  <CopyButton value={agentBrief} label="Copy brief" />
-                </div>
-              </div>
+              {activeTab === 'editor' && (
+                <section className="settings-section">
+                  <div className="settings-row">
+                    <div>
+                      <div className="settings-row-label">Font size</div>
+                      <div className="settings-row-desc">Base size for editor and reading view</div>
+                    </div>
+                    <div className="settings-row-control">
+                      <input
+                        type="range"
+                        min={13}
+                        max={22}
+                        value={fontSize}
+                        onChange={(e) => setFontSize(Number(e.target.value))}
+                      />
+                      <span className="settings-value">{fontSize}px</span>
+                    </div>
+                  </div>
+                  <div className="settings-row">
+                    <div>
+                      <div className="settings-row-label">Line width</div>
+                      <div className="settings-row-desc">Maximum width of note content</div>
+                    </div>
+                    <div className="settings-row-control">
+                      <input
+                        type="range"
+                        min={560}
+                        max={960}
+                        step={20}
+                        value={lineWidth}
+                        onChange={(e) => setLineWidth(Number(e.target.value))}
+                      />
+                      <span className="settings-value">{lineWidth}px</span>
+                    </div>
+                  </div>
+                </section>
+              )}
 
-              <div className="agent-access-grid">
-                <div className="agent-access-card">
-                  <div className="agent-access-card-title">
-                    <Terminal size={14} />
-                    <span>CLI</span>
+              {activeTab === 'notes' && (
+                <section className="settings-section">
+                  <div className="settings-row">
+                    <div>
+                      <div className="settings-row-label">Daily notes folder</div>
+                      <div className="settings-row-desc">Where Forge creates date-based notes</div>
+                    </div>
+                    <div className="settings-row-control">
+                      <input
+                        className="settings-text-input"
+                        value={dailyNotesFolder}
+                        onChange={(event) => setDailyNotesFolder(event.target.value)}
+                      />
+                    </div>
                   </div>
-                  <p>For Codex, Claude Code, Cursor, or any agent that can run shell commands.</p>
-                  <div className="agent-code-block">{cliCommand || 'Loading command…'}</div>
-                  <CopyButton value={cliCommand} label="Copy CLI" disabled={!cliCommand} />
-                </div>
+                  <div className="settings-row">
+                    <div>
+                      <div className="settings-row-label">Templates folder</div>
+                      <div className="settings-row-desc">Use Templates/Daily.md for daily note content</div>
+                    </div>
+                    <div className="settings-row-control">
+                      <input
+                        className="settings-text-input"
+                        value={templatesFolder}
+                        onChange={(event) => setTemplatesFolder(event.target.value)}
+                      />
+                    </div>
+                  </div>
+                </section>
+              )}
 
-                <div className="agent-access-card">
-                  <div className="agent-access-card-title">
-                    <Bot size={14} />
-                    <span>Codex MCP</span>
+              {activeTab === 'vault' && vault && (
+                <section className="settings-section">
+                  <div className="settings-row">
+                    <div>
+                      <div className="settings-row-label">{vault.split('/').pop()}</div>
+                      <div className="settings-row-desc">{vault}</div>
+                    </div>
+                    <div className="settings-row-control">
+                      <button
+                        className="btn"
+                        onClick={() => {
+                          setModal(null)
+                          openVaultDialog()
+                        }}
+                      >
+                        Switch vault…
+                      </button>
+                    </div>
                   </div>
-                  <p>Add this server to Codex for structured Forge tools.</p>
-                  <div className="agent-code-block">{codexAddCommand || 'Loading command…'}</div>
-                  <div className="agent-access-actions">
-                    <CopyButton value={codexAddCommand} label="Copy add command" disabled={!codexAddCommand} />
-                    <CopyButton value={codexToml} label="Copy TOML" disabled={!codexToml} />
-                  </div>
-                </div>
+                </section>
+              )}
 
-                <div className="agent-access-card">
-                  <div className="agent-access-card-title">
-                    <Code2 size={14} />
-                    <span>Claude MCP</span>
+              {activeTab === 'publishing' && vault && (
+                <section className="settings-section">
+                  <div className="settings-callout static-publish-card">
+                    <div>
+                      <div className="settings-row-label">Static site export</div>
+                      <div className="settings-row-desc">
+                        Generate local HTML from Markdown, wikilinks, tags, backlinks, and vault assets.
+                      </div>
+                    </div>
+                    <div className="settings-code-row">
+                      <code>{publishDir}</code>
+                      <CopyButton value={publishDir} label="Copy path" />
+                    </div>
+                    <div className="static-publish-actions">
+                      <button className="btn" disabled={publishState.status === 'publishing'} onClick={() => publishStaticSite()}>
+                        {publishState.status === 'publishing' ? <RefreshCw size={14} /> : <Code2 size={14} />}
+                        {publishState.status === 'publishing' ? 'Publishing' : 'Publish site'}
+                      </button>
+                      <button
+                        className="btn btn-compact"
+                        disabled={publishState.status !== 'done'}
+                        onClick={() => window.forge.reveal(vault, '.forge/publish/index.html')}
+                      >
+                        Reveal output
+                      </button>
+                    </div>
+                    {publishState.message && (
+                      <div className={`static-publish-status ${publishState.status}`}>
+                        {publishState.status === 'done' ? (
+                          <Check size={14} />
+                        ) : publishState.status === 'failed' ? (
+                          <AlertCircle size={14} />
+                        ) : (
+                          <RefreshCw size={14} />
+                        )}
+                        <span>{publishState.message}</span>
+                      </div>
+                    )}
                   </div>
-                  <p>Use the JSON config for Claude Desktop, or the command for Claude Code.</p>
-                  <div className="agent-code-block">{mcpCommand || 'Loading command…'}</div>
-                  <div className="agent-access-actions">
-                    <CopyButton value={claudeJson} label="Copy JSON" disabled={!claudeJson} />
-                    <CopyButton value={claudeCodeCommand} label="Copy Claude Code" disabled={!claudeCodeCommand} />
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
+                </section>
+              )}
 
-          <section>
-            <h3>Extensions</h3>
-            <ExtensionMarketplace />
-          </section>
+              {activeTab === 'updates' && (
+                <section className="settings-section">
+                  <UpdateCard />
+                </section>
+              )}
+
+              {activeTab === 'forgeBuddy' && vault && (
+                <section className="settings-section">
+                  <MobileRecorderCard vault={vault} />
+                </section>
+              )}
+
+              {activeTab === 'agents' && vault && (
+                <section className="settings-section">
+                  <div className="settings-callout agent-access-summary">
+                    <div>
+                      <div className="settings-row-label">Local agent bridge</div>
+                      <div className="settings-row-desc">
+                        Codex and Claude can use Forge through MCP. Terminal-based agents can use the same local CLI.
+                      </div>
+                    </div>
+                    <div className="settings-code-row">
+                      <code>{vault}</code>
+                      <CopyButton value={vault} label="Copy path" />
+                    </div>
+                  </div>
+
+                  <div className="settings-row">
+                    <div>
+                      <div className="settings-row-label">Agent brief</div>
+                      <div className="settings-row-desc">A short instruction block for agents that can read and write local files.</div>
+                    </div>
+                    <div className="settings-row-control">
+                      <CopyButton value={agentBrief} label="Copy brief" />
+                    </div>
+                  </div>
+
+                  <div className="agent-access-grid">
+                    <div className="agent-access-card">
+                      <div className="agent-access-card-title">
+                        <Terminal size={14} />
+                        <span>CLI</span>
+                      </div>
+                      <p>For Codex, Claude Code, Cursor, or any agent that can run shell commands.</p>
+                      <div className="agent-code-block">{cliCommand || 'Loading command…'}</div>
+                      <CopyButton value={cliCommand} label="Copy CLI" disabled={!cliCommand} />
+                    </div>
+
+                    <div className="agent-access-card">
+                      <div className="agent-access-card-title">
+                        <Bot size={14} />
+                        <span>Codex MCP</span>
+                      </div>
+                      <p>Add this server to Codex for structured Forge tools.</p>
+                      <div className="agent-code-block">{codexAddCommand || 'Loading command…'}</div>
+                      <div className="agent-access-actions">
+                        <CopyButton value={codexAddCommand} label="Copy add command" disabled={!codexAddCommand} />
+                        <CopyButton value={codexToml} label="Copy TOML" disabled={!codexToml} />
+                      </div>
+                    </div>
+
+                    <div className="agent-access-card">
+                      <div className="agent-access-card-title">
+                        <Code2 size={14} />
+                        <span>Claude MCP</span>
+                      </div>
+                      <p>Use the JSON config for Claude Desktop, or the command for Claude Code.</p>
+                      <div className="agent-code-block">{mcpCommand || 'Loading command…'}</div>
+                      <div className="agent-access-actions">
+                        <CopyButton value={claudeJson} label="Copy JSON" disabled={!claudeJson} />
+                        <CopyButton value={claudeCodeCommand} label="Copy Claude Code" disabled={!claudeCodeCommand} />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {activeTab === 'extensions' && (
+                <section className="settings-section">
+                  <ExtensionMarketplace />
+                </section>
+              )}
+            </div>
+          </main>
         </div>
       </div>
     </div>
