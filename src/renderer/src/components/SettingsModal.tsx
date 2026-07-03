@@ -198,6 +198,18 @@ function defaultPublishDir(vault: string): string {
   return `${vault.replace(/\/+$/, '')}/.forge/publish`
 }
 
+function publicPublishNotes(publishDir: string): string {
+  return [
+    'Forge publishing is static and host-neutral.',
+    '',
+    `1. Click "Generate site" in Forge, or run forge-publish --out ${shellQuote(publishDir)} --clean.`,
+    '2. Upload the generated folder to any static host: GitHub Pages, Cloudflare Pages, Netlify, Vercel, S3/R2, or IPFS.',
+    '3. Images, audio, video, PDFs, backlinks, tags, and wikilinks are emitted as plain HTML/assets. No Forge server is required.',
+    '',
+    'For GitHub Pages, keep the generated .nojekyll file so the _forge asset folder is served.'
+  ].join('\n')
+}
+
 async function createPairingQr(pairingUrl: string | undefined): Promise<string> {
   if (!pairingUrl) return ''
   return QRCode.toDataURL(pairingUrl, {
@@ -800,7 +812,7 @@ export default function SettingsModal(): React.JSX.Element {
                     <div>
                       <div className="settings-row-label">Static site export</div>
                       <div className="settings-row-desc">
-                        Generate local HTML from Markdown, wikilinks, tags, backlinks, and vault assets.
+                        Generate local HTML from Markdown, wikilinks, tags, backlinks, and media assets.
                       </div>
                     </div>
                     <div className="settings-code-row">
@@ -810,7 +822,7 @@ export default function SettingsModal(): React.JSX.Element {
                     <div className="static-publish-actions">
                       <button className="btn" disabled={publishState.status === 'publishing'} onClick={() => publishStaticSite()}>
                         {publishState.status === 'publishing' ? <RefreshCw size={14} /> : <Code2 size={14} />}
-                        {publishState.status === 'publishing' ? 'Publishing' : 'Publish site'}
+                        {publishState.status === 'publishing' ? 'Generating' : 'Generate site'}
                       </button>
                       <button
                         className="btn btn-compact"
@@ -832,6 +844,27 @@ export default function SettingsModal(): React.JSX.Element {
                         <span>{publishState.message}</span>
                       </div>
                     )}
+                  </div>
+                  <div className="settings-callout public-publish-card">
+                    <div>
+                      <div className="settings-row-label">Public hosting</div>
+                      <div className="settings-row-desc">
+                        Forge does not need a hosted backend. Deploy the generated folder to any static host when you want a public URL.
+                      </div>
+                    </div>
+                    <div className="public-publish-options">
+                      <div className="public-publish-option">
+                        <strong>Open source default</strong>
+                        <span>Commit or upload the output folder to GitHub Pages. Forge writes .nojekyll for _forge assets.</span>
+                      </div>
+                      <div className="public-publish-option">
+                        <strong>Provider neutral</strong>
+                        <span>Cloudflare Pages, Netlify, Vercel, S3/R2, and IPFS can serve the same static files.</span>
+                      </div>
+                    </div>
+                    <div className="static-publish-actions">
+                      <CopyButton value={publicPublishNotes(publishDir)} label="Copy deploy notes" />
+                    </div>
                   </div>
                 </section>
               )}

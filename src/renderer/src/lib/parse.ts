@@ -146,11 +146,15 @@ export function isMarkdown(rel: string): boolean {
 }
 
 export function isAudio(rel: string): boolean {
-  return /\.(m4a|mp3|wav|aac|caf|ogg)$/i.test(rel)
+  return /\.(m4a|mp3|wav|aac|caf|ogg|oga|opus|flac|aiff?)$/i.test(rel)
 }
 
 export function isImage(rel: string): boolean {
-  return /\.(png|jpe?g|gif|svg|webp)$/i.test(rel)
+  return /\.(png|jpe?g|gif|svg|webp|avif|bmp|tiff?|heic|heif)$/i.test(rel)
+}
+
+export function isVideo(rel: string): boolean {
+  return /\.(mp4|mov|m4v|webm|ogv)$/i.test(rel)
 }
 
 export function noteDisplayTitle(path: string, meta?: Pick<NoteMeta, 'title'>): string {

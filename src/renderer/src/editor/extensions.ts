@@ -22,6 +22,7 @@ import { linkTarget } from '../lib/parse'
 export interface EditorCallbacks {
   onChange(content: string): void
   onNavigate(target: string): void
+  onDropFiles(paths: string[]): Promise<string>
   getLinkTargets(): { label: string; detail?: string }[]
 }
 
@@ -149,6 +150,56 @@ function wikilinkClick(onNavigate: (target: string) => void): Extension {
   })
 }
 
+function droppedFilePaths(event: DragEvent): string[] {
+  const files = Array.from(event.dataTransfer?.files ?? [])
+  if (files.length === 0) return []
+
+  const pathsFromPreload = window.forge.droppedFilePaths(files)
+  const fallbackPaths = files
+    .map((file) => (file as File & { path?: string }).path ?? '')
+    .filter(Boolean)
+  return [...new Set([...pathsFromPreload, ...fallbackPaths])]
+}
+
+function insertionBlock(doc: string, pos: number, body: string): string {
+  const before = doc.slice(0, pos)
+  const after = doc.slice(pos)
+  const prefix = before.length === 0 || /\n\n$/.test(before) ? '' : before.endsWith('\n') ? '\n' : '\n\n'
+  const suffix = after.length === 0 || /^\n\n/.test(after) ? '' : after.startsWith('\n') ? '\n' : '\n\n'
+  return `${prefix}${body.trim()}${suffix}`
+}
+
+function fileDropHandler(onDropFiles: EditorCallbacks['onDropFiles']): Extension {
+  return EditorView.domEventHandlers({
+    drop(event, view) {
+      const paths = droppedFilePaths(event)
+      if (paths.length === 0) return false
+
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+
+      const requestedPos = view.posAtCoords({ x: event.clientX, y: event.clientY }) ?? view.state.selection.main.from
+
+      onDropFiles(paths)
+        .then((markdown) => {
+          if (!markdown.trim()) return
+          const pos = Math.min(requestedPos, view.state.doc.length)
+          const insert = insertionBlock(view.state.doc.toString(), pos, markdown)
+          view.dispatch({
+            changes: { from: pos, insert },
+            selection: { anchor: pos + insert.length },
+            scrollIntoView: true
+          })
+          view.focus()
+        })
+        .catch((error) => console.error('Attachment import failed.', error))
+
+      return true
+    }
+  })
+}
+
 // ---------- [[ autocomplete ----------
 
 function wikiCompletionSource(getLinkTargets: EditorCallbacks['getLinkTargets']) {
@@ -186,6 +237,7 @@ export function createEditorState(content: string, callbacks: EditorCallbacks): 
       decoratorPlugin(wikilinkDecorator),
       decoratorPlugin(tagDecorator),
       wikilinkClick(callbacks.onNavigate),
+      fileDropHandler(callbacks.onDropFiles),
       autocompletion({ override: [wikiCompletionSource(callbacks.getLinkTargets)], icons: false }),
       keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
       EditorView.updateListener.of((update) => {

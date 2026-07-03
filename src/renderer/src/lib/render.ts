@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify'
 import { marked, type TokenizerAndRendererExtension } from 'marked'
-import { isAudio, isImage, linkLabel, linkTarget, resolveLink } from './parse'
+import { isAudio, isImage, isVideo, linkLabel, linkTarget, resolveLink } from './parse'
 
 interface RenderContext {
   vault: string
@@ -30,6 +30,9 @@ const wikilinkExt: TokenizerAndRendererExtension = {
     }
     if (token.embed && resolved && isAudio(resolved)) {
       return `<audio class="embed-audio" controls preload="metadata" src="${window.forge.assetUrl(ctx.vault, resolved)}"></audio>`
+    }
+    if (token.embed && resolved && isVideo(resolved)) {
+      return `<video class="embed-video" controls preload="metadata" playsinline src="${window.forge.assetUrl(ctx.vault, resolved)}"></video>`
     }
     const cls = resolved ? 'internal-link' : 'internal-link unresolved'
     return `<a class="${cls}" data-target="${escapeHtml(target)}" href="#">${escapeHtml(label)}</a>`
@@ -84,8 +87,8 @@ export function renderMarkdown(content: string, vault: string, files: string[]):
   ctx = { vault, files }
   const html = marked.parse(content, { async: false })
   return DOMPurify.sanitize(html, {
-    ADD_ATTR: ['data-target', 'target', 'controls', 'preload'],
-    ADD_TAGS: ['audio'],
+    ADD_ATTR: ['data-target', 'target', 'controls', 'preload', 'playsinline'],
+    ADD_TAGS: ['audio', 'video'],
     ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|forge-asset|data|file):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i
   })
 }

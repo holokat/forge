@@ -23,6 +23,8 @@ import { pathToFileURL } from 'node:url'
 import {
   DEFAULT_SETTINGS,
   type AgentAccessInfo,
+  type ImportedAttachment,
+  type ImportedAttachmentKind,
   type ReleaseNotesInfo,
   type Settings,
   type ThemeMode,
@@ -32,10 +34,11 @@ import {
 import { MobileIngestServer } from './mobileIngest'
 
 const MD_EXT = '.md'
-const ASSET_EXTS = new Set([
-  '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.pdf',
-  '.mp3', '.mp4', '.m4a', '.wav', '.aac', '.caf', '.ogg'
-])
+const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.avif', '.bmp', '.tif', '.tiff', '.heic', '.heif'])
+const AUDIO_EXTS = new Set(['.mp3', '.m4a', '.wav', '.aac', '.caf', '.ogg', '.oga', '.opus', '.flac', '.aif', '.aiff'])
+const VIDEO_EXTS = new Set(['.mp4', '.mov', '.m4v', '.webm', '.ogv'])
+const FILE_EXTS = new Set(['.pdf'])
+const ASSET_EXTS = new Set([...IMAGE_EXTS, ...AUDIO_EXTS, ...VIDEO_EXTS, ...FILE_EXTS])
 
 let mainWindow: BrowserWindow | null = null
 let watcher: FSWatcher | null = null
@@ -292,6 +295,81 @@ function safeJoin(vault: string, rel: string): string {
   return abs
 }
 
+function slash(value: string): string {
+  return value.split(path.sep).join('/')
+}
+
+function sanitizeFileName(name: string): string {
+  const ext = path.extname(name)
+  const stem = path.basename(name, ext)
+  const cleanStem = stem
+    .normalize('NFKD')
+    .replace(/[\\/:*?"<>|]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 96)
+  const cleanExt = ext.replace(/[^\w.]/g, '').slice(0, 16)
+  return `${cleanStem || 'Attachment'}${cleanExt}`
+}
+
+function attachmentKind(ext: string): ImportedAttachmentKind {
+  if (IMAGE_EXTS.has(ext)) return 'image'
+  if (AUDIO_EXTS.has(ext)) return 'audio'
+  if (VIDEO_EXTS.has(ext)) return 'video'
+  return 'file'
+}
+
+async function exists(abs: string): Promise<boolean> {
+  return fs.access(abs).then(
+    () => true,
+    () => false
+  )
+}
+
+async function uniqueVaultRel(vault: string, rel: string): Promise<string> {
+  const parsed = path.posix.parse(rel)
+  let candidate = rel
+  let n = 1
+  while (await exists(safeJoin(vault, candidate))) {
+    candidate = path.posix.join(parsed.dir, `${parsed.name} ${n}${parsed.ext}`)
+    n += 1
+  }
+  return candidate
+}
+
+async function importAttachments(
+  vault: string,
+  noteRel: string,
+  sourcePaths: string[]
+): Promise<ImportedAttachment[]> {
+  suppressWatchUntil = Date.now() + 1200
+  const noteStem = sanitizeFileName(path.basename(noteRel, path.extname(noteRel))).replace(/\.[^.]+$/, '')
+  const targetDir = path.posix.join('Attachments', noteStem || 'Note')
+  const imported: ImportedAttachment[] = []
+
+  for (const rawSource of sourcePaths) {
+    const sourcePath = path.resolve(rawSource)
+    const stat = await fs.stat(sourcePath).catch(() => null)
+    if (!stat?.isFile()) continue
+
+    const ext = path.extname(sourcePath).toLowerCase()
+    if (!ASSET_EXTS.has(ext)) continue
+
+    const rel = await uniqueVaultRel(vault, path.posix.join(targetDir, sanitizeFileName(path.basename(sourcePath))))
+    const abs = safeJoin(vault, rel)
+    await fs.mkdir(path.dirname(abs), { recursive: true })
+    await fs.copyFile(sourcePath, abs)
+    imported.push({
+      sourcePath,
+      path: slash(rel),
+      name: path.basename(rel),
+      kind: attachmentKind(ext)
+    })
+  }
+
+  return imported
+}
+
 async function scanVault(vault: string): Promise<VaultData> {
   const files: string[] = []
   const folders: string[] = []
@@ -435,6 +513,10 @@ function registerIpc(): void {
     await fs.mkdir(path.dirname(abs), { recursive: true })
     await fs.writeFile(abs, content, 'utf8')
     return candidate
+  })
+
+  ipcMain.handle('file:importAttachments', (_e, vault: string, noteRel: string, sourcePaths: string[]) => {
+    return importAttachments(vault, noteRel, sourcePaths)
   })
 
   ipcMain.handle('file:rename', async (_e, vault: string, oldRel: string, newRel: string) => {

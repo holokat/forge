@@ -22,6 +22,7 @@
   --bg-code: #f5f5f6;
   --border: rgba(20, 20, 30, 0.09);
   --border-strong: rgba(20, 20, 30, 0.14);
+  --media-outline: rgba(0, 0, 0, 0.1);
   --text-normal: #1d1d21;
   --text-muted: #6b6b76;
   --text-faint: #a4a4ae;
@@ -57,6 +58,7 @@
   --bg-code: rgba(255, 255, 255, 0.055);
   --border: rgba(255, 255, 255, 0.085);
   --border-strong: rgba(255, 255, 255, 0.15);
+  --media-outline: rgba(255, 255, 255, 0.1);
   --text-normal: #e7e7ec;
   --text-muted: #9d9da8;
   --text-faint: #64646e;
@@ -1049,13 +1051,27 @@ body.resizing .pane-resizer::after {
 .reading-view img.embed {
   max-width: 100%;
   border-radius: 8px;
+  outline: 1px solid var(--media-outline);
+  outline-offset: -1px;
 }
 
-.reading-view audio.embed-audio {
+.reading-view audio.embed-audio,
+.reading-view video.embed-video {
   display: block;
   width: 100%;
   max-width: 480px;
   margin: 0.6em 0 1em;
+}
+
+.reading-view video.embed-video {
+  max-width: min(100%, 760px);
+  border-radius: 8px;
+  background: #000;
+  outline: 1px solid var(--media-outline);
+  outline-offset: -1px;
+}
+
+.reading-view audio.embed-audio {
   border-radius: 24px;
 }
 
@@ -1923,6 +1939,37 @@ button.tag:hover {
   gap: 11px;
 }
 
+.public-publish-card {
+  gap: 12px;
+}
+
+.public-publish-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.public-publish-option {
+  padding: 10px;
+  border-radius: 7px;
+  background: var(--bg-panel);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.public-publish-option strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-normal);
+  font-size: 12px;
+}
+
+.public-publish-option span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
 .static-publish-actions,
 .static-publish-status {
   display: flex;
@@ -2642,6 +2689,10 @@ button.tag:hover {
 }
 
 @media (max-width: 720px) {
+  .public-publish-options {
+    grid-template-columns: 1fr;
+  }
+
   .extension-marketplace .extension-marketplace-header,
   .extension-marketplace .extension-marketplace-toolbar {
     align-items: stretch;

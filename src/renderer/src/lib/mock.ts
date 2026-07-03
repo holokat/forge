@@ -156,6 +156,7 @@ export function installMockApi(): void {
     copyText: async (text) => {
       await navigator.clipboard?.writeText(text)
     },
+    droppedFilePaths: () => [],
     getMobilePairingInfo: async () => ({
       available: true,
       baseUrl: 'http://127.0.0.1:47873',
@@ -175,6 +176,7 @@ export function installMockApi(): void {
       vaultName: 'Notes'
     }),
     setMobileVault: async () => {},
+    importAttachments: async () => [],
     publishVault: async (_vault, outDir) => ({ outDir, files: 0, notes: 0 }),
     getUpdateStatus: async () => ({
       state: 'disabled',

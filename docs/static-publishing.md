@@ -30,6 +30,7 @@ The output folder contains:
 - `tags/*.html` for tag index pages.
 - `assets/**` copied from non-Markdown files in the vault.
 - `_forge/styles.css` and `_forge/manifest.json` for generated site assets and metadata.
+- `.nojekyll` so GitHub Pages serves `_forge` assets.
 - `.forge-publish.json` as the ownership marker used by `--clean`.
 
 ## Link Behavior
@@ -37,8 +38,14 @@ The output folder contains:
 - Wikilinks such as `[[Project Plan]]`, `[[Folder/Note|label]]`, and `[[Note#Heading]]` resolve to generated note pages.
 - Markdown links to other notes, such as `[Plan](Projects/Plan.md)`, resolve to generated note pages.
 - Hashtags become links to generated tag pages.
-- Local images and other non-Markdown assets are copied to `assets/` and linked with relative URLs.
+- Local images, audio, video, PDFs, and other non-Markdown assets are copied to `assets/` and linked with relative URLs.
 - Missing wikilinks are shown as unresolved and listed on `index.html`.
+
+## Public Hosting
+
+Forge publishing is static and host-neutral. The generated folder can be served by GitHub Pages, Cloudflare Pages, Netlify, Vercel, S3/R2, IPFS, or any plain web server. Forge does not require a Forge account, hosted API, or project-owned server to make published notes public.
+
+For GitHub Pages, keep the generated `.nojekyll` file in the deployed output so files under `_forge/` are served.
 
 ## Safety
 

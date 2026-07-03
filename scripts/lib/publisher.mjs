@@ -11,6 +11,7 @@ const MARKDOWN_LINK_RE = /(!?)\[([^\]\n]*)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/
 const EXTERNAL_REF_RE = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i
 const IMAGE_EXT_RE = /\.(?:apng|avif|gif|jpe?g|png|svg|webp)$/i
 const AUDIO_EXT_RE = /\.(?:aac|aiff?|flac|m4a|mp3|oga|ogg|opus|wav|webm)$/i
+const VIDEO_EXT_RE = /\.(?:m4v|mov|mp4|ogv|webm)$/i
 
 function slash(value) {
   return value.split(path.sep).join('/')
@@ -475,6 +476,9 @@ function renderMarkdown(note, site) {
         }
         if (asset && AUDIO_EXT_RE.test(asset)) {
           return `<audio class="embed-audio" controls preload="metadata" src="${relativeHref(note.outputPath, assetOutputPath(asset))}"></audio>`
+        }
+        if (asset && VIDEO_EXT_RE.test(asset)) {
+          return `<video class="embed-video" controls preload="metadata" playsinline src="${relativeHref(note.outputPath, assetOutputPath(asset))}"></video>`
         }
       }
 
@@ -1166,9 +1170,19 @@ a:active {
   outline-offset: -1px;
 }
 
-.embed-audio {
+.embed-audio,
+.embed-video {
   width: 100%;
   margin: 1.2em 0;
+}
+
+.embed-video {
+  display: block;
+  max-width: min(100%, 760px);
+  border-radius: 8px;
+  background: #000;
+  outline: 1px solid rgba(0, 0, 0, 0.1);
+  outline-offset: -1px;
 }
 
 .internal-link {
@@ -1385,6 +1399,7 @@ export async function publishVault({
   const written = []
   const copied = []
   await writeText(resolvedOutput, MARKER_FILE, `${JSON.stringify({ generator: GENERATOR, version: 1, updatedAt: new Date().toISOString() }, null, 2)}\n`, written)
+  await writeText(resolvedOutput, '.nojekyll', '', written)
   await writeText(resolvedOutput, '_forge/styles.css', styles(), written)
   await writeText(resolvedOutput, 'index.html', renderIndexPage(site), written)
 

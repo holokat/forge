@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { Settings, ForgeAPI, ThemeMode, UpdateStatus } from '../shared/types'
 
 const api: ForgeAPI = {
@@ -15,9 +15,20 @@ const api: ForgeAPI = {
   writeSettings: (settings: Settings) => ipcRenderer.invoke('settings:write', settings),
   getAgentAccessInfo: () => ipcRenderer.invoke('agent:getAccessInfo'),
   copyText: (text) => ipcRenderer.invoke('clipboard:writeText', text),
+  droppedFilePaths: (files) =>
+    files
+      .map((file) => {
+        try {
+          return webUtils.getPathForFile(file as never)
+        } catch {
+          return ''
+        }
+      })
+      .filter((path): path is string => Boolean(path)),
   getMobilePairingInfo: () => ipcRenderer.invoke('mobile:getPairingInfo'),
   resetMobilePairingToken: () => ipcRenderer.invoke('mobile:resetPairingToken'),
   setMobileVault: (vault) => ipcRenderer.invoke('mobile:setVault', vault),
+  importAttachments: (vault, noteRel, sourcePaths) => ipcRenderer.invoke('file:importAttachments', vault, noteRel, sourcePaths),
   publishVault: (vault, outDir) => ipcRenderer.invoke('vault:publish', vault, outDir),
   getUpdateStatus: () => ipcRenderer.invoke('updates:getStatus'),
   checkForUpdates: () => ipcRenderer.invoke('updates:check'),

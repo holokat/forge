@@ -60,6 +60,15 @@ export interface AgentAccessInfo {
   mcp: AgentCommandInfo
 }
 
+export type ImportedAttachmentKind = 'image' | 'audio' | 'video' | 'file'
+
+export interface ImportedAttachment {
+  sourcePath: string
+  path: string
+  name: string
+  kind: ImportedAttachmentKind
+}
+
 export type UpdateState =
   | 'idle'
   | 'disabled'
@@ -121,6 +130,8 @@ export interface ForgeAPI {
   getMobilePairingInfo(): Promise<MobilePairingInfo>
   resetMobilePairingToken(): Promise<MobilePairingInfo>
   setMobileVault(vault: string | null): Promise<void>
+  droppedFilePaths(files: unknown[]): string[]
+  importAttachments(vault: string, noteRel: string, sourcePaths: string[]): Promise<ImportedAttachment[]>
   publishVault(vault: string, outDir: string): Promise<{ outDir: string; files: number; notes: number }>
   getUpdateStatus(): Promise<UpdateStatus>
   checkForUpdates(): Promise<UpdateStatus>
