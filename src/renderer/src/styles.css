@@ -1657,25 +1657,44 @@ button.tag:hover {
 .backlink-item {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   width: 100%;
   text-align: left;
-  padding: 6px 8px;
-  border-radius: 6px;
+  padding: 7px 8px;
+  border-radius: 7px;
+  overflow: hidden;
+  transition-property: background-color, color, transform;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
 .backlink-item:hover {
   background: var(--bg-hover);
 }
 
+.backlink-item:is(button):active {
+  transform: scale(0.96);
+}
+
 .backlink-name {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   font-size: 13px;
   font-weight: 550;
-  color: var(--accent);
+  line-height: 1.25;
+  color: var(--text-normal);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .backlink-snippet {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
   font-size: 12px;
+  line-height: 1.3;
   color: var(--text-faint);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1683,48 +1702,54 @@ button.tag:hover {
 }
 
 .unlinked-mention-item {
-  flex-direction: row;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  align-items: center;
   gap: 8px;
+  padding: 6px 6px 6px 8px;
 }
 
 .unlinked-mention-open {
   min-width: 0;
-  flex: 1;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  overflow: hidden;
   text-align: left;
 }
 
 .unlinked-mention-link {
-  min-width: 58px;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
   min-height: 40px;
   align-self: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 0 8px;
-  border-radius: 5px;
+  padding: 0;
+  border-radius: 8px;
   color: var(--text-muted);
   background: var(--bg-secondary);
   box-shadow: inset 0 0 0 1px var(--border);
-  font-size: 12px;
-  font-weight: 600;
-  transition:
-    background 140ms ease,
-    color 140ms ease,
-    transform 140ms ease;
+  transition-property: background-color, color, transform, box-shadow;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
 .unlinked-mention-link:hover:not(:disabled) {
   background: var(--bg-hover);
   color: var(--text-normal);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 .unlinked-mention-link:active:not(:disabled) {
   transform: scale(0.96);
+}
+
+.unlinked-mention-link.is-linked {
+  color: var(--text-normal);
 }
 
 .unlinked-mention-link:disabled {

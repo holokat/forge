@@ -474,10 +474,16 @@ function Backlinks({ path }: { path: string }): React.JSX.Element {
         backlinks.map((source) => {
           const content = noteContents.get(source) ?? ''
           const lineWithLink = findBacklinkLine(content, path, files)
+          const sourceName = baseName(source)
+          const snippet = lineWithLink?.trim()
           return (
-            <button key={source} className="backlink-item" onClick={() => openFile(source)}>
-              <span className="backlink-name">{baseName(source)}</span>
-              {lineWithLink && <span className="backlink-snippet">{lineWithLink.trim().slice(0, 120)}</span>}
+            <button key={source} className="backlink-item" title={source} onClick={() => openFile(source)}>
+              <span className="backlink-name">{sourceName}</span>
+              {snippet && (
+                <span className="backlink-snippet" title={snippet}>
+                  {snippet}
+                </span>
+              )}
             </button>
           )
         })
@@ -524,24 +530,32 @@ function UnlinkedMentions({ path }: { path: string }): React.JSX.Element | null 
       </div>
       {mentions.map(({ source, match }) => {
         const linked = linkedSource === source
+        const sourceName = baseName(source)
+        const snippet = match ? `Line ${match.lineNumber}: ${match.line}` : ''
         return (
           <div key={source} className="backlink-item unlinked-mention-item">
-            <button className="unlinked-mention-open" onClick={() => openFile(source)}>
-              <span className="backlink-name">{baseName(source)}</span>
+            <button className="unlinked-mention-open" title={source} onClick={() => openFile(source)}>
+              <span className="backlink-name">{sourceName}</span>
               {match && (
-                <span className="backlink-snippet">
-                  Line {match.lineNumber}: {match.line.slice(0, 120)}
+                <span className="backlink-snippet" title={snippet}>
+                  {snippet}
                 </span>
               )}
             </button>
             <button
-              className="unlinked-mention-link"
+              className={`unlinked-mention-link${linked ? ' is-linked' : ''}`}
               disabled={!match || linked}
-              title={match ? `Insert wikilink in ${baseName(source)}` : 'No safe plain-text mention found'}
+              aria-label={linked ? `Linked ${sourceName}` : `Insert wikilink in ${sourceName}`}
+              title={
+                linked
+                  ? `Linked ${sourceName}`
+                  : match
+                    ? `Insert wikilink in ${sourceName}`
+                    : 'No safe plain-text mention found'
+              }
               onClick={() => linkMention(source, match)}
             >
-              <Link2 size={13} />
-              <span>{linked ? 'Linked' : 'Link'}</span>
+              {linked ? <CheckCircle2 size={14} /> : <Link2 size={14} />}
             </button>
           </div>
         )
