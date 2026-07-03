@@ -1817,34 +1817,6 @@ export default function SettingsModal(): React.JSX.Element {
                     )}
                   </div>
 
-                  <div className="settings-callout public-publish-card">
-                    <div>
-                      <div className="settings-row-label">Good ideas to borrow from Feather</div>
-                      <div className="settings-row-desc">
-                        Feather is strongest at SEO and growth defaults. Forge can keep those ideas local and open source.
-                      </div>
-                    </div>
-                    <div className="public-publish-options">
-                      <div className="public-publish-option">
-                        <span className="public-publish-option-icon" aria-hidden="true">
-                          <SearchCheck size={15} />
-                        </span>
-                        <span className="public-publish-option-copy">
-                          <strong>SEO defaults</strong>
-                          <span>Sitemaps, canonical URLs, Open Graph, schema, per-page title and description overrides.</span>
-                        </span>
-                      </div>
-                      <div className="public-publish-option">
-                        <span className="public-publish-option-icon" aria-hidden="true">
-                          <Rocket size={15} />
-                        </span>
-                        <span className="public-publish-option-copy">
-                          <strong>Growth surfaces</strong>
-                          <span>RSS, search, related posts, authors, analytics hooks, email capture snippets, and newsletter export.</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
                 </section>
               )}
 
