@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { FileAudio, Link2 } from 'lucide-react'
+import { CalendarDays, FileAudio, Link2, Timer } from 'lucide-react'
 import { getActiveEditor } from '../editor/active'
 import { scrollToLine } from '../editor/extensions'
+import { createExtensionRuntime } from '../extensions/runtime'
 import {
   WIKILINK_RE,
   baseName,
@@ -87,6 +88,71 @@ function findBacklinkLine(content: string, targetPath: string, files: string[]):
     }
   }
   return ''
+}
+
+function todayKey(): string {
+  const date = new Date()
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+function ExtensionWidgets({ path }: { path: string }): React.JSX.Element | null {
+  const extensionSettings = useStore((s) => s.extensionSettings)
+  const counts = useStore((s) => s.counts)
+  const dailyNotesFolder = useStore((s) => s.dailyNotesFolder)
+  const createDailyNote = useStore((s) => s.createDailyNote)
+  const runtime = useMemo(() => createExtensionRuntime(extensionSettings), [extensionSettings])
+  const widgets = new Set(runtime.sidebarWidgets.map((widget) => widget.widget))
+  const showStats = widgets.has('reading-stats')
+  const showDaily = widgets.has('daily-note')
+  const readingMinutes = Math.max(1, Math.ceil(counts.words / 220))
+
+  if (!showStats && !showDaily) return null
+
+  return (
+    <>
+      {showDaily && (
+        <div className="panel-section extension-widget">
+          <div className="panel-heading">
+            <span className="extension-widget-heading">
+              <CalendarDays size={13} />
+              Today
+            </span>
+          </div>
+          <button className="extension-widget-action" onClick={() => createDailyNote().catch(console.error)}>
+            <span>{todayKey()}</span>
+            <small>{dailyNotesFolder || 'Daily'}</small>
+          </button>
+        </div>
+      )}
+      {showStats && (
+        <div className="panel-section extension-widget">
+          <div className="panel-heading">
+            <span className="extension-widget-heading">
+              <Timer size={13} />
+              Reading stats
+            </span>
+          </div>
+          <div className="extension-stats-grid" title={path}>
+            <span>
+              <strong>{counts.words.toLocaleString()}</strong>
+              words
+            </span>
+            <span>
+              <strong>{counts.chars.toLocaleString()}</strong>
+              chars
+            </span>
+            <span>
+              <strong>{readingMinutes}</strong>
+              min
+            </span>
+          </div>
+        </div>
+      )}
+    </>
+  )
 }
 
 function Backlinks({ path }: { path: string }): React.JSX.Element {
@@ -303,6 +369,7 @@ export default function SidebarRight(): React.JSX.Element {
       <div className="sidebar-titlebar" />
       {path ? (
         <div className="sidebar-content panel-scroll">
+          <ExtensionWidgets path={path} />
           <AudioAttachments path={path} />
           <Properties path={path} />
           <Outline path={path} />

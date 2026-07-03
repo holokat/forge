@@ -11,7 +11,7 @@ import {
 import { baseName, isMarkdown, noteDisplayTitle, parseNote, resolveLink, wordCount, type NoteMeta } from './lib/parse'
 import { formatTemplateDateParts, renderTemplate } from './lib/templates'
 
-export type TabKind = 'note' | 'graph' | 'empty'
+export type TabKind = 'note' | 'graph' | 'board' | 'empty'
 export type ViewMode = 'edit' | 'read'
 export const STARTER_TEMPLATE_KINDS = [
   'daily',
@@ -112,6 +112,7 @@ export interface ForgeState {
 
   openFile(path: string, opts?: { newTab?: boolean }): void
   openGraph(): void
+  openBoard(): void
   newTab(): void
   closeTab(id: string): void
   activateTab(id: string): void
@@ -745,6 +746,17 @@ export const useStore = create<ForgeState>((set, get) => ({
     set({ tabs: [...tabs, tab], activeTabId: tab.id })
   },
 
+  openBoard() {
+    const { tabs } = get()
+    const existing = tabs.find((t) => t.kind === 'board')
+    if (existing) {
+      set({ activeTabId: existing.id })
+      return
+    }
+    const tab: Tab = { id: newTabId(), kind: 'board', path: null, mode: 'edit' }
+    set({ tabs: [...tabs, tab], activeTabId: tab.id })
+  },
+
   newTab() {
     const tab: Tab = { id: newTabId(), kind: 'empty', path: null, mode: 'edit' }
     set({ tabs: [...get().tabs, tab], activeTabId: tab.id })
@@ -1127,6 +1139,7 @@ export function activeTab(state: ForgeState): Tab | null {
 
 export function tabTitle(tab: Tab): string {
   if (tab.kind === 'graph') return 'Graph'
+  if (tab.kind === 'board') return 'Board'
   if (tab.kind === 'empty' || !tab.path) return 'New tab'
   return baseName(tab.path)
 }

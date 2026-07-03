@@ -4,7 +4,8 @@ import type {
   ExtensionManifest,
   ExtensionPermissionKind,
   ExtensionPointDefinition,
-  ExtensionRegistry
+  ExtensionRegistry,
+  ExtensionRegistryDocument
 } from './manifest'
 
 export type ExtensionValidationSeverity = 'error' | 'warning'
@@ -19,6 +20,10 @@ export interface ExtensionValidationIssue {
 export interface ExtensionValidationResult {
   valid: boolean
   issues: ExtensionValidationIssue[]
+}
+
+export interface ExtensionRegistryDocumentValidationResult extends ExtensionValidationResult {
+  document: ExtensionRegistryDocument | null
 }
 
 const EXTENSION_ID_RE = /^[a-z0-9][a-z0-9.-]*$/
@@ -365,6 +370,64 @@ export function validateExtensionRegistry(registry: ExtensionRegistry): Extensio
   }
 
   return { valid: !issues.some((item) => item.severity === 'error'), issues }
+}
+
+export function validateExtensionRegistryDocument(value: unknown): ExtensionRegistryDocumentValidationResult {
+  const issues: ExtensionValidationIssue[] = []
+  if (!isRecord(value)) {
+    issue(issues, 'error', 'registry_document', 'Registry document must be an object.')
+    return { valid: false, issues, document: null }
+  }
+
+  if (value.schemaVersion !== 1) {
+    issue(issues, 'error', 'registry_schema_version', 'schemaVersion must be 1.', 'schemaVersion')
+  }
+  stringValue(value.generatedAt, issues, 'generatedAt')
+  if (value.minForgeVersion !== undefined && typeof value.minForgeVersion !== 'string') {
+    issue(issues, 'error', 'registry_min_forge_version', 'minForgeVersion must be a string when present.', 'minForgeVersion')
+  }
+
+  if (!Array.isArray(value.signatures) || value.signatures.length === 0) {
+    issue(issues, 'error', 'registry_signatures_required', 'Signed registries must include at least one signature.', 'signatures')
+  } else {
+    value.signatures.forEach((signature, index) => {
+      const path = `signatures[${index}]`
+      if (!isRecord(signature)) {
+        issue(issues, 'error', 'registry_signature_object', `${path} must be an object.`, path)
+        return
+      }
+      if (signature.algorithm !== 'ed25519') {
+        issue(issues, 'error', 'registry_signature_algorithm', `${path}.algorithm must be ed25519.`, `${path}.algorithm`)
+      }
+      stringValue(signature.keyId, issues, `${path}.keyId`)
+      stringValue(signature.signature, issues, `${path}.signature`)
+      stringValue(signature.signedPayloadSha256, issues, `${path}.signedPayloadSha256`)
+      if (signature.signedAt !== undefined && typeof signature.signedAt !== 'string') {
+        issue(issues, 'error', 'registry_signature_signed_at', `${path}.signedAt must be a string when present.`, `${path}.signedAt`)
+      }
+    })
+  }
+
+  if (!isRecord(value.registry)) {
+    issue(issues, 'error', 'registry_required', 'registry must be an object.', 'registry')
+  } else {
+    const result = validateExtensionRegistry(value.registry as unknown as ExtensionRegistry)
+    for (const registryIssue of result.issues) {
+      issue(
+        issues,
+        registryIssue.severity,
+        registryIssue.code,
+        registryIssue.message,
+        registryIssue.path ? `registry.${registryIssue.path}` : 'registry'
+      )
+    }
+  }
+
+  return {
+    valid: !issues.some((item) => item.severity === 'error'),
+    issues,
+    document: value as unknown as ExtensionRegistryDocument
+  }
 }
 
 export function formatExtensionIssue(issue: ExtensionValidationIssue): string {

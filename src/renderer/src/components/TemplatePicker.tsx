@@ -1,8 +1,8 @@
-import { FilePlus2, LayoutTemplate, Search } from 'lucide-react'
+import { FilePlus2, LayoutTemplate, Search, Sparkles, Tags } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { baseName, isMarkdown } from '../lib/parse'
-import { parseTemplateVariables } from '../lib/templates'
-import { STARTER_TEMPLATE_KINDS, useStore } from '../store'
+import { parseTemplateVariables, type TemplateVariable } from '../lib/templates'
+import { STARTER_TEMPLATE_CATALOG, STARTER_TEMPLATE_KINDS, useStore } from '../store'
 import { ModalOverlay } from './CommandPalette'
 
 function templateFolderPrefix(folder: string): string {
@@ -15,6 +15,31 @@ function templateName(path: string, templatesFolder: string): string {
   return rel.replace(/\.md$/i, '')
 }
 
+type TemplateCategory = 'all' | 'agent' | 'product' | 'content' | 'capture' | 'publishing'
+
+const TEMPLATE_CATEGORIES: { id: TemplateCategory; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'agent', label: 'Agent' },
+  { id: 'product', label: 'Product' },
+  { id: 'content', label: 'Content' },
+  { id: 'capture', label: 'Capture' },
+  { id: 'publishing', label: 'Publishing' }
+]
+
+function templateCategory(path: string, templatesFolder: string): TemplateCategory {
+  const name = templateName(path, templatesFolder).toLowerCase()
+  if (/agent|task|brief/.test(name)) return 'agent'
+  if (/product|spec|bug|decision|project/.test(name)) return 'product'
+  if (/seo|content|research/.test(name)) return 'content'
+  if (/daily|meeting|person|inbox|capture/.test(name)) return 'capture'
+  if (/publish|release|changelog/.test(name)) return 'publishing'
+  return 'content'
+}
+
+function templateCategoryLabel(path: string, templatesFolder: string): string {
+  return TEMPLATE_CATEGORIES.find((category) => category.id === templateCategory(path, templatesFolder))?.label ?? 'Template'
+}
+
 export default function TemplatePicker(): React.JSX.Element {
   const vault = useStore((s) => s.vault)
   const files = useStore((s) => s.files)
@@ -25,9 +50,11 @@ export default function TemplatePicker(): React.JSX.Element {
   const setModal = useStore((s) => s.setModal)
   const [query, setQuery] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState('')
+  const [category, setCategory] = useState<TemplateCategory>('all')
   const [title, setTitle] = useState('')
   const [folder, setFolder] = useState('')
-  const [templateFields, setTemplateFields] = useState<ReturnType<typeof parseTemplateVariables>>([])
+  const [templateFields, setTemplateFields] = useState<TemplateVariable[]>([])
+  const [templateFieldCounts, setTemplateFieldCounts] = useState<Record<string, number>>({})
   const [variables, setVariables] = useState<Record<string, string>>({})
   const [isCreating, setIsCreating] = useState(false)
 
@@ -41,15 +68,49 @@ export default function TemplatePicker(): React.JSX.Element {
 
   const filteredTemplates = useMemo(() => {
     const needle = query.trim().toLowerCase()
-    if (!needle) return templateFiles
-    return templateFiles.filter((file) => templateName(file, templatesFolder).toLowerCase().includes(needle))
-  }, [query, templateFiles, templatesFolder])
+    return templateFiles.filter((file) => {
+      if (category !== 'all' && templateCategory(file, templatesFolder) !== category) return false
+      if (!needle) return true
+      return `${templateName(file, templatesFolder)} ${file}`.toLowerCase().includes(needle)
+    })
+  }, [category, query, templateFiles, templatesFolder])
 
   useEffect(() => {
     if (!selectedTemplate || !templateFiles.includes(selectedTemplate)) {
       setSelectedTemplate(templateFiles[0] ?? '')
     }
   }, [selectedTemplate, templateFiles])
+
+  useEffect(() => {
+    if (!selectedTemplate || !filteredTemplates.includes(selectedTemplate)) {
+      const nextTemplate = filteredTemplates[0] ?? templateFiles[0] ?? ''
+      if (selectedTemplate !== nextTemplate) setSelectedTemplate(nextTemplate)
+    }
+  }, [filteredTemplates, selectedTemplate, templateFiles])
+
+  useEffect(() => {
+    let cancelled = false
+    setTemplateFieldCounts({})
+
+    if (!vault || templateFiles.length === 0) return
+
+    Promise.all(
+      templateFiles.map(async (template) => {
+        try {
+          const content = await window.forge.readFile(vault, template)
+          return [template, parseTemplateVariables(content).length] as const
+        } catch {
+          return [template, 0] as const
+        }
+      })
+    ).then((entries) => {
+      if (!cancelled) setTemplateFieldCounts(Object.fromEntries(entries))
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [templateFiles, vault])
 
   useEffect(() => {
     let cancelled = false
@@ -134,14 +195,37 @@ export default function TemplatePicker(): React.JSX.Element {
                   onChange={(event) => setQuery(event.target.value)}
                 />
               </div>
+              <div className="template-category-filter" aria-label="Template categories">
+                {TEMPLATE_CATEGORIES.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={category === item.id ? 'active' : ''}
+                    aria-pressed={category === item.id}
+                    onClick={() => setCategory(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
               <div className="template-list">
                 {filteredTemplates.map((template) => (
                   <button
                     key={template}
-                    className={`template-list-item${template === selectedTemplate ? ' selected' : ''}`}
+                    className={`template-gallery-card${template === selectedTemplate ? ' selected' : ''}`}
                     onClick={() => setSelectedTemplate(template)}
                   >
-                    <span>{templateName(template, templatesFolder)}</span>
+                    <span className="template-gallery-card-title">
+                      <LayoutTemplate size={14} />
+                      <span>{templateName(template, templatesFolder)}</span>
+                    </span>
+                    <span className="template-gallery-card-meta">
+                      <span>
+                        <Tags size={11} />
+                        {templateCategoryLabel(template, templatesFolder)}
+                      </span>
+                      <span>{templateFieldCounts[template] ?? 0} fields</span>
+                    </span>
                     <small>{template}</small>
                   </button>
                 ))}
@@ -150,6 +234,13 @@ export default function TemplatePicker(): React.JSX.Element {
             </div>
 
             <div className="template-create-pane">
+              <div className="template-create-summary">
+                <span>
+                  <Sparkles size={14} />
+                  {selectedLabel || 'Template'}
+                </span>
+                <small>{templateFields.length} fields</small>
+              </div>
               <label className="template-field">
                 <span>Title</span>
                 <input
@@ -223,6 +314,20 @@ export default function TemplatePicker(): React.JSX.Element {
             <LayoutTemplate size={22} />
             <h3>No templates yet</h3>
             <p>Create starter templates for planning, research, product, SEO, agent tasks, releases, and publishing.</p>
+            <div className="template-empty-starters">
+              {STARTER_TEMPLATE_CATALOG.slice(0, 8).map((template) => (
+                <button
+                  key={template.kind}
+                  type="button"
+                  className="template-empty-starter"
+                  disabled={isCreating}
+                  onClick={() => createStarterTemplate(template.kind).catch(console.error)}
+                >
+                  <strong>{template.label}</strong>
+                  <span>{template.detail}</span>
+                </button>
+              ))}
+            </div>
             <button className="btn btn-primary" disabled={isCreating} onClick={() => seedStarterTemplates()}>
               <FilePlus2 size={14} />
               {isCreating ? 'Creating' : 'Create starter templates'}

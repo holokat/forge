@@ -1,6 +1,7 @@
 import {
   CheckCircle2,
   Cable,
+  AlertCircle,
   PackageCheck,
   PackagePlus,
   Puzzle,
@@ -16,6 +17,7 @@ import type { ExtensionManifest } from '../extensions/manifest'
 import { extensionEntry } from '../extensions/preferences'
 import { LOCAL_EXTENSION_MANIFESTS, LOCAL_EXTENSION_POINTS, registryDiagnostics, searchLocalExtensions } from '../extensions/registry'
 import { createExtensionRuntime, extensionRuntimeForManifest, type ExtensionRuntimeRoute } from '../extensions/runtime'
+import { formatExtensionIssue, validateExtensionRegistryDocument } from '../extensions/validation'
 import { useStore } from '../store'
 
 type ExtensionFilter = 'all' | 'installed' | 'available'
@@ -147,6 +149,58 @@ function ExtensionCard({
   )
 }
 
+function SignedRegistryPanel(): React.JSX.Element {
+  const [input, setInput] = useState('')
+  const [message, setMessage] = useState('Paste a signed Forge registry document to validate it before install.')
+  const [valid, setValid] = useState(false)
+
+  const validate = (): void => {
+    setValid(false)
+    try {
+      const parsed = JSON.parse(input)
+      const result = validateExtensionRegistryDocument(parsed)
+      setValid(result.valid)
+      if (result.valid) {
+        setMessage(`Registry valid: ${result.document?.registry.manifests.length ?? 0} extensions, ${result.document?.signatures.length ?? 0} signatures.`)
+      } else {
+        setMessage(result.issues.slice(0, 4).map(formatExtensionIssue).join('\n'))
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  return (
+    <div className={`extension-remote-registry ${valid ? 'valid' : ''}`}>
+      <div className="extension-remote-registry-copy">
+        <div className="extension-eyebrow">
+          {valid ? <ShieldCheck size={14} /> : <AlertCircle size={14} />}
+          <span>Signed registry</span>
+        </div>
+        <h3>Remote install preview</h3>
+        <p>Forge only accepts declarative registries with Ed25519 signature metadata. Install stays locked until a trusted public key is configured.</p>
+      </div>
+      <textarea
+        value={input}
+        placeholder='Paste {"schemaVersion":1,"registry":...,"signatures":[...]}'
+        spellCheck={false}
+        onChange={(event) => setInput(event.target.value)}
+      />
+      <div className="extension-remote-registry-actions">
+        <button className="extension-install-btn available" type="button" disabled={!input.trim()} onClick={validate}>
+          <ShieldCheck size={15} />
+          <span>Validate registry</span>
+        </button>
+        <button className="extension-install-btn installed" type="button" disabled={!valid} title="Public-key trust configuration is required before remote install.">
+          <PackagePlus size={15} />
+          <span>Install verified registry</span>
+        </button>
+      </div>
+      <pre className={`extension-remote-registry-status ${valid ? 'valid' : ''}`}>{message}</pre>
+    </div>
+  )
+}
+
 export default function ExtensionMarketplace({ className = '' }: ExtensionMarketplaceProps): React.JSX.Element {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<ExtensionFilter>('all')
@@ -228,6 +282,8 @@ export default function ExtensionMarketplace({ className = '' }: ExtensionMarket
           ))}
         </div>
       </div>
+
+      <SignedRegistryPanel />
 
       <div className="extension-list" aria-live="polite">
         {visibleExtensions.length ? (

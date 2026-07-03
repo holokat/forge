@@ -2,6 +2,7 @@ import {
   BookOpen,
   FilePlus2,
   FileText,
+  LayoutDashboard,
   LayoutTemplate,
   PanelLeft,
   PanelRight,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import Editor from './Editor'
+import CanvasBoard from './CanvasBoard'
 import { ForgeHexagonMark } from './ForgeLogo'
 import GraphView from './GraphView'
 import Reading from './Reading'
@@ -49,7 +51,13 @@ function TabBar(): React.JSX.Element {
             }}
             title={tab.path ?? undefined}
           >
-            {tab.kind === 'graph' ? <Waypoints size={13} className="tab-icon" /> : <FileText size={13} className="tab-icon" />}
+            {tab.kind === 'graph' ? (
+              <Waypoints size={13} className="tab-icon" />
+            ) : tab.kind === 'board' ? (
+              <LayoutDashboard size={13} className="tab-icon" />
+            ) : (
+              <FileText size={13} className="tab-icon" />
+            )}
             <span className="tab-title">{tabTitle(tab)}</span>
             <button
               className="tab-close"
@@ -122,6 +130,7 @@ function EmptyTab(): React.JSX.Element {
   const createNote = useStore((s) => s.createNote)
   const setModal = useStore((s) => s.setModal)
   const openGraph = useStore((s) => s.openGraph)
+  const openBoard = useStore((s) => s.openBoard)
 
   return (
     <div className="empty-tab">
@@ -149,6 +158,11 @@ function EmptyTab(): React.JSX.Element {
           Open graph view
           <kbd>⌘⇧G</kbd>
         </button>
+        <button className="empty-tab-action" onClick={() => openBoard()}>
+          <LayoutDashboard size={15} />
+          Open board
+          <kbd>⌘⇧B</kbd>
+        </button>
       </div>
     </div>
   )
@@ -167,6 +181,7 @@ function StatusBar(): React.JSX.Element | null {
 
 function TabContent({ tab }: { tab: Tab }): React.JSX.Element {
   if (tab.kind === 'graph') return <GraphView />
+  if (tab.kind === 'board') return <CanvasBoard />
   if (tab.kind === 'empty' || !tab.path) return <EmptyTab />
   if (!isMarkdown(tab.path)) {
     return (

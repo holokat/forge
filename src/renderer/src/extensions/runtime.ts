@@ -64,8 +64,8 @@ const BUILT_IN_RUNTIME_ROUTES: Record<
   },
   'forge.daily-notes.sidebar': {
     surface: 'right-sidebar',
-    implementation: 'daily note sidebar widget route',
-    status: 'declared'
+    implementation: 'SidebarRight.ExtensionWidgets.daily-note',
+    status: 'wired'
   },
   'forge.reading-stats.metadata': {
     surface: 'note-footer',
@@ -74,18 +74,18 @@ const BUILT_IN_RUNTIME_ROUTES: Record<
   },
   'forge.reading-stats.sidebar': {
     surface: 'right-sidebar',
-    implementation: 'reading stats sidebar widget route',
-    status: 'declared'
+    implementation: 'SidebarRight.ExtensionWidgets.reading-stats',
+    status: 'wired'
   },
   'forge.markdown-tools.normalize-headings': {
     surface: 'editor-selection',
-    implementation: 'markdown transform registry',
-    status: 'declared'
+    implementation: 'CommandPalette.normalizeHeadingSpacing',
+    status: 'wired'
   },
   'forge.markdown-tools.wrap-selection': {
     surface: 'editor-selection',
-    implementation: 'markdown transform registry',
-    status: 'declared'
+    implementation: 'CommandPalette.wrapSelection',
+    status: 'wired'
   },
   'forge.graph-insights.view': {
     surface: 'workspace-view',

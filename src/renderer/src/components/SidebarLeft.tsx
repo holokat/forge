@@ -1,4 +1,17 @@
-import { Bookmark, BookmarkCheck, FilePlus2, FileText, FolderPlus, Files, Search, Settings, Vault, Waypoints, X } from 'lucide-react'
+import {
+  Bookmark,
+  BookmarkCheck,
+  FilePlus2,
+  FileText,
+  FolderPlus,
+  Files,
+  LayoutDashboard,
+  Search,
+  Settings,
+  Vault,
+  Waypoints,
+  X
+} from 'lucide-react'
 import { useMemo } from 'react'
 import FileTree from './FileTree'
 import SearchPane from './SearchPane'
@@ -59,6 +72,7 @@ export default function SidebarLeft(): React.JSX.Element {
   const createNote = useStore((s) => s.createNote)
   const createFolder = useStore((s) => s.createFolder)
   const openGraph = useStore((s) => s.openGraph)
+  const openBoard = useStore((s) => s.openBoard)
   const setModal = useStore((s) => s.setModal)
   const active = useStore(activeTab)
   const bookmarks = useStore((s) => s.bookmarks)
@@ -125,6 +139,9 @@ export default function SidebarLeft(): React.JSX.Element {
         <div className="sidebar-footer-actions">
           <button className="icon-btn" title="Graph view (⌘⇧G)" onClick={() => openGraph()}>
             <Waypoints size={15} />
+          </button>
+          <button className="icon-btn" title="Board (⌘⇧B)" onClick={() => openBoard()}>
+            <LayoutDashboard size={15} />
           </button>
           <button className="icon-btn" title="Settings (⌘,)" onClick={() => setModal('settings')}>
             <Settings size={15} />

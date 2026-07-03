@@ -39,7 +39,7 @@ Enabled extensions are resolved into an `ExtensionRuntimeCatalog`:
 - `views`
 - `routes`
 
-Routes map a contribution to a Forge-owned implementation surface such as the command palette, editor selection transforms, note footer metadata, right sidebar widgets, or workspace views. Contributions without an implemented route are treated as declared but not wired.
+Routes map a contribution to a Forge-owned implementation surface such as the command palette, editor selection transforms, note footer metadata, right sidebar widgets, or workspace views. Current bundled contributions are wired to visible app behavior. Future third-party contributions without an implemented route are treated as declared but not wired.
 
 This keeps the marketplace honest: a manifest can be installed and enabled, but Forge still shows how many hooks are active and how many are wired to real app behavior.
 
@@ -136,14 +136,14 @@ Remote extension installation should use a signed registry document before it is
 }
 ```
 
-Forge should only install remote registry entries after signature verification, manifest validation, version compatibility checks, and a user-visible permissions review. Until then, bundled and local-folder declarative manifests are the supported path.
+The Extensions settings pane includes a signed-registry import preview. It validates registry document shape, signature metadata, manifest declarations, and contribution compatibility before enabling the install action. Forge should only complete remote registry installation after cryptographic signature verification against trusted public keys, version compatibility checks, and a user-visible permissions review. Until then, bundled and local-folder declarative manifests are the supported path.
 
 ## Future Marketplace Work
 
 Remote extension install should come after these pieces are implemented:
 
 - Signature verification against trusted registry keys.
-- Permission review UI before install.
+- Full permission review confirmation before install.
 - Compatibility and version constraints.
 - Sandboxed runtime boundary if Forge ever allows executable extensions.
 - A submission/review process for the public registry.

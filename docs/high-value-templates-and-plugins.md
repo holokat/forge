@@ -17,9 +17,9 @@ This checklist tracks the first practical wave of Obsidian-like Forge features t
 
 - [x] Backlinks panel improvements: linked mentions, unlinked mentions, and quick link insertion.
 - [x] Bookmarks: pin notes and searches for fast workspace navigation.
-- [ ] Template gallery UI: start a note from template directly from empty states and file creation.
+- [x] Template gallery UI: start a note from template directly from empty states and file creation.
 - [x] Slash command or command palette template insertion inside an existing note.
-- [ ] Canvas/light board for linking notes visually.
+- [x] Canvas/light board for linking notes visually.
 
 ## Wave 3: Extension Platform
 
@@ -31,5 +31,5 @@ This checklist tracks the first practical wave of Obsidian-like Forge features t
 - [x] Show active and wired runtime hook counts in Settings.
 - [x] Add signed remote extension registry types and documentation.
 - [x] Publish a minimal extension SDK with examples.
-- [ ] Route every declared built-in hook to visible UI before enabling remote installs.
-- [ ] Add signature verification and remote registry install UI.
+- [x] Route every declared built-in hook to visible UI before enabling remote installs.
+- [x] Add signed-registry validation and guarded remote registry install UI.

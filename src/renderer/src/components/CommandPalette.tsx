@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getActiveEditor } from '../editor/active'
+import { createExtensionRuntime } from '../extensions/runtime'
 import { fuzzyFilter } from '../lib/fuzzy'
 import { baseName, isMarkdown } from '../lib/parse'
 import { parseTemplateVariables, renderTemplate, type TemplateVariable } from '../lib/templates'
@@ -176,6 +177,53 @@ async function insertTemplateAtCursor(sourcePath: string): Promise<void> {
   view.focus()
 }
 
+function selectedMarkdown(): { from: number; to: number; text: string } | null {
+  const view = getActiveEditor()
+  if (!view) return null
+  const selection = view.state.selection.main
+  if (selection.empty) return null
+  return {
+    from: selection.from,
+    to: selection.to,
+    text: view.state.doc.sliceString(selection.from, selection.to)
+  }
+}
+
+function normalizeHeadingSpacing(): void {
+  const view = getActiveEditor()
+  const selection = selectedMarkdown()
+  if (!view || !selection) {
+    window.alert('Select Markdown before running this transform.')
+    return
+  }
+  const next = selection.text.replace(/^(#{1,6})\s*(.*?)\s*$/gm, (_match, hashes: string, text: string) => {
+    return text ? `${hashes} ${text}` : hashes
+  })
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: next },
+    selection: { anchor: selection.from, head: selection.from + next.length }
+  })
+  view.focus()
+}
+
+function wrapSelection(): void {
+  const view = getActiveEditor()
+  const selection = selectedMarkdown()
+  if (!view || !selection) {
+    window.alert('Select Markdown before running this transform.')
+    return
+  }
+  const wrapper = window.prompt('Wrap selection with', '**')
+  if (wrapper === null) return
+  const marker = wrapper || '**'
+  const next = `${marker}${selection.text}${marker}`
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: next },
+    selection: { anchor: selection.from + marker.length, head: selection.from + marker.length + selection.text.length }
+  })
+  view.focus()
+}
+
 export function useListNav(count: number, onPick: (index: number) => void): {
   selected: number
   setSelected: (i: number) => void
@@ -218,6 +266,7 @@ export default function CommandPalette(): React.JSX.Element {
   const commands = useMemo<Command[]>(() => {
     const store = useStore.getState()
     const tab = activeTab(store)
+    const runtime = createExtensionRuntime(store.extensionSettings)
     const close = (fn: () => void) => () => {
       store.setModal(null)
       fn()
@@ -228,6 +277,7 @@ export default function CommandPalette(): React.JSX.Element {
       { name: "Open today's daily note", action: close(() => store.createDailyNote()) },
       { name: 'Open quick switcher', hint: '⌘O', action: () => store.setModal('switcher') },
       { name: 'Open graph view', hint: '⌘⇧G', action: close(() => store.openGraph()) },
+      { name: 'Open board', hint: '⌘⇧B', action: close(() => store.openBoard()) },
       { name: 'Search in all notes', hint: '⌘⇧F', action: close(() => store.setLeftPane('search')) },
       { name: 'Toggle reading view', hint: '⌘E', action: close(() => store.toggleActiveMode()) },
       { name: 'New tab', hint: '⌘T', action: close(() => store.newTab()) },
@@ -244,8 +294,15 @@ export default function CommandPalette(): React.JSX.Element {
       const path = tab.path
       const editor = getActiveEditor()
       const hasSelection = Boolean(editor && !editor.state.selection.main.empty)
+      const transforms = new Set(runtime.markdownTransforms.map((transform) => transform.transform))
       if (hasSelection) {
         list.push({ name: 'Extract selection to new note', action: close(() => extractSelectionToNote(path).catch(console.error)) })
+        if (transforms.has('normalize-headings')) {
+          list.push({ name: 'Markdown: Normalize heading spacing', action: close(() => normalizeHeadingSpacing()) })
+        }
+        if (transforms.has('wrap-selection')) {
+          list.push({ name: 'Markdown: Wrap selection', action: close(() => wrapSelection()) })
+        }
       }
       list.push(
         { name: 'Insert template at cursor', action: close(() => insertTemplateAtCursor(path).catch(console.error)) },
