@@ -2474,6 +2474,20 @@ button.tag:hover {
   animation: panel-in 0.16s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
 
+:root[data-theme='light'] .settings-panel,
+:root[data-theme='light'] .settings-header,
+:root[data-theme='light'] .settings-shell,
+:root[data-theme='light'] .settings-nav,
+:root[data-theme='light'] .settings-content,
+:root[data-theme='light'] .settings-content-header,
+:root[data-theme='light'] .settings-pane {
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .settings-panel {
+  backdrop-filter: none;
+}
+
 .settings-header {
   display: flex;
   align-items: flex-start;
