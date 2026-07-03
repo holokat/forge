@@ -29,6 +29,64 @@ export interface Settings {
   publishSites: Record<string, PublishSiteConfig[]>
   enabledExtensions: string[]
   extensionSettings: ExtensionSettings
+  ai: AISettings
+}
+
+export type AITextProvider = 'codex' | 'openai' | 'anthropic'
+export type AILoginProvider = 'codex' | 'claude'
+
+export interface AISettings {
+  defaultProvider: AITextProvider
+  codexModel: string
+  openaiModel: string
+  anthropicModel: string
+  includeActiveNote: boolean
+}
+
+export interface AISecretUpdate {
+  openaiApiKey?: string
+  anthropicApiKey?: string
+  clearOpenAIKey?: boolean
+  clearAnthropicKey?: boolean
+}
+
+export interface AICLIStatus {
+  installed: boolean
+  path: string | null
+  version: string | null
+  authenticated: boolean | null
+  detail: string
+  setupCommand: string
+  docsUrl: string
+}
+
+export interface AIAPIKeyStatus {
+  configured: boolean
+  updatedAt: string | null
+}
+
+export interface AIStatus {
+  safeStorageAvailable: boolean
+  codex: AICLIStatus
+  claude: AICLIStatus
+  openai: AIAPIKeyStatus
+  anthropic: AIAPIKeyStatus
+  notes: string[]
+}
+
+export interface AITextTaskRequest {
+  provider: AITextProvider
+  prompt: string
+  model?: string
+  vault?: string | null
+  documentPath?: string | null
+  documentContent?: string | null
+}
+
+export interface AITextTaskResult {
+  provider: AITextProvider
+  model: string | null
+  output: string
 }
 
 export type PublishSiteTheme =
@@ -263,6 +321,13 @@ export const DEFAULT_SETTINGS: Settings = {
     schemaVersion: 1,
     registry: 'local',
     entries: {}
+  },
+  ai: {
+    defaultProvider: 'codex',
+    codexModel: '',
+    openaiModel: 'gpt-5.5',
+    anthropicModel: 'claude-sonnet-5',
+    includeActiveNote: true
   }
 }
 
@@ -279,6 +344,10 @@ export interface ForgeAPI {
   readSettings(): Promise<Settings>
   writeSettings(settings: Settings): Promise<void>
   getAgentAccessInfo(): Promise<AgentAccessInfo>
+  getAIStatus(): Promise<AIStatus>
+  saveAISettings(settings: AISettings, secrets?: AISecretUpdate): Promise<AIStatus>
+  runAITextTask(request: AITextTaskRequest): Promise<AITextTaskResult>
+  openAIProviderLogin(provider: AILoginProvider): Promise<void>
   copyText(text: string): Promise<void>
   getMobilePairingInfo(): Promise<MobilePairingInfo>
   resetMobilePairingToken(): Promise<MobilePairingInfo>

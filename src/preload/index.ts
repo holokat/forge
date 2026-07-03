@@ -14,6 +14,10 @@ const api: ForgeAPI = {
   readSettings: () => ipcRenderer.invoke('settings:read'),
   writeSettings: (settings: Settings) => ipcRenderer.invoke('settings:write', settings),
   getAgentAccessInfo: () => ipcRenderer.invoke('agent:getAccessInfo'),
+  getAIStatus: () => ipcRenderer.invoke('ai:getStatus'),
+  saveAISettings: (settings, secrets) => ipcRenderer.invoke('ai:saveSettings', settings, secrets),
+  runAITextTask: (request) => ipcRenderer.invoke('ai:runTextTask', request),
+  openAIProviderLogin: (provider) => ipcRenderer.invoke('ai:openProviderLogin', provider),
   copyText: (text) => ipcRenderer.invoke('clipboard:writeText', text),
   droppedFilePaths: (files) =>
     files

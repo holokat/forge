@@ -157,6 +157,72 @@ export function installMockApi(): void {
       cli: { command: 'node', args: ['/Users/demo/forge/scripts/forge-agent.mjs'] },
       mcp: { command: 'node', args: ['/Users/demo/forge/scripts/forge-mcp.mjs'] }
     }),
+    getAIStatus: async () => ({
+      safeStorageAvailable: true,
+      codex: {
+        installed: true,
+        path: '/usr/local/bin/codex',
+        version: 'codex 0.0.0-preview',
+        authenticated: true,
+        detail: 'Logged in using ChatGPT',
+        setupCommand: 'codex login',
+        docsUrl: 'https://developers.openai.com/codex/auth'
+      },
+      claude: {
+        installed: false,
+        path: null,
+        version: null,
+        authenticated: false,
+        detail: 'Claude Code is not installed or is not on PATH.',
+        setupCommand: 'claude',
+        docsUrl: 'https://code.claude.com/docs/en/iam'
+      },
+      openai: { configured: false, updatedAt: null },
+      anthropic: { configured: false, updatedAt: null },
+      notes: [
+        'Codex prompts run through the local Codex CLI.',
+        'Use Anthropic API keys for direct Forge prompting.'
+      ]
+    }),
+    saveAISettings: async (ai, _secrets) => {
+      settings = { ...settings, ai }
+      return {
+        safeStorageAvailable: true,
+        codex: {
+          installed: true,
+          path: '/usr/local/bin/codex',
+          version: 'codex 0.0.0-preview',
+          authenticated: true,
+          detail: 'Logged in using ChatGPT',
+          setupCommand: 'codex login',
+          docsUrl: 'https://developers.openai.com/codex/auth'
+        },
+        claude: {
+          installed: false,
+          path: null,
+          version: null,
+          authenticated: false,
+          detail: 'Claude Code is not installed or is not on PATH.',
+          setupCommand: 'claude',
+          docsUrl: 'https://code.claude.com/docs/en/iam'
+        },
+        openai: { configured: Boolean(_secrets?.openaiApiKey), updatedAt: _secrets?.openaiApiKey ? new Date().toISOString() : null },
+        anthropic: {
+          configured: Boolean(_secrets?.anthropicApiKey),
+          updatedAt: _secrets?.anthropicApiKey ? new Date().toISOString() : null
+        },
+        notes: [
+          'Codex prompts run through the local Codex CLI.',
+          'Use Anthropic API keys for direct Forge prompting.'
+        ]
+      }
+    },
+    runAITextTask: async (request) => ({
+      provider: request.provider,
+      model: request.model || settings.ai.openaiModel,
+      output: `Mock ${request.provider} result:\n\n${request.prompt}`
+    }),
+    openAIProviderLogin: async () => {},
     copyText: async (text) => {
       await navigator.clipboard?.writeText(text)
     },

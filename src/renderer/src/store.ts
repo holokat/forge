@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import {
   DEFAULT_SETTINGS,
   DEFAULT_PUBLISH_SITE_INTEGRATIONS,
+  type AISettings,
+  type AITextProvider,
   type PublishAnalyticsProvider,
   type PublishDeployTarget,
   type PublishFormProvider,
@@ -76,6 +78,7 @@ export interface ForgeState {
   lineWidth: number
   templatesFolder: string
   dailyNotesFolder: string
+  aiSettings: AISettings
   bookmarks: string[]
   bookmarkSettings: Record<string, string[]>
   pinnedFolders: string[]
@@ -132,6 +135,7 @@ export interface ForgeState {
   setLineWidth(width: number): void
   setTemplatesFolder(folder: string): void
   setDailyNotesFolder(folder: string): void
+  setAISettings(settings: AISettings): void
   toggleBookmark(path: string): void
   removeBookmark(path: string): void
   togglePinnedFolder(path: string): void
@@ -169,6 +173,7 @@ async function persistSettings(state: ForgeState): Promise<void> {
     lineWidth: state.lineWidth,
     templatesFolder: state.templatesFolder,
     dailyNotesFolder: state.dailyNotesFolder,
+    ai: state.aiSettings,
     bookmarks: bookmarkSettingsForState(state),
     pinnedFolders: pinnedFolderSettingsForState(state),
     publishSites: publishSiteSettingsForState(state),
@@ -248,6 +253,22 @@ function stringValue(value: unknown): string {
 
 function booleanValue(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback
+}
+
+function normalizeAIProvider(value: unknown): AITextProvider {
+  const providers: AITextProvider[] = ['codex', 'openai', 'anthropic']
+  return providers.includes(value as AITextProvider) ? (value as AITextProvider) : DEFAULT_SETTINGS.ai.defaultProvider
+}
+
+function normalizeAISettings(value: unknown): AISettings {
+  const raw = value && typeof value === 'object' && !Array.isArray(value) ? (value as Partial<AISettings>) : {}
+  return {
+    defaultProvider: normalizeAIProvider(raw.defaultProvider),
+    codexModel: stringValue(raw.codexModel),
+    openaiModel: stringValue(raw.openaiModel) || DEFAULT_SETTINGS.ai.openaiModel,
+    anthropicModel: stringValue(raw.anthropicModel) || DEFAULT_SETTINGS.ai.anthropicModel,
+    includeActiveNote: booleanValue(raw.includeActiveNote, DEFAULT_SETTINGS.ai.includeActiveNote)
+  }
 }
 
 function normalizeAnalyticsProvider(value: unknown): PublishAnalyticsProvider {
@@ -445,6 +466,7 @@ export const useStore = create<ForgeState>((set, get) => ({
   lineWidth: DEFAULT_SETTINGS.lineWidth,
   templatesFolder: DEFAULT_SETTINGS.templatesFolder,
   dailyNotesFolder: DEFAULT_SETTINGS.dailyNotesFolder,
+  aiSettings: DEFAULT_SETTINGS.ai,
   bookmarks: [],
   bookmarkSettings: DEFAULT_SETTINGS.bookmarks,
   pinnedFolders: [],
@@ -469,12 +491,14 @@ export const useStore = create<ForgeState>((set, get) => ({
     const bookmarkSettings = normalizeBookmarkSettings(settings.bookmarks)
     const pinnedFolderSettings = normalizePinnedFolderSettings(settings.pinnedFolders)
     const publishSiteSettings = normalizePublishSiteSettings(settings.publishSites)
+    const aiSettings = normalizeAISettings(settings.ai)
     set({
       theme: settings.theme,
       fontSize: settings.fontSize,
       lineWidth: settings.lineWidth,
       templatesFolder: settings.templatesFolder,
       dailyNotesFolder: settings.dailyNotesFolder,
+      aiSettings,
       bookmarkSettings,
       pinnedFolderSettings,
       publishSiteSettings,
@@ -1003,6 +1027,10 @@ export const useStore = create<ForgeState>((set, get) => ({
   },
   setDailyNotesFolder(dailyNotesFolder) {
     set({ dailyNotesFolder: dailyNotesFolder.trim() || DEFAULT_SETTINGS.dailyNotesFolder })
+    persistSettings(get())
+  },
+  setAISettings(aiSettings) {
+    set({ aiSettings: normalizeAISettings(aiSettings) })
     persistSettings(get())
   },
   toggleBookmark(path) {

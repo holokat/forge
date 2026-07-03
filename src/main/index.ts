@@ -8,6 +8,7 @@ import {
   nativeTheme,
   net,
   protocol,
+  safeStorage,
   shell
 } from 'electron'
 import {
@@ -19,10 +20,18 @@ import {
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import fsSync, { type FSWatcher } from 'node:fs'
+import { execFile, spawn } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
 import {
   DEFAULT_SETTINGS,
   type AgentAccessInfo,
+  type AILoginProvider,
+  type AISecretUpdate,
+  type AISettings,
+  type AIStatus,
+  type AITextProvider,
+  type AITextTaskRequest,
+  type AITextTaskResult,
   type ImportedAttachment,
   type ImportedAttachmentKind,
   type PublishVaultOptions,
@@ -292,7 +301,12 @@ const settingsPath = (): string => path.join(app.getPath('userData'), 'forge-set
 async function readSettings(): Promise<Settings> {
   try {
     const raw = await fs.readFile(settingsPath(), 'utf8')
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+    const parsed = JSON.parse(raw) as Partial<Settings>
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      ai: { ...DEFAULT_SETTINGS.ai, ...(parsed.ai ?? {}) }
+    }
   } catch {
     return { ...DEFAULT_SETTINGS }
   }
@@ -300,6 +314,448 @@ async function readSettings(): Promise<Settings> {
 
 async function writeSettings(settings: Settings): Promise<void> {
   await fs.writeFile(settingsPath(), JSON.stringify(settings, null, 2), 'utf8')
+}
+
+// ---------- AI helpers ----------
+
+interface StoredAISecret {
+  encrypted: string
+  updatedAt: string
+}
+
+interface StoredAISecrets {
+  version: 1
+  openaiApiKey?: StoredAISecret
+  anthropicApiKey?: StoredAISecret
+}
+
+interface CommandResult {
+  stdout: string
+  stderr: string
+}
+
+function aiSecretsPath(): string {
+  return path.join(app.getPath('userData'), 'forge-ai-secrets.json')
+}
+
+async function readAISecrets(): Promise<StoredAISecrets> {
+  try {
+    const raw = await fs.readFile(aiSecretsPath(), 'utf8')
+    const parsed = JSON.parse(raw) as Partial<StoredAISecrets>
+    return { version: 1, ...parsed }
+  } catch {
+    return { version: 1 }
+  }
+}
+
+async function writeAISecrets(secrets: StoredAISecrets): Promise<void> {
+  await fs.writeFile(aiSecretsPath(), JSON.stringify(secrets, null, 2), { mode: 0o600 })
+}
+
+function safeStorageAvailable(): boolean {
+  return safeStorage.isEncryptionAvailable()
+}
+
+function encryptSecret(value: string): StoredAISecret {
+  if (!safeStorageAvailable()) throw new Error('Encrypted key storage is not available on this Mac.')
+  return {
+    encrypted: safeStorage.encryptString(value).toString('base64'),
+    updatedAt: new Date().toISOString()
+  }
+}
+
+function decryptSecret(secret: StoredAISecret | undefined): string | null {
+  if (!secret || !safeStorageAvailable()) return null
+  try {
+    return safeStorage.decryptString(Buffer.from(secret.encrypted, 'base64'))
+  } catch {
+    return null
+  }
+}
+
+async function saveAISecrets(update: AISecretUpdate = {}): Promise<void> {
+  const secrets = await readAISecrets()
+  const openaiKey = update.openaiApiKey?.trim()
+  const anthropicKey = update.anthropicApiKey?.trim()
+
+  if (update.clearOpenAIKey) delete secrets.openaiApiKey
+  if (update.clearAnthropicKey) delete secrets.anthropicApiKey
+  if (openaiKey) secrets.openaiApiKey = encryptSecret(openaiKey)
+  if (anthropicKey) secrets.anthropicApiKey = encryptSecret(anthropicKey)
+
+  await writeAISecrets(secrets)
+}
+
+function execFileText(command: string, args: string[], timeout = 8_000): Promise<CommandResult> {
+  return new Promise((resolve, reject) => {
+    execFile(command, args, { encoding: 'utf8', timeout, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+      if (error) {
+        const wrapped = new Error(stderr || stdout || error.message) as Error & CommandResult
+        wrapped.stdout = stdout
+        wrapped.stderr = stderr
+        reject(wrapped)
+        return
+      }
+      resolve({ stdout, stderr })
+    })
+  })
+}
+
+function spawnText(
+  command: string,
+  args: string[],
+  input: string,
+  options: { cwd?: string; timeout?: number } = {}
+): Promise<CommandResult> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
+      stdio: ['pipe', 'pipe', 'pipe']
+    })
+    let stdout = ''
+    let stderr = ''
+    let settled = false
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      child.kill('SIGTERM')
+      reject(new Error('AI task timed out.'))
+    }, options.timeout ?? 180_000)
+
+    child.stdout.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString('utf8')
+    })
+    child.stderr.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString('utf8')
+    })
+    child.on('error', (error) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      reject(error)
+    })
+    child.on('close', (code) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      if (code === 0) {
+        resolve({ stdout, stderr })
+        return
+      }
+      reject(new Error(stderr || stdout || `Command exited with code ${code ?? 'unknown'}.`))
+    })
+    child.stdin.end(input)
+  })
+}
+
+function homePath(...segments: string[]): string {
+  return path.join(app.getPath('home'), ...segments)
+}
+
+function uniqueValues(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean)))
+}
+
+function cliCandidates(name: 'codex' | 'claude'): string[] {
+  if (name === 'codex') {
+    return uniqueValues([
+      'codex',
+      '/Applications/Codex.app/Contents/Resources/codex',
+      '/opt/homebrew/bin/codex',
+      '/usr/local/bin/codex',
+      homePath('.local', 'bin', 'codex')
+    ])
+  }
+  return uniqueValues([
+    'claude',
+    '/opt/homebrew/bin/claude',
+    '/usr/local/bin/claude',
+    homePath('.local', 'bin', 'claude')
+  ])
+}
+
+async function findCLI(name: 'codex' | 'claude'): Promise<{ path: string | null; version: string | null }> {
+  for (const candidate of cliCandidates(name)) {
+    try {
+      const result = await execFileText(candidate, ['--version'])
+      const version = (result.stdout || result.stderr).trim() || null
+      return { path: candidate, version }
+    } catch {
+      // Try the next known location.
+    }
+  }
+  return { path: null, version: null }
+}
+
+async function codexStatus(): Promise<AIStatus['codex']> {
+  const cli = await findCLI('codex')
+  if (!cli.path) {
+    return {
+      installed: false,
+      path: null,
+      version: null,
+      authenticated: false,
+      detail: 'Codex CLI is not installed or is not on PATH.',
+      setupCommand: 'codex login',
+      docsUrl: 'https://developers.openai.com/codex/auth'
+    }
+  }
+
+  try {
+    const result = await execFileText(cli.path, ['login', 'status'])
+    const detail = (result.stdout || result.stderr).trim() || 'Codex login status is available.'
+    return {
+      installed: true,
+      path: cli.path,
+      version: cli.version,
+      authenticated: /logged in/i.test(detail),
+      detail,
+      setupCommand: 'codex login',
+      docsUrl: 'https://developers.openai.com/codex/auth'
+    }
+  } catch (error) {
+    return {
+      installed: true,
+      path: cli.path,
+      version: cli.version,
+      authenticated: false,
+      detail: error instanceof Error ? error.message : 'Codex is installed but not logged in.',
+      setupCommand: 'codex login',
+      docsUrl: 'https://developers.openai.com/codex/auth'
+    }
+  }
+}
+
+async function claudeStatus(): Promise<AIStatus['claude']> {
+  const cli = await findCLI('claude')
+  return {
+    installed: Boolean(cli.path),
+    path: cli.path,
+    version: cli.version,
+    authenticated: cli.path ? null : false,
+    detail: cli.path
+      ? 'Claude Code is installed. Forge can help configure MCP, but does not proxy Claude.ai subscription credentials.'
+      : 'Claude Code is not installed or is not on PATH.',
+    setupCommand: 'claude',
+    docsUrl: 'https://code.claude.com/docs/en/iam'
+  }
+}
+
+async function getAIStatus(): Promise<AIStatus> {
+  const [codex, claude, secrets] = await Promise.all([codexStatus(), claudeStatus(), readAISecrets()])
+  const notes = [
+    'Codex prompts run through the local Codex CLI, so ChatGPT subscription access comes from the user’s own Codex login.',
+    'Claude.ai Free, Pro, and Max credentials cannot be routed through third-party apps. Use an Anthropic API key for direct Forge prompting, or use Claude Code with Forge MCP.'
+  ]
+  if (!safeStorageAvailable()) {
+    notes.push('Encrypted key storage is unavailable. API keys cannot be saved on this device until OS key storage is available.')
+  }
+
+  return {
+    safeStorageAvailable: safeStorageAvailable(),
+    codex,
+    claude,
+    openai: {
+      configured: Boolean(secrets.openaiApiKey),
+      updatedAt: secrets.openaiApiKey?.updatedAt ?? null
+    },
+    anthropic: {
+      configured: Boolean(secrets.anthropicApiKey),
+      updatedAt: secrets.anthropicApiKey?.updatedAt ?? null
+    },
+    notes
+  }
+}
+
+async function saveAISettings(settings: AISettings, secrets?: AISecretUpdate): Promise<AIStatus> {
+  const current = await readSettings()
+  await writeSettings({ ...current, ai: { ...DEFAULT_SETTINGS.ai, ...settings } })
+  if (secrets) await saveAISecrets(secrets)
+  return getAIStatus()
+}
+
+function providerModel(settings: AISettings, provider: AITextProvider, override?: string): string {
+  const requested = override?.trim()
+  if (requested) return requested
+  if (provider === 'codex') return settings.codexModel.trim()
+  if (provider === 'anthropic') return settings.anthropicModel.trim() || DEFAULT_SETTINGS.ai.anthropicModel
+  return settings.openaiModel.trim() || DEFAULT_SETTINGS.ai.openaiModel
+}
+
+function buildAITextPrompt(request: AITextTaskRequest): string {
+  const parts = [
+    'You are Forge AI, a local-first Markdown assistant inside the Forge desktop app.',
+    'Return useful Markdown or plain text only. Do not describe hidden reasoning.',
+    '',
+    'User request:',
+    request.prompt.trim()
+  ]
+
+  if (request.documentContent?.trim()) {
+    parts.push(
+      '',
+      `Active note${request.documentPath ? ` (${request.documentPath})` : ''}:`,
+      '```markdown',
+      request.documentContent,
+      '```'
+    )
+  }
+
+  return parts.join('\n')
+}
+
+function recordText(record: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'string' && value.trim()) return value
+  }
+  return null
+}
+
+function extractOpenAIText(data: unknown): string {
+  if (!data || typeof data !== 'object') return ''
+  const root = data as Record<string, unknown>
+  const direct = recordText(root, ['output_text', 'text'])
+  if (direct) return direct
+
+  const output = root.output
+  if (!Array.isArray(output)) return ''
+  const parts: string[] = []
+  for (const item of output) {
+    if (!item || typeof item !== 'object') continue
+    const itemRecord = item as Record<string, unknown>
+    const itemText = recordText(itemRecord, ['output_text', 'text'])
+    if (itemText) parts.push(itemText)
+    const content = itemRecord.content
+    if (!Array.isArray(content)) continue
+    for (const block of content) {
+      if (!block || typeof block !== 'object') continue
+      const blockText = recordText(block as Record<string, unknown>, ['text', 'output_text'])
+      if (blockText) parts.push(blockText)
+    }
+  }
+  return parts.join('\n').trim()
+}
+
+function extractAnthropicText(data: unknown): string {
+  if (!data || typeof data !== 'object') return ''
+  const root = data as Record<string, unknown>
+  const content = root.content
+  if (!Array.isArray(content)) return ''
+  return content
+    .map((block) => (block && typeof block === 'object' ? recordText(block as Record<string, unknown>, ['text']) : null))
+    .filter((value): value is string => Boolean(value))
+    .join('\n')
+    .trim()
+}
+
+function apiErrorMessage(data: unknown, fallback: string): string {
+  if (!data || typeof data !== 'object') return fallback
+  const error = (data as Record<string, unknown>).error
+  if (error && typeof error === 'object') {
+    const message = (error as Record<string, unknown>).message
+    if (typeof message === 'string' && message.trim()) return message
+  }
+  return fallback
+}
+
+async function runOpenAITextTask(model: string, prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model,
+      input: prompt
+    })
+  })
+  const data = (await response.json().catch(() => null)) as unknown
+  if (!response.ok) throw new Error(apiErrorMessage(data, `OpenAI request failed with status ${response.status}.`))
+  const output = extractOpenAIText(data)
+  if (!output) throw new Error('OpenAI returned no text output.')
+  return output
+}
+
+async function runAnthropicTextTask(model: string, prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  })
+  const data = (await response.json().catch(() => null)) as unknown
+  if (!response.ok) throw new Error(apiErrorMessage(data, `Anthropic request failed with status ${response.status}.`))
+  const output = extractAnthropicText(data)
+  if (!output) throw new Error('Anthropic returned no text output.')
+  return output
+}
+
+async function runCodexTextTask(model: string, prompt: string, vault?: string | null): Promise<string> {
+  const status = await codexStatus()
+  if (!status.path) throw new Error('Codex CLI is not installed.')
+  if (status.authenticated === false) throw new Error('Codex CLI is not logged in. Run `codex login` first.')
+
+  const args = [
+    'exec',
+    '--ephemeral',
+    '--skip-git-repo-check',
+    '--sandbox',
+    'read-only',
+    '--ask-for-approval',
+    'never',
+    '--color',
+    'never'
+  ]
+  if (model) args.push('--model', model)
+  args.push('-')
+
+  const cwd = vault && path.isAbsolute(vault) && fsSync.existsSync(vault) ? vault : app.getPath('home')
+  const result = await spawnText(status.path, args, prompt, { cwd })
+  const output = result.stdout.trim()
+  if (!output) throw new Error(result.stderr.trim() || 'Codex returned no text output.')
+  return output
+}
+
+async function runAITextTask(request: AITextTaskRequest): Promise<AITextTaskResult> {
+  const settings = (await readSettings()).ai
+  const secrets = await readAISecrets()
+  const provider = request.provider
+  const model = providerModel(settings, provider, request.model)
+  const prompt = buildAITextPrompt(request)
+  let output = ''
+
+  if (provider === 'codex') {
+    output = await runCodexTextTask(model, prompt, request.vault)
+  } else if (provider === 'openai') {
+    const apiKey = decryptSecret(secrets.openaiApiKey)
+    if (!apiKey) throw new Error('Save an OpenAI API key before running OpenAI tasks.')
+    output = await runOpenAITextTask(model, prompt, apiKey)
+  } else {
+    const apiKey = decryptSecret(secrets.anthropicApiKey)
+    if (!apiKey) throw new Error('Save an Anthropic API key before running Anthropic tasks.')
+    output = await runAnthropicTextTask(model, prompt, apiKey)
+  }
+
+  return { provider, model: model || null, output }
+}
+
+function terminalCommandScript(command: string): string {
+  return `tell application "Terminal" to do script ${JSON.stringify(command)}`
+}
+
+async function openAIProviderLogin(provider: AILoginProvider): Promise<void> {
+  const command = provider === 'codex' ? 'codex login' : 'claude'
+  await execFileText('/usr/bin/osascript', ['-e', terminalCommandScript(command), '-e', 'tell application "Terminal" to activate'])
 }
 
 // ---------- vault helpers ----------
@@ -604,6 +1060,10 @@ function registerIpc(): void {
   ipcMain.handle('settings:read', () => readSettings())
   ipcMain.handle('settings:write', (_e, s: Settings) => writeSettings(s))
   ipcMain.handle('agent:getAccessInfo', () => getAgentAccessInfo())
+  ipcMain.handle('ai:getStatus', () => getAIStatus())
+  ipcMain.handle('ai:saveSettings', (_e, settings: AISettings, secrets?: AISecretUpdate) => saveAISettings(settings, secrets))
+  ipcMain.handle('ai:runTextTask', (_e, request: AITextTaskRequest) => runAITextTask(request))
+  ipcMain.handle('ai:openProviderLogin', (_e, provider: AILoginProvider) => openAIProviderLogin(provider))
   ipcMain.handle('clipboard:writeText', (_e, text: string) => clipboard.writeText(text))
   ipcMain.handle('vault:publish', (_e, vault: string, outDir: string, options?: PublishVaultOptions) =>
     publishVaultForDesktop(vault, outDir, options)

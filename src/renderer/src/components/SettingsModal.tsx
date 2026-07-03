@@ -7,16 +7,21 @@ import {
   Clipboard,
   Code2,
   Download,
+  ExternalLink,
   Folder,
   FolderOpen,
   FileText,
   Globe2,
+  KeyRound,
+  LockKeyhole,
   Mail,
   Plus,
   RefreshCw,
   Rocket,
   Rss,
   SearchCheck,
+  ShieldAlert,
+  Sparkles,
   Smartphone,
   Terminal,
   Trash2,
@@ -27,6 +32,9 @@ import QRCode from 'qrcode'
 import { useEffect, useMemo, useState } from 'react'
 import type {
   AgentAccessInfo,
+  AISettings,
+  AIStatus,
+  AITextProvider,
   PublishAnalyticsProvider,
   PublishDeployTarget,
   PublishFormProvider,
@@ -37,7 +45,7 @@ import type {
   UpdateStatus
 } from '../../../shared/types'
 import { DEFAULT_PUBLISH_SITE_INTEGRATIONS } from '../../../shared/types'
-import { STARTER_TEMPLATE_CATALOG, useStore } from '../store'
+import { activeTab as selectActiveTab, noteContents, STARTER_TEMPLATE_CATALOG, useStore } from '../store'
 import ExtensionMarketplace from './ExtensionMarketplace'
 import {
   createSettingsTabs,
@@ -238,6 +246,45 @@ function publishThemeLabel(theme: PublishSiteConfig['theme']): string {
 
 function vaultDisplayName(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path
+}
+
+function aiProviderLabel(provider: AITextProvider): string {
+  if (provider === 'codex') return 'Codex'
+  if (provider === 'openai') return 'OpenAI API'
+  return 'Anthropic API'
+}
+
+function aiModelForProvider(settings: AISettings, provider: AITextProvider): string {
+  if (provider === 'codex') return settings.codexModel
+  if (provider === 'openai') return settings.openaiModel
+  return settings.anthropicModel
+}
+
+function updateAIModel(settings: AISettings, provider: AITextProvider, model: string): AISettings {
+  if (provider === 'codex') return { ...settings, codexModel: model }
+  if (provider === 'openai') return { ...settings, openaiModel: model }
+  return { ...settings, anthropicModel: model }
+}
+
+function statusLabel(value: boolean | null): string {
+  if (value === true) return 'Connected'
+  if (value === false) return 'Needs setup'
+  return 'Local only'
+}
+
+function statusTone(value: boolean | null): 'good' | 'warn' | 'neutral' {
+  if (value === true) return 'good'
+  if (value === false) return 'warn'
+  return 'neutral'
+}
+
+function dateStamp(value: string | null): string {
+  if (!value) return 'Not saved'
+  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function openExternalUrl(url: string): void {
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 function revealRelForOutput(vault: string, outputDir: string): string | null {
@@ -542,17 +589,29 @@ export default function SettingsModal(): React.JSX.Element {
   const dailyNotesFolder = useStore((s) => s.dailyNotesFolder)
   const folders = useStore((s) => s.folders)
   const publishSites = useStore((s) => s.publishSites)
+  const aiSettings = useStore((s) => s.aiSettings)
   const setTemplatesFolder = useStore((s) => s.setTemplatesFolder)
   const setDailyNotesFolder = useStore((s) => s.setDailyNotesFolder)
   const setPublishSites = useStore((s) => s.setPublishSites)
+  const setAISettings = useStore((s) => s.setAISettings)
   const createStarterTemplate = useStore((s) => s.createStarterTemplate)
   const setModal = useStore((s) => s.setModal)
   const openVaultDialog = useStore((s) => s.openVaultDialog)
   const openVaultPath = useStore((s) => s.openVaultPath)
   const removeRecentVault = useStore((s) => s.removeRecentVault)
+  const currentTab = useStore(selectActiveTab)
   const [activeTab, setActiveTab] = useState<SettingsTabId>('appearance')
   const [selectedPublishSiteId, setSelectedPublishSiteId] = useState<string | null>(null)
   const [agentAccess, setAgentAccess] = useState<AgentAccessInfo | null>(null)
+  const [aiStatus, setAIStatus] = useState<AIStatus | null>(null)
+  const [aiStatusError, setAIStatusError] = useState('')
+  const [aiSecrets, setAISecrets] = useState({ openaiApiKey: '', anthropicApiKey: '' })
+  const [aiSaveState, setAISaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle')
+  const [aiTaskProvider, setAITaskProvider] = useState<AITextProvider>(aiSettings.defaultProvider)
+  const [aiPrompt, setAIPrompt] = useState('Improve the formatting and clarity of this note without changing its meaning.')
+  const [aiTaskState, setAITaskState] = useState<'idle' | 'running' | 'done' | 'failed'>('idle')
+  const [aiTaskMessage, setAITaskMessage] = useState('')
+  const [aiTaskResult, setAITaskResult] = useState('')
   const [publishState, setPublishState] = useState<{
     siteId: string | null
     status: 'idle' | 'publishing' | 'done' | 'failed'
@@ -574,6 +633,91 @@ export default function SettingsModal(): React.JSX.Element {
       cancelled = true
     }
   }, [])
+
+  const refreshAIStatus = async (): Promise<void> => {
+    try {
+      setAIStatusError('')
+      setAIStatus(await window.forge.getAIStatus())
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setAIStatusError(message)
+    }
+  }
+
+  useEffect(() => {
+    refreshAIStatus().catch(console.error)
+  }, [])
+
+  const saveProviderKey = async (provider: 'openai' | 'anthropic'): Promise<void> => {
+    setAISaveState('saving')
+    try {
+      const update =
+        provider === 'openai'
+          ? { openaiApiKey: aiSecrets.openaiApiKey }
+          : { anthropicApiKey: aiSecrets.anthropicApiKey }
+      const next = await window.forge.saveAISettings(aiSettings, update)
+      setAIStatus(next)
+      setAISecrets((current) =>
+        provider === 'openai' ? { ...current, openaiApiKey: '' } : { ...current, anthropicApiKey: '' }
+      )
+      setAISaveState('saved')
+      window.setTimeout(() => setAISaveState('idle'), 1600)
+    } catch (error) {
+      console.error('AI key save failed.', error)
+      setAIStatusError(error instanceof Error ? error.message : String(error))
+      setAISaveState('failed')
+      window.setTimeout(() => setAISaveState('idle'), 2200)
+    }
+  }
+
+  const clearProviderKey = async (provider: 'openai' | 'anthropic'): Promise<void> => {
+    setAISaveState('saving')
+    try {
+      const next = await window.forge.saveAISettings(
+        aiSettings,
+        provider === 'openai' ? { clearOpenAIKey: true } : { clearAnthropicKey: true }
+      )
+      setAIStatus(next)
+      setAISaveState('saved')
+      window.setTimeout(() => setAISaveState('idle'), 1600)
+    } catch (error) {
+      console.error('AI key clear failed.', error)
+      setAIStatusError(error instanceof Error ? error.message : String(error))
+      setAISaveState('failed')
+      window.setTimeout(() => setAISaveState('idle'), 2200)
+    }
+  }
+
+  const updateAISettings = (next: AISettings): void => {
+    setAISettings(next)
+  }
+
+  const runAITask = async (): Promise<void> => {
+    if (!aiPrompt.trim()) return
+    const activeNotePath = currentTab?.kind === 'note' ? currentTab.path : null
+    const documentContent =
+      aiSettings.includeActiveNote && activeNotePath ? noteContents.get(activeNotePath) ?? '' : ''
+    setAITaskState('running')
+    setAITaskMessage(`Running ${aiProviderLabel(aiTaskProvider)}...`)
+    setAITaskResult('')
+    try {
+      const result = await window.forge.runAITextTask({
+        provider: aiTaskProvider,
+        prompt: aiPrompt,
+        model: aiModelForProvider(aiSettings, aiTaskProvider),
+        vault,
+        documentPath: activeNotePath,
+        documentContent
+      })
+      setAITaskResult(result.output)
+      setAITaskMessage(`Finished with ${aiProviderLabel(result.provider)}${result.model ? ` (${result.model})` : ''}.`)
+      setAITaskState('done')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setAITaskMessage(message)
+      setAITaskState('failed')
+    }
+  }
 
   const settingsTabs = useMemo<SettingsNavItem[]>(() => createSettingsTabs(vault), [vault])
 
@@ -1730,6 +1874,323 @@ export default function SettingsModal(): React.JSX.Element {
                       </div>
                     </div>
                   </div>
+                </section>
+              )}
+
+              {activeTab === 'ai' && (
+                <section className="settings-section">
+                  <div className="settings-callout ai-policy-card">
+                    <span className="ai-policy-icon">
+                      <ShieldAlert size={16} />
+                    </span>
+                    <span>
+                      <strong>Subscription access stays local.</strong>
+                      <small>
+                        Codex runs through the user’s local Codex CLI login. Claude subscription login remains in Claude Code;
+                        Forge supports Claude through MCP setup and direct Anthropic API keys.
+                      </small>
+                    </span>
+                  </div>
+
+                  {aiStatusError && (
+                    <div className="static-publish-status failed">
+                      <AlertCircle size={14} />
+                      <span>{aiStatusError}</span>
+                    </div>
+                  )}
+
+                  <div className="ai-provider-grid">
+                    <div className="ai-provider-card">
+                      <div className="ai-provider-head">
+                        <span className="ai-provider-icon">
+                          <Sparkles size={16} />
+                        </span>
+                        <span>
+                          <strong>Codex</strong>
+                          <small>ChatGPT subscription via local CLI</small>
+                        </span>
+                        <span className={`ai-status-pill ${statusTone(aiStatus?.codex.authenticated ?? false)}`}>
+                          {statusLabel(aiStatus?.codex.authenticated ?? false)}
+                        </span>
+                      </div>
+                      <p>{aiStatus?.codex.detail ?? 'Checking Codex...'}</p>
+                      <div className="ai-meta-grid">
+                        <span>CLI</span>
+                        <code>{aiStatus?.codex.path ?? 'Not found'}</code>
+                        <span>Version</span>
+                        <code>{aiStatus?.codex.version ?? 'Unknown'}</code>
+                      </div>
+                      <label className="publish-field">
+                        <span>Model override</span>
+                        <input
+                          className="settings-text-input"
+                          placeholder="Use Codex default"
+                          value={aiSettings.codexModel}
+                          onChange={(event) => updateAISettings(updateAIModel(aiSettings, 'codex', event.target.value))}
+                        />
+                      </label>
+                      <div className="ai-card-actions">
+                        <button
+                          className="btn btn-compact"
+                          onClick={() => window.forge.openAIProviderLogin('codex').then(refreshAIStatus).catch(console.error)}
+                        >
+                          <Terminal size={14} />
+                          Open login
+                        </button>
+                        <CopyButton value={aiStatus?.codex.setupCommand ?? 'codex login'} label="Copy login" />
+                        <button className="btn btn-compact" onClick={() => openExternalUrl(aiStatus?.codex.docsUrl ?? 'https://developers.openai.com/codex/auth')}>
+                          <ExternalLink size={14} />
+                          Docs
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="ai-provider-card">
+                      <div className="ai-provider-head">
+                        <span className="ai-provider-icon">
+                          <Terminal size={16} />
+                        </span>
+                        <span>
+                          <strong>Claude Code</strong>
+                          <small>Subscription access through MCP</small>
+                        </span>
+                        <span className={`ai-status-pill ${aiStatus?.claude.installed ? 'neutral' : 'warn'}`}>
+                          {aiStatus?.claude.installed ? 'Installed' : 'Needs setup'}
+                        </span>
+                      </div>
+                      <p>{aiStatus?.claude.detail ?? 'Checking Claude Code...'}</p>
+                      <div className="ai-meta-grid">
+                        <span>CLI</span>
+                        <code>{aiStatus?.claude.path ?? 'Not found'}</code>
+                        <span>Version</span>
+                        <code>{aiStatus?.claude.version ?? 'Unknown'}</code>
+                      </div>
+                      <div className="publish-warning compact">
+                        <AlertCircle size={14} />
+                        <span>Forge does not route prompts through Claude.ai Free, Pro, or Max credentials.</span>
+                      </div>
+                      <div className="ai-card-actions">
+                        <button
+                          className="btn btn-compact"
+                          onClick={() => window.forge.openAIProviderLogin('claude').then(refreshAIStatus).catch(console.error)}
+                        >
+                          <Terminal size={14} />
+                          Open login
+                        </button>
+                        <CopyButton value={aiStatus?.claude.setupCommand ?? 'claude'} label="Copy login" />
+                        <CopyButton value={claudeCodeCommand} label="Copy MCP" disabled={!claudeCodeCommand} />
+                        <button className="btn btn-compact" onClick={() => openExternalUrl(aiStatus?.claude.docsUrl ?? 'https://code.claude.com/docs/en/iam')}>
+                          <ExternalLink size={14} />
+                          Docs
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="ai-provider-card">
+                      <div className="ai-provider-head">
+                        <span className="ai-provider-icon">
+                          <KeyRound size={16} />
+                        </span>
+                        <span>
+                          <strong>OpenAI API</strong>
+                          <small>Bring your own API key</small>
+                        </span>
+                        <span className={`ai-status-pill ${aiStatus?.openai.configured ? 'good' : 'warn'}`}>
+                          {aiStatus?.openai.configured ? 'Saved' : 'No key'}
+                        </span>
+                      </div>
+                      <p>Direct text generation through the Responses API. Usage is billed to the user’s OpenAI Platform account.</p>
+                      <div className="ai-meta-grid">
+                        <span>Storage</span>
+                        <code>{aiStatus?.safeStorageAvailable ? 'Encrypted on device' : 'Unavailable'}</code>
+                        <span>Updated</span>
+                        <code>{dateStamp(aiStatus?.openai.updatedAt ?? null)}</code>
+                      </div>
+                      <label className="publish-field">
+                        <span>Model</span>
+                        <input
+                          className="settings-text-input"
+                          value={aiSettings.openaiModel}
+                          onChange={(event) => updateAISettings(updateAIModel(aiSettings, 'openai', event.target.value))}
+                        />
+                      </label>
+                      <label className="publish-field">
+                        <span>API key</span>
+                        <input
+                          className="settings-text-input"
+                          type="password"
+                          placeholder={aiStatus?.openai.configured ? 'Key saved' : 'sk-...'}
+                          value={aiSecrets.openaiApiKey}
+                          onChange={(event) => setAISecrets((current) => ({ ...current, openaiApiKey: event.target.value }))}
+                        />
+                      </label>
+                      <div className="ai-card-actions">
+                        <button
+                          className="btn btn-compact"
+                          disabled={!aiSecrets.openaiApiKey.trim() || aiSaveState === 'saving'}
+                          onClick={() => saveProviderKey('openai')}
+                        >
+                          <LockKeyhole size={14} />
+                          Save key
+                        </button>
+                        <button
+                          className="btn btn-compact"
+                          disabled={!aiStatus?.openai.configured || aiSaveState === 'saving'}
+                          onClick={() => clearProviderKey('openai')}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="ai-provider-card">
+                      <div className="ai-provider-head">
+                        <span className="ai-provider-icon">
+                          <KeyRound size={16} />
+                        </span>
+                        <span>
+                          <strong>Anthropic API</strong>
+                          <small>Bring your own API key</small>
+                        </span>
+                        <span className={`ai-status-pill ${aiStatus?.anthropic.configured ? 'good' : 'warn'}`}>
+                          {aiStatus?.anthropic.configured ? 'Saved' : 'No key'}
+                        </span>
+                      </div>
+                      <p>Direct Claude API calls from Forge. This is the compliant path for in-app Claude-powered prompting.</p>
+                      <div className="ai-meta-grid">
+                        <span>Storage</span>
+                        <code>{aiStatus?.safeStorageAvailable ? 'Encrypted on device' : 'Unavailable'}</code>
+                        <span>Updated</span>
+                        <code>{dateStamp(aiStatus?.anthropic.updatedAt ?? null)}</code>
+                      </div>
+                      <label className="publish-field">
+                        <span>Model</span>
+                        <input
+                          className="settings-text-input"
+                          value={aiSettings.anthropicModel}
+                          onChange={(event) => updateAISettings(updateAIModel(aiSettings, 'anthropic', event.target.value))}
+                        />
+                      </label>
+                      <label className="publish-field">
+                        <span>API key</span>
+                        <input
+                          className="settings-text-input"
+                          type="password"
+                          placeholder={aiStatus?.anthropic.configured ? 'Key saved' : 'sk-ant-...'}
+                          value={aiSecrets.anthropicApiKey}
+                          onChange={(event) => setAISecrets((current) => ({ ...current, anthropicApiKey: event.target.value }))}
+                        />
+                      </label>
+                      <div className="ai-card-actions">
+                        <button
+                          className="btn btn-compact"
+                          disabled={!aiSecrets.anthropicApiKey.trim() || aiSaveState === 'saving'}
+                          onClick={() => saveProviderKey('anthropic')}
+                        >
+                          <LockKeyhole size={14} />
+                          Save key
+                        </button>
+                        <button
+                          className="btn btn-compact"
+                          disabled={!aiStatus?.anthropic.configured || aiSaveState === 'saving'}
+                          onClick={() => clearProviderKey('anthropic')}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {aiSaveState !== 'idle' && (
+                    <div className={`static-publish-status ${aiSaveState === 'failed' ? 'failed' : aiSaveState === 'saved' ? 'done' : 'publishing'}`}>
+                      {aiSaveState === 'failed' ? <AlertCircle size={14} /> : aiSaveState === 'saved' ? <Check size={14} /> : <RefreshCw size={14} />}
+                      <span>{aiSaveState === 'saving' ? 'Saving key...' : aiSaveState === 'saved' ? 'AI settings saved.' : 'Could not save AI settings.'}</span>
+                    </div>
+                  )}
+
+                  <div className="settings-callout ai-task-card">
+                    <div className="ai-task-header">
+                      <div>
+                        <div className="settings-row-label">Prompt current note</div>
+                        <div className="settings-row-desc">Run a local Codex or API-backed text task without changing files automatically.</div>
+                      </div>
+                      <button className="btn btn-compact" onClick={() => refreshAIStatus().catch(console.error)}>
+                        <RefreshCw size={14} />
+                        Refresh status
+                      </button>
+                    </div>
+
+                    <div className="ai-provider-selector">
+                      {(['codex', 'openai', 'anthropic'] as AITextProvider[]).map((provider) => (
+                        <button
+                          key={provider}
+                          className={aiTaskProvider === provider ? 'active' : ''}
+                          onClick={() => {
+                            setAITaskProvider(provider)
+                            updateAISettings({ ...aiSettings, defaultProvider: provider })
+                          }}
+                        >
+                          {provider === 'codex' ? <Sparkles size={14} /> : <KeyRound size={14} />}
+                          <span>{aiProviderLabel(provider)}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <label className="publish-field">
+                      <span>Prompt</span>
+                      <textarea
+                        className="settings-textarea ai-prompt-input"
+                        value={aiPrompt}
+                        onChange={(event) => setAIPrompt(event.target.value)}
+                      />
+                    </label>
+
+                    <div className="ai-task-options">
+                      <label className="publish-option compact">
+                        <input
+                          type="checkbox"
+                          checked={aiSettings.includeActiveNote}
+                          onChange={(event) => updateAISettings({ ...aiSettings, includeActiveNote: event.target.checked })}
+                        />
+                        <span>
+                          <strong>Include active note</strong>
+                          <small>{currentTab?.kind === 'note' && currentTab.path ? currentTab.path : 'No active note open'}</small>
+                        </span>
+                      </label>
+                      <button className="btn" disabled={!aiPrompt.trim() || aiTaskState === 'running'} onClick={() => runAITask()}>
+                        {aiTaskState === 'running' ? <RefreshCw size={14} /> : <Sparkles size={14} />}
+                        {aiTaskState === 'running' ? 'Running' : `Run ${aiProviderLabel(aiTaskProvider)}`}
+                      </button>
+                    </div>
+
+                    {aiTaskMessage && (
+                      <div className={`static-publish-status ${aiTaskState === 'failed' ? 'failed' : aiTaskState === 'done' ? 'done' : 'publishing'}`}>
+                        {aiTaskState === 'failed' ? <AlertCircle size={14} /> : aiTaskState === 'done' ? <Check size={14} /> : <RefreshCw size={14} />}
+                        <span>{aiTaskMessage}</span>
+                      </div>
+                    )}
+
+                    {aiTaskResult && (
+                      <div className="ai-result-block">
+                        <div className="ai-result-head">
+                          <strong>Result</strong>
+                          <CopyButton value={aiTaskResult} label="Copy result" />
+                        </div>
+                        <pre>{aiTaskResult}</pre>
+                      </div>
+                    )}
+                  </div>
+
+                  {aiStatus?.notes.length ? (
+                    <div className="ai-notes">
+                      {aiStatus.notes.map((note) => (
+                        <div key={note}>
+                          <AlertCircle size={13} />
+                          <span>{note}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </section>
               )}
 

@@ -36,6 +36,7 @@ import {
   ScrollText,
   Search,
   SearchCheck,
+  Sparkles,
   Smartphone,
   Sun,
   Terminal,
@@ -116,6 +117,7 @@ export type SettingsTabId =
   | 'publishing'
   | 'forgeBuddy'
   | 'agents'
+  | 'ai'
   | 'extensions'
   | 'updates'
 
@@ -177,6 +179,13 @@ export function createSettingsTabs(vault: string | null): SettingsNavItem[] {
       group: 'Connections',
       icon: <Bot size={15} />,
       disabled: !vault
+    },
+    {
+      id: 'ai',
+      label: 'AI',
+      description: 'Codex and API providers.',
+      group: 'Connections',
+      icon: <Sparkles size={15} />
     },
     {
       id: 'extensions',
