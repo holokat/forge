@@ -5,7 +5,7 @@
   "description": "Forge — a fast, beautiful local knowledge base for macOS",
   "main": "./out/main/index.js",
   "author": "Forge",
-  "private": true,
+  "license": "MIT",
   "bin": {
     "forge": "scripts/forge-agent.mjs",
     "forge-mcp": "scripts/forge-mcp.mjs",

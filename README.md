@@ -1,104 +1,66 @@
-# Forge ⚡️
+# Forge
 
-A fast, beautiful, local-first knowledge base for macOS — an Obsidian-style note app. Your notes are plain Markdown files in a folder ("vault") on your Mac. No servers, no lock-in.
+Forge is a local-first Markdown knowledge base for macOS. It is built for people and AI agents who want to work with plain files instead of a closed notes database.
 
-![Electron](https://img.shields.io/badge/Electron-33-47848F) ![React](https://img.shields.io/badge/React-18-61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)
+Forge is open source under the MIT License.
 
-## Features
+## What Forge Can Do
 
-- **Vaults** — any folder of Markdown files; open, create, and switch vaults. Recent vaults remembered.
-- **Live-styled editor** — CodeMirror 6 with Markdown styling as you type (headings, bold, code, quotes), plus a rendered **reading view** (⌘E to toggle).
-- **Wikilinks** — type `[[` for autocomplete, ⌘-click to follow, links to missing notes create them. Aliases (`[[Note|label]]`) supported.
-- **Backlinks & outline** — right panel shows what links to the current note, its headings, and its tags.
-- **Graph view** — interactive force-directed graph of your vault (zoom, pan, drag, click to open).
-- **Quick switcher** (⌘O) and **command palette** (⌘P) with fuzzy matching.
-- **Full-text search** across the vault.
-- **Properties, aliases, daily notes, and unlinked mentions** for more Obsidian-like organization.
-- **Local extension marketplace foundation** with declarative built-in extensions and persisted install/enable state.
-- **Static publishing** to local HTML for future website/deployment workflows.
-- **Tabs**, file tree with context menus (rename, reveal in Finder, move to Trash), inline title rename.
-- **Interactive task lists** — click checkboxes in reading view to update the source.
-- **Dark, light, and system themes**, adjustable font size and line width.
-- **Autosave** with debounce; external file changes picked up via file watching.
+- Open any folder as a Markdown vault.
+- Create, edit, rename, move, and organize notes and folders.
+- Autosave notes as plain `.md` files.
+- Use wikilinks, backlinks, tags, outlines, and a graph view.
+- Search notes, titles, aliases, tags, and frontmatter properties.
+- Create daily notes from a configurable folder/template.
+- Show unlinked mentions to help connect related notes.
+- Play local audio attachments from voice notes.
+- Pair with Forge Buddy, the iOS companion recorder.
+- Expose a local CLI and MCP server for Codex, Claude, and other agent tools.
+- Publish a vault to static HTML.
+- Manage bundled extensions through an early local marketplace.
 
-## Keyboard shortcuts
+## Current Status
 
-| Shortcut | Action |
-| --- | --- |
-| ⌘O | Quick switcher (open or create note) |
-| ⌘P | Command palette |
-| ⌘N | New note |
-| ⌘E | Toggle edit / reading view |
-| ⌘T / ⌘W | New tab / close tab |
-| ⌘⇧G | Graph view |
-| ⌘\ | Toggle sidebar |
-| ⌘, | Settings |
+Forge is early software. The core local notes workflow works, and the agent/CLI/MCP surface is usable, but many features are still being shaped.
+
+Implemented foundations:
+
+- Desktop Markdown editor and reader.
+- Vault file tree and tabs.
+- Wikilinks, backlinks, tags, outlines, graph view, and search.
+- Frontmatter properties and aliases.
+- Daily notes and templates.
+- Local agent CLI.
+- MCP server for agent tools.
+- Static HTML publisher.
+- Forge Buddy pairing/ingest support.
+- Local declarative extension marketplace foundation.
+
+Planned or in progress:
+
+- A safer public extension/plugin system.
+- Better publishing workflows.
+- More graph and backlink organization tools.
+- Stronger import/export flows.
+- More polish around Forge Buddy sync and offline capture.
+- Broader documentation for contributors.
 
 ## Development
 
 ```bash
 npm install
-npm run dev        # run the Electron app with hot reload
-npm run dev:web    # renderer only, in a browser with a mock vault (design work)
-npm run agent -- --vault /path/to/vault analyze --json
-npm run publish:vault -- --vault /path/to/vault --out /path/to/site --clean
-npm run mcp        # run the Forge MCP server over stdio
+npm run dev
 npm run typecheck
 ```
 
-## Agent access
-
-Forge is built for local agents. Vaults are plain Markdown folders, and Forge exposes two automation front doors:
-
-- `forge` — a local CLI for agents that can run shell commands.
-- `forge-mcp` — a stdio MCP server for Codex, Claude, and other MCP clients.
-
-Both use the same path safety rules as the desktop app. If `--vault` / `FORGE_VAULT` is omitted, they use the active vault saved by Forge desktop.
+Useful local commands:
 
 ```bash
-forge --vault /path/to/vault create-folder Projects
-forge --vault /path/to/vault create-doc Projects/Plan --title "Plan"
-forge --vault /path/to/vault search "Plan" --json
-forge --vault /path/to/vault analyze --json
-```
-
-From a source checkout, use `npm run agent -- ...` or `node scripts/forge-mcp.mjs`. Packaged macOS builds include wrapper commands at `Forge.app/Contents/Resources/bin/`.
-
-See `AGENTS.md` and `docs/agent-access.md` for the full CLI, MCP, Codex, and Claude setup guide.
-
-## Static publishing
-
-Export a vault to dependency-light static HTML without using the renderer UI:
-
-```bash
+npm run agent -- --vault /path/to/vault analyze --json
+npm run mcp
 npm run publish:vault -- --vault /path/to/vault --out /path/to/site --clean
 ```
 
-The publisher renders Markdown notes, rewrites local note links, creates backlink and tag sections, copies local assets, and writes a bounded cleanup marker. See `docs/static-publishing.md` for details.
+## License
 
-## Extensions
-
-Forge now has a local extension marketplace foundation in Settings. It is declarative and bundled-only for the first pass, with extension points for commands, Markdown transforms, metadata, sidebar widgets, and views. See `docs/extensions.md` for the current extension contract and the path toward a public registry.
-
-## iOS voice recorder
-
-Forge includes a native iPhone companion app in `ios/ForgeRecorder`. Open a vault in the desktop app, then use Settings > Mobile recorder to scan the pairing QR code. Recordings are transcribed on iPhone and saved automatically as Markdown notes in `Inbox/Voice` in the open vault.
-
-Generate the iOS project with:
-
-```bash
-xcodegen generate --spec ios/ForgeRecorder/project.yml
-```
-
-## Packaging
-
-```bash
-npm run dist       # builds a .dmg into release/
-```
-
-## Architecture
-
-- `src/main` — Electron main process: window, vault file I/O over IPC, settings, file watching, `forge-asset://` protocol for images.
-- `src/preload` — context-isolated bridge exposing the typed `window.forge` API.
-- `src/renderer` — React UI. State in a Zustand store; note contents kept outside React state for performance. CodeMirror 6 editor with custom wikilink/tag extensions; `marked` + DOMPurify for reading view.
-- `src/shared` — types shared across processes.
+MIT License. See `LICENSE`.
