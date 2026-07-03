@@ -3887,9 +3887,11 @@ button.tag:hover {
 
 .canvas-board {
   flex: 1;
+  min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--bg) 94%, var(--text-normal) 6%), var(--bg) 280px),
     var(--bg);
@@ -3973,21 +3975,27 @@ button.tag:hover {
 
 .canvas-board-scroll {
   flex: 1;
+  min-width: 0;
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 0 28px 28px;
 }
 
 .canvas-board-lanes {
   display: grid;
-  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 14px;
   align-items: start;
-  min-width: min(100%, 980px);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .canvas-board-lane {
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   border-radius: 18px;
   background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
   box-shadow:
@@ -4000,6 +4008,7 @@ button.tag:hover {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
   padding: 14px 14px 10px;
 }
 
@@ -4007,6 +4016,11 @@ button.tag:hover {
   display: flex;
   align-items: flex-start;
   gap: 9px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.canvas-board-lane-title > div {
   min-width: 0;
 }
 
@@ -4022,19 +4036,26 @@ button.tag:hover {
 
 .canvas-board-lane-title h2 {
   margin: 1px 0 0;
+  overflow: hidden;
   color: var(--text-normal);
   font-size: 13px;
   line-height: 1.18;
   font-weight: 730;
   letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .canvas-board-lane-title p {
   margin: 3px 0 0;
+  display: -webkit-box;
+  overflow: hidden;
   color: var(--text-faint);
   font-size: 11.5px;
   line-height: 1.3;
   text-wrap: pretty;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .canvas-board-lane-count {
@@ -4053,17 +4074,22 @@ button.tag:hover {
 }
 
 .canvas-board-card-list {
+  min-width: 0;
   display: grid;
   gap: 9px;
   padding: 0 10px 10px;
+  overflow: hidden;
 }
 
 .canvas-board-card {
+  min-width: 0;
+  max-width: 100%;
   min-height: 142px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   width: 100%;
+  overflow: hidden;
   padding: 11px;
   color: inherit;
   text-align: left;
@@ -4094,6 +4120,8 @@ button.tag:hover {
 .canvas-board-card-title,
 .canvas-board-tags,
 .canvas-board-links {
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   align-items: center;
 }
@@ -4107,6 +4135,9 @@ button.tag:hover {
 }
 
 .canvas-board-folder {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4122,6 +4153,7 @@ button.tag:hover {
 
 .canvas-board-card-title {
   gap: 7px;
+  min-height: 17px;
   color: var(--text-normal);
   font-size: 13px;
   line-height: 1.25;
@@ -4135,6 +4167,8 @@ button.tag:hover {
 
 .canvas-board-card-title span {
   min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4142,11 +4176,13 @@ button.tag:hover {
 
 .canvas-board-excerpt {
   display: -webkit-box;
+  max-width: 100%;
   min-height: 45px;
   overflow: hidden;
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
   text-wrap: pretty;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
@@ -4156,11 +4192,14 @@ button.tag:hover {
   gap: 5px;
   flex-wrap: wrap;
   min-height: 20px;
+  overflow: hidden;
   margin-top: auto;
 }
 
 .canvas-board-tags span {
+  min-width: 0;
   max-width: 100%;
+  flex: 0 1 auto;
   padding: 3px 6px;
   overflow: hidden;
   color: var(--text-muted);
@@ -4174,6 +4213,7 @@ button.tag:hover {
 
 .canvas-board-links {
   gap: 5px;
+  overflow: hidden;
   min-height: 8px;
 }
 
@@ -4218,7 +4258,7 @@ button.tag:hover {
 
 @media (max-width: 1180px) {
   .canvas-board-lanes {
-    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   }
 }
 
