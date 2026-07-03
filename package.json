@@ -6,12 +6,17 @@
   "main": "./out/main/index.js",
   "author": "Forge",
   "private": true,
+  "bin": {
+    "forge": "scripts/forge-agent.mjs",
+    "forge-mcp": "scripts/forge-mcp.mjs"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "dev:web": "vite --config vite.web.config.ts",
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "agent": "node scripts/forge-agent.mjs",
+    "mcp": "node scripts/forge-mcp.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "dist": "electron-vite build && electron-builder --mac"
   },
@@ -57,6 +62,18 @@
       {
         "from": "build/icon.png",
         "to": "icon.png"
+      },
+      {
+        "from": "bin",
+        "to": "bin"
+      },
+      {
+        "from": "scripts/forge-agent.mjs",
+        "to": "scripts/forge-agent.mjs"
+      },
+      {
+        "from": "scripts/forge-mcp.mjs",
+        "to": "scripts/forge-mcp.mjs"
       }
     ],
     "mac": {

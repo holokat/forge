@@ -148,6 +148,11 @@ export function installMockApi(): void {
     writeSettings: async (s) => {
       settings = s
     },
+    getAgentAccessInfo: async () => ({
+      mode: 'source',
+      cli: { command: 'node', args: ['/Users/demo/forge/scripts/forge-agent.mjs'] },
+      mcp: { command: 'node', args: ['/Users/demo/forge/scripts/forge-mcp.mjs'] }
+    }),
     copyText: async (text) => {
       await navigator.clipboard?.writeText(text)
     },

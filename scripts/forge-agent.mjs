@@ -1,7 +1,9 @@
 #!/usr/bin/env node
+import fsSync from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 
 const WIKILINK_RE = /\[\[([^[\]]+?)\]\]/g
 const TAG_RE = /(^|[\s([])#([A-Za-z][\w/-]*)/g
@@ -10,8 +12,12 @@ const HEADING_RE = /^(#{1,6})\s+(.+)/
 const HELP = `Forge agent CLI
 
 Usage:
+  forge --vault <folder> <command> [args]
+  FORGE_VAULT=<folder> forge <command> [args]
+  forge <command> [args]                Uses the active Forge desktop vault when available
+
+From the source checkout:
   npm run agent -- --vault <folder> <command> [args]
-  FORGE_VAULT=<folder> npm run agent -- <command> [args]
 
 Commands:
   list [--json]                         List folders and files in the vault
@@ -128,6 +134,30 @@ function normalizeDocPath(rel) {
 function normalizeVault(vault) {
   if (!vault) throw new Error('Missing vault path. Pass --vault <folder> or set FORGE_VAULT.')
   return path.resolve(expandHome(vault))
+}
+
+function defaultSettingsPath() {
+  if (process.env.FORGE_SETTINGS_PATH) return expandHome(process.env.FORGE_SETTINGS_PATH)
+  const home = process.env.HOME ?? ''
+  if (process.platform === 'darwin') return path.join(home, 'Library', 'Application Support', 'Forge', 'forge-settings.json')
+  if (process.platform === 'win32') {
+    return path.join(process.env.APPDATA ?? path.join(home, 'AppData', 'Roaming'), 'Forge', 'forge-settings.json')
+  }
+  return path.join(process.env.XDG_CONFIG_HOME ?? path.join(home, '.config'), 'Forge', 'forge-settings.json')
+}
+
+async function readActiveVaultFromSettings() {
+  try {
+    const raw = await fs.readFile(defaultSettingsPath(), 'utf8')
+    const settings = JSON.parse(raw)
+    return typeof settings.lastVault === 'string' ? settings.lastVault : ''
+  } catch {
+    return ''
+  }
+}
+
+async function resolveVault(vault) {
+  return normalizeVault(vault || process.env.FORGE_VAULT || (await readActiveVaultFromSettings()))
 }
 
 function expandHome(value) {
@@ -501,7 +531,7 @@ async function batchCommand(defaultVault, inputPath) {
   const operations = Array.isArray(parsed) ? parsed : parsed.operations
   if (!Array.isArray(operations)) throw new Error('Batch input must be an array or an object with operations[].')
 
-  const vault = normalizeVault(parsed.vault ?? defaultVault)
+  const vault = await resolveVault(parsed.vault ?? defaultVault)
   await ensureVault(vault)
 
   const results = []
@@ -543,7 +573,7 @@ async function main() {
       return
     }
 
-    const vault = normalizeVault(globals.vault)
+    const vault = await resolveVault(globals.vault)
     await ensureVault(vault)
 
     switch (command) {
@@ -625,4 +655,33 @@ async function main() {
   }
 }
 
-main()
+function isDirectRun() {
+  const entry = process.argv[1]
+  if (!entry) return false
+  const current = fileURLToPath(import.meta.url)
+  try {
+    return fsSync.realpathSync(entry) === current
+  } catch {
+    return path.resolve(entry) === current
+  }
+}
+
+export {
+  HELP,
+  analyzeCommand,
+  appendCommand,
+  batchCommand,
+  createDocCommand,
+  createFolderCommand,
+  ensureVault,
+  listCommand,
+  moveCommand,
+  readCommand,
+  renderTree,
+  resolveVault,
+  runOperation,
+  searchCommand,
+  writeCommand
+}
+
+if (isDirectRun()) main()

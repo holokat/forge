@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+APP_EXEC="$SCRIPT_DIR/../../MacOS/Forge"
+AGENT_SCRIPT="$SCRIPT_DIR/../scripts/forge-agent.mjs"
+
+exec env ELECTRON_RUN_AS_NODE=1 "$APP_EXEC" "$AGENT_SCRIPT" "$@"

@@ -1,35 +1,49 @@
 # Forge Agent Access
 
-Forge vaults are plain folders of Markdown files. Agents should use the local CLI in this repo instead of driving the UI.
+Forge vaults are plain folders of Markdown files. Agents should use the local CLI or MCP server instead of driving the UI.
 
 ## Quick Start
 
 Use a vault path explicitly:
 
 ```bash
-npm run agent -- --vault /path/to/vault analyze --json
+forge --vault /path/to/vault analyze --json
 ```
 
 Or set it once for a shell session:
 
 ```bash
 export FORGE_VAULT=/path/to/vault
-npm run agent -- list
+forge list
 ```
+
+If neither is provided, Forge falls back to the active vault saved by the desktop app.
+
+From the source checkout, use `npm run agent -- ...` instead of `forge ...`.
 
 If the Forge desktop app is open on the same vault, its file watcher will pick up agent edits.
 
 ## Common Tasks
 
 ```bash
-npm run agent -- --vault /path/to/vault create-folder Projects
-npm run agent -- --vault /path/to/vault create-doc Projects/Plan --title "Plan"
-printf '\n## Next\n- Ship it\n' | npm run agent -- --vault /path/to/vault append Projects/Plan.md --stdin
-npm run agent -- --vault /path/to/vault read Projects/Plan.md
-npm run agent -- --vault /path/to/vault search "Ship it" --json
-npm run agent -- --vault /path/to/vault move Projects/Plan.md Projects/Active/Plan.md
-npm run agent -- --vault /path/to/vault analyze --json
+forge --vault /path/to/vault create-folder Projects
+forge --vault /path/to/vault create-doc Projects/Plan --title "Plan"
+printf '\n## Next\n- Ship it\n' | forge --vault /path/to/vault append Projects/Plan.md --stdin
+forge --vault /path/to/vault read Projects/Plan.md
+forge --vault /path/to/vault search "Ship it" --json
+forge --vault /path/to/vault move Projects/Plan.md Projects/Active/Plan.md
+forge --vault /path/to/vault analyze --json
 ```
+
+## MCP
+
+Use `forge-mcp` for Codex, Claude, and other MCP clients:
+
+```bash
+FORGE_VAULT=/path/to/vault forge-mcp
+```
+
+The MCP server exposes tools for listing, reading, writing, appending, creating folders/docs, moving, searching, analyzing, and batch operations. It speaks stdio MCP and should be launched by the MCP client, not used interactively.
 
 ## Batch Operations
 
@@ -50,7 +64,7 @@ Batch mode is best when an agent needs multiple changes to stay ordered:
 Run it with:
 
 ```bash
-npm run agent -- batch batch.json --json
+forge batch batch.json --json
 ```
 
 ## Safety Rules

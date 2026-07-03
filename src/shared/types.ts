@@ -32,6 +32,17 @@ export interface MobilePairingInfo {
   vaultName?: string
 }
 
+export interface AgentCommandInfo {
+  command: string
+  args: string[]
+}
+
+export interface AgentAccessInfo {
+  mode: 'packaged' | 'source'
+  cli: AgentCommandInfo
+  mcp: AgentCommandInfo
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   lastVault: null,
@@ -52,6 +63,7 @@ export interface ForgeAPI {
   reveal(vault: string, rel: string): Promise<void>
   readSettings(): Promise<Settings>
   writeSettings(settings: Settings): Promise<void>
+  getAgentAccessInfo(): Promise<AgentAccessInfo>
   copyText(text: string): Promise<void>
   getMobilePairingInfo(): Promise<MobilePairingInfo>
   resetMobilePairingToken(): Promise<MobilePairingInfo>

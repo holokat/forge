@@ -13,6 +13,7 @@ const api: ForgeAPI = {
   reveal: (vault, rel) => ipcRenderer.invoke('file:reveal', vault, rel),
   readSettings: () => ipcRenderer.invoke('settings:read'),
   writeSettings: (settings: Settings) => ipcRenderer.invoke('settings:write', settings),
+  getAgentAccessInfo: () => ipcRenderer.invoke('agent:getAccessInfo'),
   copyText: (text) => ipcRenderer.invoke('clipboard:writeText', text),
   getMobilePairingInfo: () => ipcRenderer.invoke('mobile:getPairingInfo'),
   resetMobilePairingToken: () => ipcRenderer.invoke('mobile:resetPairingToken'),

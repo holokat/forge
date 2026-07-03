@@ -38,21 +38,29 @@ npm install
 npm run dev        # run the Electron app with hot reload
 npm run dev:web    # renderer only, in a browser with a mock vault (design work)
 npm run agent -- --vault /path/to/vault analyze --json
+npm run mcp        # run the Forge MCP server over stdio
 npm run typecheck
 ```
 
 ## Agent access
 
-Forge includes a local agent CLI for safe vault operations without driving the UI:
+Forge is built for local agents. Vaults are plain Markdown folders, and Forge exposes two automation front doors:
+
+- `forge` — a local CLI for agents that can run shell commands.
+- `forge-mcp` — a stdio MCP server for Codex, Claude, and other MCP clients.
+
+Both use the same path safety rules as the desktop app. If `--vault` / `FORGE_VAULT` is omitted, they use the active vault saved by Forge desktop.
 
 ```bash
-npm run agent -- --vault /path/to/vault create-folder Projects
-npm run agent -- --vault /path/to/vault create-doc Projects/Plan --title "Plan"
-npm run agent -- --vault /path/to/vault search "Plan" --json
-npm run agent -- --vault /path/to/vault analyze --json
+forge --vault /path/to/vault create-folder Projects
+forge --vault /path/to/vault create-doc Projects/Plan --title "Plan"
+forge --vault /path/to/vault search "Plan" --json
+forge --vault /path/to/vault analyze --json
 ```
 
-See `AGENTS.md` for the full command and batch-operation guide.
+From a source checkout, use `npm run agent -- ...` or `node scripts/forge-mcp.mjs`. Packaged macOS builds include wrapper commands at `Forge.app/Contents/Resources/bin/`.
+
+See `AGENTS.md` and `docs/agent-access.md` for the full CLI, MCP, Codex, and Claude setup guide.
 
 ## iOS voice recorder
 

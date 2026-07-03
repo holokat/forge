@@ -1,7 +1,7 @@
-import { AlertCircle, Check, Clipboard, Monitor, Moon, RefreshCw, Smartphone, Sun, X } from 'lucide-react'
+import { AlertCircle, Bot, Check, Clipboard, Code2, Monitor, Moon, RefreshCw, Smartphone, Sun, Terminal, X } from 'lucide-react'
 import QRCode from 'qrcode'
 import { useEffect, useMemo, useState } from 'react'
-import type { MobilePairingInfo, ThemeMode } from '../../../shared/types'
+import type { AgentAccessInfo, MobilePairingInfo, ThemeMode } from '../../../shared/types'
 import { useStore } from '../store'
 
 const THEMES: { mode: ThemeMode; label: string; icon: React.ReactNode }[] = [
@@ -107,6 +107,47 @@ function CopyButton({
       {icon}
       {text}
     </button>
+  )
+}
+
+function shellQuote(value: string): string {
+  if (/^[A-Za-z0-9_/@%+=:,.-]+$/.test(value)) return value
+  return `'${value.replaceAll("'", "'\\''")}'`
+}
+
+function commandLine(command: string, args: string[] = []): string {
+  return [command, ...args].map(shellQuote).join(' ')
+}
+
+function tomlString(value: string): string {
+  return JSON.stringify(value)
+}
+
+function codexConfig(info: AgentAccessInfo, vault: string): string {
+  const lines = [
+    '[mcp_servers.forge]',
+    `command = ${tomlString(info.mcp.command)}`,
+    info.mcp.args.length ? `args = [${info.mcp.args.map(tomlString).join(', ')}]` : '',
+    '',
+    '[mcp_servers.forge.env]',
+    `FORGE_VAULT = ${tomlString(vault)}`
+  ].filter(Boolean)
+  return lines.join('\n')
+}
+
+function claudeDesktopConfig(info: AgentAccessInfo, vault: string): string {
+  return JSON.stringify(
+    {
+      mcpServers: {
+        forge: {
+          command: info.mcp.command,
+          ...(info.mcp.args.length ? { args: info.mcp.args } : {}),
+          env: { FORGE_VAULT: vault }
+        }
+      }
+    },
+    null,
+    2
   )
 }
 
@@ -280,6 +321,23 @@ export default function SettingsModal(): React.JSX.Element {
   const setLineWidth = useStore((s) => s.setLineWidth)
   const setModal = useStore((s) => s.setModal)
   const openVaultDialog = useStore((s) => s.openVaultDialog)
+  const [agentAccess, setAgentAccess] = useState<AgentAccessInfo | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    window.forge
+      .getAgentAccessInfo()
+      .then((info) => {
+        if (!cancelled) setAgentAccess(info)
+      })
+      .catch((error) => {
+        console.error('Agent access info failed.', error)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const agentBrief = useMemo(
     () =>
       vault
@@ -287,12 +345,34 @@ export default function SettingsModal(): React.JSX.Element {
             `Use this Forge vault: ${vault}`,
             '',
             'Treat it as a plain Markdown knowledge base. You may create folders and .md notes, update existing notes, retrieve files, search, organize, and analyze links or tags.',
-            'Keep paths relative to the vault, preserve existing content unless asked, and use wikilinks like [[Note Name]] for connections.'
+            'Prefer the Forge MCP server or Forge CLI when available. Keep paths relative to the vault, preserve existing content unless asked, and use wikilinks like [[Note Name]] for connections.'
           ].join('\n')
         : '',
     [vault]
   )
-  const cliCommand = vault ? `npm run agent -- --vault ${JSON.stringify(vault)} analyze --json` : ''
+  const cliCommand = vault && agentAccess ? commandLine(agentAccess.cli.command, [...agentAccess.cli.args, '--vault', vault, 'analyze', '--json']) : ''
+  const mcpCommand = agentAccess ? commandLine(agentAccess.mcp.command, agentAccess.mcp.args) : ''
+  const codexToml = vault && agentAccess ? codexConfig(agentAccess, vault) : ''
+  const codexAddCommand =
+    vault && agentAccess
+      ? commandLine('codex', ['mcp', 'add', 'forge', '--env', `FORGE_VAULT=${vault}`, '--', agentAccess.mcp.command, ...agentAccess.mcp.args])
+      : ''
+  const claudeJson = vault && agentAccess ? claudeDesktopConfig(agentAccess, vault) : ''
+  const claudeCodeCommand =
+    vault && agentAccess
+      ? commandLine('claude', [
+          'mcp',
+          'add',
+          '--env',
+          `FORGE_VAULT=${vault}`,
+          '--transport',
+          'stdio',
+          'forge',
+          '--',
+          agentAccess.mcp.command,
+          ...agentAccess.mcp.args
+        ])
+      : ''
 
   return (
     <div className="modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && setModal(null)}>
@@ -394,16 +474,19 @@ export default function SettingsModal(): React.JSX.Element {
           {vault && (
             <section>
               <h3>Agent access</h3>
-              <div className="settings-callout">
+              <div className="settings-callout agent-access-summary">
                 <div>
-                  <div className="settings-row-label">Vault path</div>
-                  <div className="settings-row-desc">Give this folder to a local agent. Forge will pick up file changes.</div>
+                  <div className="settings-row-label">Local agent bridge</div>
+                  <div className="settings-row-desc">
+                    Codex and Claude can use Forge through MCP. Terminal-based agents can use the same local CLI.
+                  </div>
                 </div>
                 <div className="settings-code-row">
                   <code>{vault}</code>
                   <CopyButton value={vault} label="Copy path" />
                 </div>
               </div>
+
               <div className="settings-row">
                 <div>
                   <div className="settings-row-label">Agent brief</div>
@@ -413,13 +496,42 @@ export default function SettingsModal(): React.JSX.Element {
                   <CopyButton value={agentBrief} label="Copy brief" />
                 </div>
               </div>
-              <div className="settings-row">
-                <div>
-                  <div className="settings-row-label">Developer CLI</div>
-                  <div className="settings-row-desc">For agents running from this Forge source checkout.</div>
+
+              <div className="agent-access-grid">
+                <div className="agent-access-card">
+                  <div className="agent-access-card-title">
+                    <Terminal size={14} />
+                    <span>CLI</span>
+                  </div>
+                  <p>For Codex, Claude Code, Cursor, or any agent that can run shell commands.</p>
+                  <div className="agent-code-block">{cliCommand || 'Loading command…'}</div>
+                  <CopyButton value={cliCommand} label="Copy CLI" disabled={!cliCommand} />
                 </div>
-                <div className="settings-row-control">
-                  <CopyButton value={cliCommand} label="Copy command" />
+
+                <div className="agent-access-card">
+                  <div className="agent-access-card-title">
+                    <Bot size={14} />
+                    <span>Codex MCP</span>
+                  </div>
+                  <p>Add this server to Codex for structured Forge tools.</p>
+                  <div className="agent-code-block">{codexAddCommand || 'Loading command…'}</div>
+                  <div className="agent-access-actions">
+                    <CopyButton value={codexAddCommand} label="Copy add command" disabled={!codexAddCommand} />
+                    <CopyButton value={codexToml} label="Copy TOML" disabled={!codexToml} />
+                  </div>
+                </div>
+
+                <div className="agent-access-card">
+                  <div className="agent-access-card-title">
+                    <Code2 size={14} />
+                    <span>Claude MCP</span>
+                  </div>
+                  <p>Use the JSON config for Claude Desktop, or the command for Claude Code.</p>
+                  <div className="agent-code-block">{mcpCommand || 'Loading command…'}</div>
+                  <div className="agent-access-actions">
+                    <CopyButton value={claudeJson} label="Copy JSON" disabled={!claudeJson} />
+                    <CopyButton value={claudeCodeCommand} label="Copy Claude Code" disabled={!claudeCodeCommand} />
+                  </div>
                 </div>
               </div>
             </section>

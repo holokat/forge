@@ -14,7 +14,7 @@ import path from 'node:path'
 import fs from 'node:fs/promises'
 import fsSync, { type FSWatcher } from 'node:fs'
 import { pathToFileURL } from 'node:url'
-import { DEFAULT_SETTINGS, type Settings, type ThemeMode, type VaultData } from '../shared/types'
+import { DEFAULT_SETTINGS, type AgentAccessInfo, type Settings, type ThemeMode, type VaultData } from '../shared/types'
 import { MobileIngestServer } from './mobileIngest'
 
 const MD_EXT = '.md'
@@ -38,6 +38,23 @@ function getAppIcon(): Electron.NativeImage | undefined {
   if (!fsSync.existsSync(iconPath)) return undefined
   const icon = nativeImage.createFromPath(iconPath)
   return icon.isEmpty() ? undefined : icon
+}
+
+function getAgentAccessInfo(): AgentAccessInfo {
+  if (app.isPackaged) {
+    return {
+      mode: 'packaged',
+      cli: { command: path.join(process.resourcesPath, 'bin', 'forge'), args: [] },
+      mcp: { command: path.join(process.resourcesPath, 'bin', 'forge-mcp'), args: [] }
+    }
+  }
+
+  const appPath = app.getAppPath()
+  return {
+    mode: 'source',
+    cli: { command: 'node', args: [path.join(appPath, 'scripts', 'forge-agent.mjs')] },
+    mcp: { command: 'node', args: [path.join(appPath, 'scripts', 'forge-mcp.mjs')] }
+  }
 }
 
 // ---------- settings ----------
@@ -236,6 +253,7 @@ function registerIpc(): void {
 
   ipcMain.handle('settings:read', () => readSettings())
   ipcMain.handle('settings:write', (_e, s: Settings) => writeSettings(s))
+  ipcMain.handle('agent:getAccessInfo', () => getAgentAccessInfo())
   ipcMain.handle('clipboard:writeText', (_e, text: string) => clipboard.writeText(text))
   ipcMain.handle('mobile:getPairingInfo', () => mobileIngest.getPairingInfo())
   ipcMain.handle('mobile:resetPairingToken', () => {
