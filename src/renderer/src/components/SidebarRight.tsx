@@ -29,6 +29,7 @@ import {
   resolveLink,
   type PropertyValue
 } from '../lib/parse'
+import { markdownTasks } from '../lib/tasks'
 import { activeTab, backlinksFor, noteContents, unlinkedMentionsFor, useStore } from '../store'
 
 interface MentionMatch {
@@ -37,12 +38,6 @@ interface MentionMatch {
   text: string
   line: string
   lineNumber: number
-}
-
-interface TaskItem {
-  lineNumber: number
-  text: string
-  done: boolean
 }
 
 type MediaKind = 'image' | 'video' | 'audio' | 'pdf' | 'file'
@@ -307,25 +302,10 @@ function unresolvedLinks(path: string, files: string[]): string[] {
   )
 }
 
-function taskItems(content: string): TaskItem[] {
-  return content
-    .split('\n')
-    .map((line, index) => {
-      const match = /^(\s*)[-*+]\s+\[([ xX])\]\s+(.+)$/.exec(line)
-      if (!match) return null
-      return {
-        lineNumber: index,
-        text: match[3].trim(),
-        done: match[2].toLowerCase() === 'x'
-      }
-    })
-    .filter((item): item is TaskItem => Boolean(item))
-}
-
 function TaskSummary({ path }: { path: string }): React.JSX.Element | null {
   const contentVersion = useStore((s) => s.contentVersion)
   const content = noteContents.get(path) ?? ''
-  const tasks = useMemo(() => taskItems(content), [content, contentVersion])
+  const tasks = useMemo(() => markdownTasks(content), [content, contentVersion])
   const open = tasks.filter((task) => !task.done)
   const done = tasks.length - open.length
 

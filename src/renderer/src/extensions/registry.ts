@@ -441,7 +441,7 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
     id: 'forge.task-summary',
     name: 'task-summary',
     displayName: 'Task Summary',
-    description: 'Shows open, completed, and total Markdown checkbox tasks for the active note.',
+    description: 'Shows open, completed, and total Markdown checkbox tasks for active notes and the full vault.',
     version: '0.1.0',
     publisher: 'Forge',
     license: 'MIT',
@@ -452,7 +452,8 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
     runtime: declarativeRuntime,
     extensionPoints: [
       { id: 'forge.note.metadata', label: 'Note metadata' },
-      { id: 'forge.sidebar.widgets', label: 'Sidebar widgets' }
+      { id: 'forge.sidebar.widgets', label: 'Sidebar widgets' },
+      { id: 'forge.views', label: 'Views' }
     ],
     permissions: [
       {
@@ -474,6 +475,13 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         extensionPoint: 'forge.sidebar.widgets',
         label: 'Task summary',
         widget: 'tasks'
+      },
+      {
+        id: 'forge.task-summary.view',
+        kind: 'view',
+        extensionPoint: 'forge.views',
+        label: 'Tasks view',
+        view: 'tasks'
       }
     ],
     defaultInstalled: true,

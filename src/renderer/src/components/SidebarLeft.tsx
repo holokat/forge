@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Search,
   Settings,
+  SquareCheckBig,
   Vault,
   Waypoints,
   X
@@ -73,6 +74,7 @@ export default function SidebarLeft(): React.JSX.Element {
   const createFolder = useStore((s) => s.createFolder)
   const openGraph = useStore((s) => s.openGraph)
   const openBoard = useStore((s) => s.openBoard)
+  const openTasks = useStore((s) => s.openTasks)
   const setModal = useStore((s) => s.setModal)
   const active = useStore(activeTab)
   const bookmarks = useStore((s) => s.bookmarks)
@@ -142,6 +144,9 @@ export default function SidebarLeft(): React.JSX.Element {
           </button>
           <button className="icon-btn" title="Board (⌘⇧B)" onClick={() => openBoard()}>
             <LayoutDashboard size={15} />
+          </button>
+          <button className="icon-btn" title="Tasks" onClick={() => openTasks()}>
+            <SquareCheckBig size={15} />
           </button>
           <button className="icon-btn" title="Settings (⌘,)" onClick={() => setModal('settings')}>
             <Settings size={15} />

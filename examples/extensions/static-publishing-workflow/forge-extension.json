@@ -1,0 +1,75 @@
+{
+  "manifestVersion": 1,
+  "id": "example.static-publishing-workflow",
+  "name": "static-publishing-workflow",
+  "displayName": "Static Publishing Workflow Example",
+  "description": "Example declarative extension that combines publish readiness metadata, frontmatter fields, a publish checklist widget, and a safe table-of-contents transform.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["publishing", "editing", "organization"],
+  "keywords": ["publish", "static site", "frontmatter", "toc"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:read",
+      "reason": "Reads local Markdown frontmatter, headings, and publish checklist items already available to Forge."
+    },
+    {
+      "kind": "vault:write",
+      "reason": "Writes a bounded generated table of contents into the current note when requested."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.static-publishing-workflow.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Publishing workflow metadata",
+      "description": "Declares publish, frontmatter, and heading fields useful for static-site preparation.",
+      "fields": [
+        "publishStatus",
+        "publishSlug",
+        "publishChecklistItems",
+        "publishReady",
+        "frontmatterProperties",
+        "aliases",
+        "title",
+        "headings",
+        "headingCount",
+        "tableOfContents"
+      ]
+    },
+    {
+      "id": "example.static-publishing-workflow.sidebar",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Publish checklist",
+      "description": "Declares Forge's supported local publishing checklist sidebar widget.",
+      "widget": "publish-checklist"
+    },
+    {
+      "id": "example.static-publishing-workflow.toc",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Insert generated table of contents",
+      "description": "Declares the supported generated table-of-contents transform for publish-ready notes.",
+      "transform": "insert-table-of-contents"
+    }
+  ]
+}

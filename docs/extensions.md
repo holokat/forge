@@ -58,7 +58,7 @@ Forge ships practical built-in manifests that describe local features without ex
 | Link Health | metadata provider, sidebar widget | Unresolved wikilink metadata, local link counts, and broken-link checks |
 | Tag Index | metadata provider, sidebar widget | Active-note tags, tag search filters, and publish tag pages |
 | Outline and Table of Contents | metadata provider, sidebar widget | Parsed headings and clickable right-sidebar outline |
-| Task Summary | metadata provider, sidebar widget | Open/completed task counts and active-note task navigation |
+| Task Summary | metadata provider, sidebar widget, view | Open/completed task counts, active-note task navigation, and a vault-wide Tasks workspace view |
 | Publish Checklist | metadata provider, sidebar widget | Publish-page checklist metadata and static publishing readiness checks |
 | Frontmatter Inspector | metadata provider, sidebar widget | Parsed properties, aliases, and title metadata |
 | Media Gallery | sidebar widget | Linked local image, video, audio, PDF, and common file attachments |
@@ -137,7 +137,7 @@ npm run extensions:validate -- examples/extensions --recursive
 npm run extensions:validate -- /path/to/forge-extension.json --json
 ```
 
-Current examples cover daily-note commands, reading stats, link health, tag/outline metadata, publish checklists, frontmatter inspection, task panels/checklists, generated table-of-contents insertion, callout formatting, and media attachments.
+Current examples cover daily-note commands, reading stats, link health, tag/outline metadata, publish checklists, frontmatter inspection, task panels/checklists, generated table-of-contents insertion, callout formatting, media attachments, vault health scaffolds, metadata dashboard scaffolds, static publishing workflows, and agent handoff workflows.
 
 ## Example Coverage
 
@@ -151,10 +151,16 @@ The manifests in `examples/extensions/` are local-folder examples for contributo
 | `tag-outline` | Tag and heading metadata plus tags and outline sidebar widgets | Generated table-of-contents insertion |
 | `publish-checklist` | Publish metadata and publish checklist sidebar widget | Custom checklist rule packs |
 | `frontmatter-inspector` | Frontmatter metadata and properties sidebar widget | Editable property schemas |
-| `tasks-checklist` | Task checklist metadata, tasks sidebar widget, and `lines-to-checklist` Markdown transform | Cross-note task queries and recurring task rules |
+| `tasks-checklist` | Task checklist metadata, tasks sidebar widget, vault-wide tasks view, and `lines-to-checklist` Markdown transform | Recurring task rules and saved task filters |
 | `table-of-contents-insertion` | Heading metadata plus the supported `insert-table-of-contents` Markdown transform | Editable TOC formatting presets |
 | `media-attachments` | Attachment metadata fields plus the supported `media-gallery` sidebar widget | Attachment actions such as reveal, copy link, and batch organization |
 | `callout-formatting` | Supported `callout` Markdown transform | Callout style presets and reusable callout templates |
+| `vault-health` | Link, backlink, tag, heading, task, and publish metadata plus the supported `graph-insights` view | Dedicated vault-health view/sidebar, orphan/stale-note metrics, duplicate-note checks, and bulk repair actions |
+| `query-dashboard` | Frontmatter, tag, reading, task, and publish metadata plus the supported `outline-board` view | Declarative query language, saved dashboard filters, table/card dashboard views, and computed rollups |
+| `static-publishing-workflow` | Publish, frontmatter, and heading metadata; `publish-checklist` sidebar widget; supported `insert-table-of-contents` transform | Publish pipeline commands, preflight rule packs, per-site deployment hooks, and custom readiness checks |
+| `agent-handoff-workflow` | Frontmatter, tag, and task metadata; `tasks` and `frontmatter` sidebar widgets; supported `tasks` view; supported `lines-to-checklist` and `normalize-headings` transforms | Agent runbook contribution point, MCP/CLI workflow launchers, review-state metadata, and automated handoff summaries |
+
+The planned coverage column is intentionally prose. Do not encode values such as `vault-health`, `query-dashboard`, publishing pipeline commands, or agent workflow launchers in manifests until the validator adds those contribution values.
 
 Validation checks:
 

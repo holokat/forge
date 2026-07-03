@@ -1,7 +1,7 @@
 import { EditorView } from '@codemirror/view'
 import { useEffect, useRef } from 'react'
 import type { ImportedAttachment } from '../../../shared/types'
-import { createEditorState } from '../editor/extensions'
+import { createEditorState, scrollToLine } from '../editor/extensions'
 import { getActiveEditor, setActiveEditor } from '../editor/active'
 import { baseName, isMarkdown, resolveLink } from '../lib/parse'
 import { noteContents, useStore } from '../store'
@@ -46,7 +46,9 @@ export default function Editor({ path }: { path: string }): React.JSX.Element {
       parent: host.current!
     })
     setActiveEditor(view)
-    view.focus()
+    const lineNumber = useStore.getState().consumePendingEditorNavigation(path)
+    if (lineNumber !== null) scrollToLine(view, lineNumber)
+    else view.focus()
     return () => {
       if (getActiveEditor() === view) setActiveEditor(null)
       view.destroy()

@@ -1,0 +1,62 @@
+{
+  "manifestVersion": 1,
+  "id": "example.query-dashboard",
+  "name": "query-dashboard",
+  "displayName": "Query Dashboard Example",
+  "description": "Example declarative extension that exposes safe metadata fields for a local Dataview-style dashboard scaffold without running queries or code.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["organization", "navigation", "visualization"],
+  "keywords": ["query", "dashboard", "dataview", "metadata"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.views", "label": "Views" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:metadata",
+      "reason": "Reads metadata already derived from local Markdown notes for dashboard grouping and review."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.query-dashboard.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Dashboard metadata",
+      "description": "Declares supported metadata fields commonly needed by local dashboards and saved-note reviews.",
+      "fields": [
+        "frontmatterProperties",
+        "aliases",
+        "title",
+        "tags",
+        "tagCount",
+        "wordCount",
+        "estimatedReadingMinutes",
+        "openTasks",
+        "completedTasks",
+        "publishStatus"
+      ]
+    },
+    {
+      "id": "example.query-dashboard.outline-board",
+      "kind": "view",
+      "extensionPoint": "forge.views",
+      "label": "Outline board",
+      "description": "Declares Forge's supported outline-board view as a safe board-style dashboard scaffold.",
+      "view": "outline-board"
+    }
+  ]
+}

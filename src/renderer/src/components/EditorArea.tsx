@@ -9,6 +9,7 @@ import {
   Pencil,
   Plus,
   Search,
+  SquareCheckBig,
   Waypoints,
   X
 } from 'lucide-react'
@@ -18,6 +19,7 @@ import CanvasBoard from './CanvasBoard'
 import { ForgeHexagonMark } from './ForgeLogo'
 import GraphView from './GraphView'
 import Reading from './Reading'
+import TasksView from './TasksView'
 import { baseName, isMarkdown } from '../lib/parse'
 import { activeTab, tabTitle, useStore, type Tab } from '../store'
 
@@ -55,6 +57,8 @@ function TabBar(): React.JSX.Element {
               <Waypoints size={13} className="tab-icon" />
             ) : tab.kind === 'board' ? (
               <LayoutDashboard size={13} className="tab-icon" />
+            ) : tab.kind === 'tasks' ? (
+              <SquareCheckBig size={13} className="tab-icon" />
             ) : (
               <FileText size={13} className="tab-icon" />
             )}
@@ -131,6 +135,7 @@ function EmptyTab(): React.JSX.Element {
   const setModal = useStore((s) => s.setModal)
   const openGraph = useStore((s) => s.openGraph)
   const openBoard = useStore((s) => s.openBoard)
+  const openTasks = useStore((s) => s.openTasks)
 
   return (
     <div className="empty-tab">
@@ -163,6 +168,10 @@ function EmptyTab(): React.JSX.Element {
           Open board
           <kbd>⌘⇧B</kbd>
         </button>
+        <button className="empty-tab-action" onClick={() => openTasks()}>
+          <SquareCheckBig size={15} />
+          Open tasks
+        </button>
       </div>
     </div>
   )
@@ -182,6 +191,7 @@ function StatusBar(): React.JSX.Element | null {
 function TabContent({ tab }: { tab: Tab }): React.JSX.Element {
   if (tab.kind === 'graph') return <GraphView />
   if (tab.kind === 'board') return <CanvasBoard />
+  if (tab.kind === 'tasks') return <TasksView />
   if (tab.kind === 'empty' || !tab.path) return <EmptyTab />
   if (!isMarkdown(tab.path)) {
     return (

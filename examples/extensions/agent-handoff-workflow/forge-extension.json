@@ -1,0 +1,98 @@
+{
+  "manifestVersion": 1,
+  "id": "example.agent-handoff-workflow",
+  "name": "agent-handoff-workflow",
+  "displayName": "Agent Handoff Workflow Example",
+  "description": "Example declarative extension that uses local metadata, task widgets, properties, and safe Markdown transforms to scaffold agent handoff notes without executable code.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["capture", "editing", "organization"],
+  "keywords": ["agent", "handoff", "tasks", "workflow"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" },
+    { "id": "forge.views", "label": "Views" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:read",
+      "reason": "Reads local task, tag, and frontmatter metadata from Markdown notes already available to Forge."
+    },
+    {
+      "kind": "vault:write",
+      "reason": "Writes bounded Markdown cleanup and checklist transforms into the current note when requested."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.agent-handoff-workflow.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Agent handoff metadata",
+      "description": "Declares existing metadata fields useful for agent runbooks, review queues, and handoff notes.",
+      "fields": [
+        "frontmatterProperties",
+        "aliases",
+        "title",
+        "tags",
+        "tasks",
+        "openTasks",
+        "completedTasks",
+        "taskCompletionPercent"
+      ]
+    },
+    {
+      "id": "example.agent-handoff-workflow.tasks",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Task summary",
+      "description": "Declares Forge's supported task summary sidebar widget for handoff progress.",
+      "widget": "tasks"
+    },
+    {
+      "id": "example.agent-handoff-workflow.properties",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Properties",
+      "description": "Declares Forge's supported frontmatter properties sidebar widget for handoff context.",
+      "widget": "frontmatter"
+    },
+    {
+      "id": "example.agent-handoff-workflow.tasks-view",
+      "kind": "view",
+      "extensionPoint": "forge.views",
+      "label": "Tasks view",
+      "description": "Declares Forge's supported vault-wide tasks view for handoff queues.",
+      "view": "tasks"
+    },
+    {
+      "id": "example.agent-handoff-workflow.checklist",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Convert lines to checklist",
+      "description": "Declares the supported checklist transform for turning handoff bullets into trackable tasks.",
+      "transform": "lines-to-checklist"
+    },
+    {
+      "id": "example.agent-handoff-workflow.normalize-headings",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Normalize heading spacing",
+      "description": "Declares the supported heading cleanup transform for structured handoff notes.",
+      "transform": "normalize-headings"
+    }
+  ]
+}

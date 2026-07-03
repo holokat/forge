@@ -38,7 +38,7 @@ const SIDEBAR_WIDGETS = new Set([
   'link-health',
   'publish-checklist'
 ])
-const VIEWS = new Set(['graph-insights', 'outline-board'])
+const VIEWS = new Set(['graph-insights', 'outline-board', 'tasks'])
 const ID_RE = /^[a-z0-9][a-z0-9.-]*$/
 const SEMVER_RE = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/
 

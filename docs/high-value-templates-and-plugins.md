@@ -55,3 +55,15 @@ This checklist tracks the first practical wave of Obsidian-like Forge features t
 - [x] Add a first-class generated table-of-contents insertion transform instead of relying on generic template insertion.
 - [x] Add callout style presets and reusable callout templates on top of the first-class callout transform.
 - [x] Add image, video, PDF, and mixed-media gallery widget contribution values for local attachments.
+
+## Wave 5: Vault Intelligence
+
+- [x] Add a vault-wide Tasks workspace view for open, done, and all Markdown checklist items.
+- [x] Make task navigation line-aware so task clicks open the source note at the matching line.
+- [x] Harden task parsing to skip fenced code blocks and support ordered checklist syntax.
+- [x] Expose the Tasks workspace as a safe declarative `forge.views` contribution.
+- [x] Add local extension examples for vault health, metadata dashboards, static publishing workflows, and agent handoff workflows.
+- [x] Add incident postmortem, technical RFC, API spec, launch plan, customer profile, content calendar, learning plan, and decision review starter templates.
+- [ ] Add saved task filters and recurring task rules.
+- [ ] Add a dedicated vault-health workspace view with stale-note, duplicate-title, orphan, and broken-link repair queues.
+- [ ] Add a declarative query/dashboard view once the extension validator supports query contribution values.

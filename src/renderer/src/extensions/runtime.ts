@@ -167,6 +167,11 @@ const BUILT_IN_RUNTIME_ROUTES: Record<
     implementation: 'SidebarRight.TaskSummary',
     status: 'wired'
   },
+  'forge.task-summary.view': {
+    surface: 'workspace-view',
+    implementation: 'store.openTasks',
+    status: 'wired'
+  },
   'forge.outline-toc.metadata': {
     surface: 'right-sidebar',
     implementation: 'parseNote.headings',

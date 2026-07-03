@@ -138,7 +138,7 @@ For MCP clients:
 
 ## Templates
 
-Templates are Markdown files in the configured templates folder, usually `Templates/`. Use them for repeatable note shapes like daily notes, meeting notes, agent task briefs, SEO/content briefs, research briefs, PRDs, project plans, bug reports, decision records, changelog entries, transcript cleanup notes, people, and publishing drafts.
+Templates are Markdown files in the configured templates folder, usually `Templates/`. Use them for repeatable note shapes like daily notes, meeting notes, agent task briefs, SEO/content briefs, research briefs, PRDs, project plans, support tickets, experiments, interviews, callout libraries, agent reviews, incident postmortems, RFCs, API specs, launch plans, customer profiles, content calendars, learning plans, decision reviews, changelog entries, transcript cleanup notes, people, and publishing drafts.
 
 Use two list commands before creating from a template:
 

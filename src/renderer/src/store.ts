@@ -11,7 +11,7 @@ import {
 import { baseName, isMarkdown, noteDisplayTitle, parseNote, resolveLink, wordCount, type NoteMeta } from './lib/parse'
 import { formatTemplateDateParts, renderTemplate } from './lib/templates'
 
-export type TabKind = 'note' | 'graph' | 'board' | 'empty'
+export type TabKind = 'note' | 'graph' | 'board' | 'tasks' | 'empty'
 export type ViewMode = 'edit' | 'read'
 export const STARTER_TEMPLATE_KINDS = [
   'daily',
@@ -33,6 +33,14 @@ export const STARTER_TEMPLATE_KINDS = [
   'interviewNotes',
   'bugReport',
   'decision',
+  'incidentPostmortem',
+  'technicalRFC',
+  'apiSpec',
+  'launchPlan',
+  'customerProfile',
+  'contentCalendar',
+  'learningPlan',
+  'decisionReview',
   'publishPage',
   'changelog',
   'transcriptCleanup',
@@ -61,6 +69,14 @@ export const STARTER_TEMPLATE_CATALOG: { kind: StarterTemplateKind; label: strin
   { kind: 'interviewNotes', label: 'Interview notes', detail: 'Research, customer, or hiring notes' },
   { kind: 'bugReport', label: 'Bug report', detail: 'Repro, impact, fix notes' },
   { kind: 'decision', label: 'Decision record', detail: 'Options, rationale, consequences' },
+  { kind: 'incidentPostmortem', label: 'Incident postmortem', detail: 'Impact, timeline, causes, follow-up' },
+  { kind: 'technicalRFC', label: 'Technical RFC', detail: 'Proposal, tradeoffs, rollout plan' },
+  { kind: 'apiSpec', label: 'API spec', detail: 'Endpoint contract and examples' },
+  { kind: 'launchPlan', label: 'Launch plan', detail: 'Readiness, rollout, comms, metrics' },
+  { kind: 'customerProfile', label: 'Customer profile', detail: 'Account context, goals, risks, next steps' },
+  { kind: 'contentCalendar', label: 'Content calendar', detail: 'Campaign schedule and publishing workflow' },
+  { kind: 'learningPlan', label: 'Learning plan', detail: 'Goals, resources, practice, evidence' },
+  { kind: 'decisionReview', label: 'Decision review', detail: 'Evaluate outcomes and next decision' },
   { kind: 'publishPage', label: 'Publish page', detail: 'Public Markdown page draft' },
   { kind: 'changelog', label: 'Changelog entry', detail: 'Forge-style product entries' },
   { kind: 'transcriptCleanup', label: 'Transcript cleanup', detail: 'Raw transcript to polished notes' },
@@ -125,6 +141,7 @@ export interface ForgeState {
   counts: { words: number; chars: number }
   /** bumped whenever note contents change, for panes that read noteContents */
   contentVersion: number
+  pendingEditorNavigation: { path: string; lineNumber: number } | null
 
   boot(): Promise<void>
   openVaultDialog(): Promise<void>
@@ -132,9 +149,11 @@ export interface ForgeState {
   closeVault(): void
   refreshVault(): Promise<void>
 
-  openFile(path: string, opts?: { newTab?: boolean }): void
+  openFile(path: string, opts?: { newTab?: boolean; line?: number }): void
+  consumePendingEditorNavigation(path: string): number | null
   openGraph(): void
   openBoard(): void
+  openTasks(): void
   newTab(): void
   closeTab(id: string): void
   activateTab(id: string): void
@@ -1102,6 +1121,475 @@ const STARTER_TEMPLATES: Record<StarterTemplateKind, { file: string; content: st
       ''
     ].join('\n')
   },
+  incidentPostmortem: {
+    file: 'Incident Postmortem.md',
+    content: [
+      '---',
+      'type: incident-postmortem',
+      'status: {{select:Status|Draft,Reviewed,Closed}}',
+      'severity: {{select:Severity|SEV1,SEV2,SEV3,SEV4}}',
+      'incident_date: {{prompt:Incident date}}',
+      'owner: {{prompt:Owner}}',
+      'created: {{date}}',
+      'tags: [incident, postmortem]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Summary',
+      '{{prompt:Summary}}',
+      '',
+      '## Impact',
+      '- Users affected:',
+      '- Duration:',
+      '- Systems:',
+      '- Customer impact:',
+      '',
+      '## Timeline',
+      '- {{datetime}} - Detected',
+      '-  - Mitigated',
+      '-  - Resolved',
+      '',
+      '## Detection',
+      '- Signal:',
+      '- Alert or report:',
+      '- Time to detect:',
+      '',
+      '## Root Cause',
+      '- Trigger:',
+      '- Contributing factors:',
+      '- What changed:',
+      '',
+      '## Resolution',
+      '- Mitigation:',
+      '- Permanent fix:',
+      '- Verification:',
+      '',
+      '## What Went Well',
+      '- ',
+      '',
+      '## What Went Wrong',
+      '- ',
+      '',
+      '## Follow-up Actions',
+      '- [ ] Owner:  Due:  Action: ',
+      '',
+      '## Agent Tasks',
+      '- [ ] Extract action items with owners and due dates',
+      '- [ ] Link related support tickets, bugs, and decisions',
+      '- [ ] Draft customer-facing summary if needed'
+    ].join('\n')
+  },
+  technicalRFC: {
+    file: 'Technical RFC.md',
+    content: [
+      '---',
+      'type: technical-rfc',
+      'status: {{select:Status|Draft,In review,Accepted,Rejected,Implemented}}',
+      'owner: {{prompt:Owner}}',
+      'reviewers: {{prompt:Reviewers}}',
+      'created: {{date}}',
+      'tags: [rfc, engineering]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Summary',
+      '{{prompt:Summary}}',
+      '',
+      '## Problem',
+      '{{prompt:Problem}}',
+      '',
+      '## Goals',
+      '- ',
+      '',
+      '## Non-goals',
+      '- ',
+      '',
+      '## Proposed Design',
+      '- Architecture:',
+      '- Data model:',
+      '- User or developer flow:',
+      '',
+      '## Alternatives Considered',
+      '- Option:  Pros:  Cons: ',
+      '',
+      '## Tradeoffs',
+      '- Benefit:',
+      '- Cost:',
+      '- Risk:',
+      '',
+      '## Rollout Plan',
+      '- Phase:',
+      '- Migration:',
+      '- Rollback:',
+      '',
+      '## Observability',
+      '- Metrics:',
+      '- Logs:',
+      '- Alerts:',
+      '',
+      '## Open Questions',
+      '- ',
+      '',
+      '## Decision Log',
+      '- {{date}} - ',
+      '',
+      '## Agent Review Notes',
+      '- [ ] Check assumptions against linked specs or code',
+      '- [ ] Identify missing edge cases and migration risks',
+      '- [ ] Summarize unresolved reviewer questions'
+    ].join('\n')
+  },
+  apiSpec: {
+    file: 'API Spec.md',
+    content: [
+      '---',
+      'type: api-spec',
+      'status: {{select:Status|Draft,Review,Stable,Deprecated}}',
+      'method: {{select:Method|GET,POST,PUT,PATCH,DELETE}}',
+      'endpoint: {{prompt:Endpoint}}',
+      'owner: {{prompt:Owner}}',
+      'created: {{date}}',
+      'tags: [api, spec]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Overview',
+      '{{prompt:Overview}}',
+      '',
+      '## Endpoint',
+      '- Method: {{select:Method|GET,POST,PUT,PATCH,DELETE}}',
+      '- Path: {{prompt:Endpoint}}',
+      '- Auth: {{select:Auth|None,API key,OAuth,Session,Service token}}',
+      '',
+      '## Request Parameters',
+      '| Name | Type | Required | Description |',
+      '| --- | --- | --- | --- |',
+      '|  |  |  |  |',
+      '',
+      '## Request Body',
+      '```json',
+      '{}',
+      '```',
+      '',
+      '## Response',
+      '```json',
+      '{}',
+      '```',
+      '',
+      '## Error Cases',
+      '| Status | Code | Condition | Recovery |',
+      '| --- | --- | --- | --- |',
+      '|  |  |  |  |',
+      '',
+      '## Examples',
+      '```bash',
+      'curl ',
+      '```',
+      '',
+      '## Compatibility',
+      '- Versioning:',
+      '- Breaking changes:',
+      '- Deprecation plan:',
+      '',
+      '## Test Cases',
+      '- [ ] Happy path',
+      '- [ ] Auth failure',
+      '- [ ] Validation failure',
+      '- [ ] Rate limit or quota behavior',
+      '',
+      '## Agent Tasks',
+      '- [ ] Generate example requests and responses',
+      '- [ ] Compare implementation behavior with this contract',
+      '- [ ] Flag undocumented fields or status codes'
+    ].join('\n')
+  },
+  launchPlan: {
+    file: 'Launch Plan.md',
+    content: [
+      '---',
+      'type: launch-plan',
+      'status: {{select:Status|Planning,Ready,Launching,Launched,Paused}}',
+      'owner: {{prompt:Owner}}',
+      'launch_date: {{prompt:Launch date}}',
+      'audience: {{prompt:Audience}}',
+      'created: {{date}}',
+      'tags: [launch, go-to-market]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Objective',
+      '{{prompt:Objective}}',
+      '',
+      '## Audience',
+      '{{prompt:Audience}}',
+      '',
+      '## Scope',
+      '### Included',
+      '- ',
+      '',
+      '### Excluded',
+      '- ',
+      '',
+      '## Launch Criteria',
+      '- Product:',
+      '- Docs:',
+      '- Support:',
+      '- Analytics:',
+      '',
+      '## Rollout Plan',
+      '- Phase:  Audience:  Date:  Owner: ',
+      '',
+      '## Communications',
+      '- Internal:',
+      '- Customer:',
+      '- Website or docs:',
+      '- Social or community:',
+      '',
+      '## Support Readiness',
+      '- Saved replies:',
+      '- Known issues:',
+      '- Escalation path:',
+      '',
+      '## Metrics',
+      '- Success metric:',
+      '- Guardrail metric:',
+      '- Review date:',
+      '',
+      '## Risks',
+      '- Risk:  Mitigation: ',
+      '',
+      '## Checklist',
+      '- [ ] Launch owner assigned',
+      '- [ ] Rollback or pause plan written',
+      '- [ ] Docs and support notes reviewed',
+      '- [ ] Metrics dashboard or query ready',
+      '',
+      '## Agent Tasks',
+      '- [ ] Draft announcement copy from scope and audience',
+      '- [ ] Check linked PRD, RFC, and support notes for gaps',
+      '- [ ] Summarize launch readiness blockers'
+    ].join('\n')
+  },
+  customerProfile: {
+    file: 'Customer Profile.md',
+    content: [
+      '---',
+      'type: customer-profile',
+      'status: {{select:Status|Prospect,Active,At risk,Churned,Archived}}',
+      'customer: {{prompt:Customer}}',
+      'segment: {{select:Segment|Individual,SMB,Mid-market,Enterprise,Internal}}',
+      'owner: {{prompt:Owner}}',
+      'created: {{date}}',
+      'tags: [customer, profile]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Snapshot',
+      '- Customer: {{prompt:Customer}}',
+      '- Segment: {{select:Segment|Individual,SMB,Mid-market,Enterprise,Internal}}',
+      '- Owner: {{prompt:Owner}}',
+      '- Health: {{select:Health|Green,Yellow,Red,Unknown}}',
+      '',
+      '## People',
+      '- Name:  Role:  Notes: ',
+      '',
+      '## Goals',
+      '- ',
+      '',
+      '## Use Cases',
+      '- Workflow:',
+      '- Success criteria:',
+      '',
+      '## Environment',
+      '- Tools:',
+      '- Integrations:',
+      '- Constraints:',
+      '',
+      '## Timeline',
+      '- {{date}} - Profile created',
+      '',
+      '## Pain Points',
+      '- ',
+      '',
+      '## Success Signals',
+      '- ',
+      '',
+      '## Risks',
+      '- Risk:  Mitigation: ',
+      '',
+      '## Opportunities',
+      '- ',
+      '',
+      '## Related Notes',
+      '- [[ ]]',
+      '',
+      '## Agent Tasks',
+      '- [ ] Summarize recent notes about this customer',
+      '- [ ] Extract open follow-ups and owners',
+      '- [ ] Identify missing context before the next meeting'
+    ].join('\n')
+  },
+  contentCalendar: {
+    file: 'Content Calendar.md',
+    content: [
+      '---',
+      'type: content-calendar',
+      'status: {{select:Status|Planning,Active,Paused,Archived}}',
+      'channel: {{select:Channel|Blog,Newsletter,Social,Docs,Video,Multi-channel}}',
+      'owner: {{prompt:Owner}}',
+      'month: {{prompt:Month}}',
+      'created: {{date}}',
+      'tags: [content, calendar]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Goals',
+      '- ',
+      '',
+      '## Audience',
+      '{{prompt:Audience}}',
+      '',
+      '## Themes',
+      '- Theme:  Notes: ',
+      '',
+      '## Calendar',
+      '| Date | Channel | Asset | Status | Owner | Link |',
+      '| --- | --- | --- | --- | --- | --- |',
+      '|  |  |  |  |  |  |',
+      '',
+      '## Production Board',
+      '### Not Started',
+      '- ',
+      '',
+      '### Drafting',
+      '- ',
+      '',
+      '### Review',
+      '- ',
+      '',
+      '### Scheduled',
+      '- ',
+      '',
+      '### Published',
+      '- ',
+      '',
+      '## Distribution',
+      '- Primary channel:',
+      '- Repurposing plan:',
+      '- CTA:',
+      '',
+      '## Dependencies',
+      '- Source material:',
+      '- Design:',
+      '- Reviewers:',
+      '',
+      '## Agent Tasks',
+      '- [ ] Turn approved ideas into draft briefs',
+      '- [ ] Find stale or blocked calendar items',
+      '- [ ] Summarize upcoming publishing workload'
+    ].join('\n')
+  },
+  learningPlan: {
+    file: 'Learning Plan.md',
+    content: [
+      '---',
+      'type: learning-plan',
+      'status: {{select:Status|Not started,Active,Paused,Complete}}',
+      'topic: {{prompt:Topic}}',
+      'target_date: {{prompt:Target date}}',
+      'created: {{date}}',
+      'tags: [learning, plan]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Outcome',
+      '{{prompt:Outcome}}',
+      '',
+      '## Current Level',
+      '{{select:Current level|Beginner,Working knowledge,Intermediate,Advanced}}',
+      '',
+      '## Curriculum',
+      '- Module:  Goal:  Evidence: ',
+      '',
+      '## Resources',
+      '- Resource:  Type:  Link:  Priority: ',
+      '',
+      '## Practice Projects',
+      '- Project:  Skill tested:  Done when: ',
+      '',
+      '## Schedule',
+      '- Week:  Focus:  Output: ',
+      '',
+      '## Notes',
+      '- ',
+      '',
+      '## Assessment',
+      '- Can explain:',
+      '- Can build:',
+      '- Needs more practice:',
+      '',
+      '## Agent Coach Tasks',
+      '- [ ] Convert resources into a weekly plan',
+      '- [ ] Quiz weak areas from notes in this topic',
+      '- [ ] Suggest practice tasks based on gaps'
+    ].join('\n')
+  },
+  decisionReview: {
+    file: 'Decision Review.md',
+    content: [
+      '---',
+      'type: decision-review',
+      'status: {{select:Status|Scheduled,Reviewing,Done}}',
+      'decision_date: {{prompt:Decision date}}',
+      'review_date: {{date}}',
+      'owner: {{prompt:Owner}}',
+      'tags: [decision, review]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Original Decision',
+      '- Link: [[ ]]',
+      '- Summary: {{prompt:Original decision}}',
+      '- Intended outcome:',
+      '',
+      '## Actual Outcome',
+      '- What happened:',
+      '- What did not happen:',
+      '- Who was affected:',
+      '',
+      '## Evidence',
+      '- Metric or signal:  Result:  Source: ',
+      '',
+      '## What Changed',
+      '- Assumption:',
+      '- New information:',
+      '- Constraint:',
+      '',
+      '## Consequences',
+      '- Positive:',
+      '- Negative:',
+      '- Unexpected:',
+      '',
+      '## Review Decision',
+      '{{select:Review decision|Keep,Change,Reverse,Defer}}',
+      '',
+      '## Follow-up Decisions',
+      '- [ ] Decision needed:  Owner:  Due: ',
+      '',
+      '## Agent Tasks',
+      '- [ ] Compare this review with the original decision note',
+      '- [ ] Pull supporting evidence from linked notes',
+      '- [ ] Draft follow-up decision records if needed'
+    ].join('\n')
+  },
   releaseNotes: {
     file: 'Release Notes.md',
     content: [
@@ -1272,6 +1760,7 @@ export const useStore = create<ForgeState>((set, get) => ({
   contextMenu: null,
   counts: { words: 0, chars: 0 },
   contentVersion: 0,
+  pendingEditorNavigation: null,
 
   async boot() {
     const settings = await window.forge.readSettings()
@@ -1383,16 +1872,34 @@ export const useStore = create<ForgeState>((set, get) => ({
     const { tabs, activeTabId } = get()
     const existing = tabs.find((t) => t.kind === 'note' && t.path === path)
     if (existing) {
-      set({ activeTabId: existing.id })
+      set({
+        activeTabId: existing.id,
+        tabs:
+          opts?.line === undefined
+            ? tabs
+            : tabs.map((tab) => (tab.id === existing.id ? { ...tab, mode: 'edit' } : tab))
+      })
     } else if (!opts?.newTab && activeTabId) {
       set({
-        tabs: tabs.map((t) => (t.id === activeTabId ? { ...t, kind: 'note' as TabKind, path, mode: t.mode } : t))
+        tabs: tabs.map((tab) =>
+          tab.id === activeTabId
+            ? { ...tab, kind: 'note' as TabKind, path, mode: opts?.line === undefined ? tab.mode : 'edit' }
+            : tab
+        )
       })
     } else {
       const tab: Tab = { id: newTabId(), kind: 'note', path, mode: 'edit' }
       set({ tabs: [...tabs, tab], activeTabId: tab.id })
     }
+    if (opts?.line !== undefined) set({ pendingEditorNavigation: { path, lineNumber: opts.line } })
     set({ counts: wordCount(noteContents.get(path) ?? '') })
+  },
+
+  consumePendingEditorNavigation(path) {
+    const pending = get().pendingEditorNavigation
+    if (!pending || pending.path !== path) return null
+    set({ pendingEditorNavigation: null })
+    return pending.lineNumber
   },
 
   openGraph() {
@@ -1414,6 +1921,17 @@ export const useStore = create<ForgeState>((set, get) => ({
       return
     }
     const tab: Tab = { id: newTabId(), kind: 'board', path: null, mode: 'edit' }
+    set({ tabs: [...tabs, tab], activeTabId: tab.id })
+  },
+
+  openTasks() {
+    const { tabs } = get()
+    const existing = tabs.find((t) => t.kind === 'tasks')
+    if (existing) {
+      set({ activeTabId: existing.id })
+      return
+    }
+    const tab: Tab = { id: newTabId(), kind: 'tasks', path: null, mode: 'edit' }
     set({ tabs: [...tabs, tab], activeTabId: tab.id })
   },
 
@@ -1800,6 +2318,7 @@ export function activeTab(state: ForgeState): Tab | null {
 export function tabTitle(tab: Tab): string {
   if (tab.kind === 'graph') return 'Graph'
   if (tab.kind === 'board') return 'Board'
+  if (tab.kind === 'tasks') return 'Tasks'
   if (tab.kind === 'empty' || !tab.path) return 'New tab'
   return baseName(tab.path)
 }
