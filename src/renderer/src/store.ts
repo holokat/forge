@@ -591,7 +591,7 @@ export function tabTitle(tab: Tab): string {
   return baseName(tab.path)
 }
 
-const WELCOME_NOTE = `# Welcome to Forge ⚡️
+const WELCOME_NOTE = `# Welcome to Forge
 
 Forge keeps your notes as **plain Markdown files**, right here on your Mac.
 

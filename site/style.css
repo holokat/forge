@@ -7,15 +7,15 @@
   --bg-raised: #121216;
   --bg-card: #141419;
   --border: rgba(255, 255, 255, 0.09);
-  --border-hot: rgba(255, 138, 76, 0.5);
+  --border-hot: rgba(255, 255, 255, 0.36);
   --text: #f2f2f5;
   --text-dim: #9b9ba6;
   --text-faint: #5b5b66;
-  --accent: #ff8a4c;
-  --accent-hot: #ff6a1f;
-  --accent-deep: #f04d0c;
-  --accent-soft: rgba(255, 138, 76, 0.12);
-  --gradient: linear-gradient(120deg, #ffc46b 0%, #ff8a3d 40%, #ff5f1f 70%, #ff3d5e 100%);
+  --accent: #f2f2f5;
+  --accent-hot: #ffffff;
+  --accent-deep: #cfcfd6;
+  --accent-soft: rgba(255, 255, 255, 0.11);
+  --gradient: linear-gradient(120deg, #ffffff 0%, #d8d8df 48%, #9f9faa 100%);
   --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', sans-serif;
   --mono: ui-monospace, 'SF Mono', Menlo, monospace;
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
@@ -35,7 +35,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: rgba(255, 122, 40, 0.4); }
+::selection { background: rgba(255, 255, 255, 0.24); }
 
 a { color: inherit; text-decoration: none; }
 b { font-weight: 700; }
@@ -80,7 +80,7 @@ body::after {
   border-radius: 50%;
   pointer-events: none;
   z-index: 1;
-  background: radial-gradient(circle, rgba(255, 122, 40, 0.07) 0%, transparent 60%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.055) 0%, transparent 60%);
   transform: translate(-50%, -50%);
   transition: opacity 0.4s;
 }
@@ -119,12 +119,12 @@ body::after {
   background: var(--gradient);
   background-size: 160% 160%;
   border: none;
-  color: #1a0c04;
-  box-shadow: 0 4px 24px rgba(255, 106, 31, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  color: #0a0a0d;
+  box-shadow: 0 4px 24px rgba(255, 255, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.35);
   animation: gradient-drift 6s ease infinite;
 }
 .btn-primary:hover {
-  box-shadow: 0 6px 40px rgba(255, 106, 31, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  box-shadow: 0 6px 40px rgba(255, 255, 255, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 @keyframes gradient-drift {
   0%, 100% { background-position: 0% 50%; }
@@ -169,18 +169,18 @@ body::after {
   letter-spacing: -0.02em;
 }
 
-.bolt {
+.site-logo-mark {
   display: grid;
   place-items: center;
   width: 26px; height: 26px;
   border-radius: 8px;
   background: var(--gradient);
-  color: #fff;
-  box-shadow: 0 0 18px rgba(255, 106, 31, 0.5);
+  color: var(--accent);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.18);
 }
-.bolt svg { width: 15px; height: 15px; }
-.nav-logo:hover .bolt { animation: bolt-jolt 0.5s var(--ease-spring); }
-@keyframes bolt-jolt {
+.site-logo-mark svg { width: 26px; height: 26px; }
+.nav-logo:hover .site-logo-mark { animation: logo-jolt 0.5s var(--ease-spring); }
+@keyframes logo-jolt {
   30% { transform: rotate(-12deg) scale(1.15); }
   60% { transform: rotate(8deg); }
 }
@@ -214,7 +214,7 @@ body::after {
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
-.kbd-hint:hover { color: var(--accent); border-color: var(--border-hot); box-shadow: 0 0 14px rgba(255, 106, 31, 0.25); }
+.kbd-hint:hover { color: var(--accent); border-color: var(--border-hot); box-shadow: 0 0 14px rgba(255, 255, 255, 0.16); }
 
 /* ============ hero ============ */
 
@@ -295,7 +295,7 @@ body::after {
   stroke-dasharray: 340;
   stroke-dashoffset: 340;
   animation: scribble-draw 0.9s var(--ease-spring) 1s forwards;
-  filter: drop-shadow(0 0 8px rgba(255, 106, 31, 0.6));
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.35));
 }
 @keyframes scribble-draw { to { stroke-dashoffset: 0; } }
 
@@ -343,7 +343,7 @@ body::after {
   position: absolute;
   inset: 10% -6% -12% -6%;
   z-index: -1;
-  background: radial-gradient(50% 60% at 50% 60%, rgba(255, 106, 31, 0.22), transparent 70%);
+  background: radial-gradient(50% 60% at 50% 60%, rgba(255, 255, 255, 0.12), transparent 70%);
   filter: blur(30px);
 }
 
@@ -529,7 +529,7 @@ body::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(360px circle at var(--mx) var(--my), rgba(255, 122, 40, 0.12), transparent 55%);
+  background: radial-gradient(360px circle at var(--mx) var(--my), rgba(255, 255, 255, 0.1), transparent 55%);
   opacity: 0;
   transition: opacity 0.35s;
   pointer-events: none;
@@ -617,7 +617,7 @@ body::after {
   border-radius: 20px;
   border: 1px solid var(--border);
   background:
-    radial-gradient(600px 300px at 50% 0%, rgba(255, 106, 31, 0.06), transparent 70%),
+    radial-gradient(600px 300px at 50% 0%, rgba(255, 255, 255, 0.05), transparent 70%),
     #101014;
   overflow: hidden;
 }
@@ -681,7 +681,7 @@ body::after {
 }
 .keycap.pressed {
   transform: translateY(3px);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 0 22px rgba(255, 106, 31, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 0 22px rgba(255, 255, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   color: var(--accent);
   border-color: var(--border-hot);
 }
@@ -700,25 +700,25 @@ body::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(700px 420px at 50% 62%, rgba(255, 106, 31, 0.14), transparent 70%);
+  background: radial-gradient(700px 420px at 50% 62%, rgba(255, 255, 255, 0.08), transparent 70%);
   pointer-events: none;
 }
 
 .cta-inner { position: relative; }
 
-.cta-bolt {
+.cta-logo {
   width: 84px; height: 84px;
   margin: 0 auto 30px;
   display: grid;
   place-items: center;
   border-radius: 24px;
   background: var(--gradient);
-  color: #fff;
-  box-shadow: 0 16px 60px rgba(255, 106, 31, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.4);
-  animation: bolt-float 5s ease-in-out infinite;
+  color: var(--accent);
+  box-shadow: 0 16px 60px rgba(255, 255, 255, 0.18), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+  animation: logo-float 5s ease-in-out infinite;
 }
-.cta-bolt svg { width: 42px; height: 42px; }
-@keyframes bolt-float {
+.cta-logo svg { width: 84px; height: 84px; }
+@keyframes logo-float {
   50% { transform: translateY(-12px) rotate(3deg); }
 }
 
@@ -774,7 +774,7 @@ body::after {
   backdrop-filter: blur(30px);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 14px;
-  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7), 0 0 60px rgba(255, 106, 31, 0.08);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7), 0 0 60px rgba(255, 255, 255, 0.06);
   overflow: hidden;
   animation: palette-in 0.2s var(--ease-spring);
 }

@@ -26,7 +26,7 @@ Forge is your **local-first** thinking space. Every note is a plain Markdown fil
 const forge = { fast: true, local: true, beautiful: true }
 \`\`\`
 
-Check the graph view to see how everything connects. Happy writing! ⚡️
+Check the graph view to see how everything connects. Happy writing.
 `
 
 const IDEAS = `# Ideas

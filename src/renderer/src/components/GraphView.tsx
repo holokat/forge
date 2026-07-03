@@ -188,7 +188,7 @@ export default function GraphView(): React.JSX.Element {
     const draw = (): void => {
       tick()
       ctx.clearRect(0, 0, width, height)
-      const accent = cssVar('--accent') || '#f97316'
+      const accent = cssVar('--accent') || '#1d1d21'
       const nodeColor = cssVar('--graph-node') || '#8888aa'
       const edgeColor = cssVar('--graph-edge') || 'rgba(128,128,140,0.25)'
       const labelColor = cssVar('--text-muted') || '#888'

@@ -25,20 +25,21 @@
   --text-normal: #1d1d21;
   --text-muted: #6b6b76;
   --text-faint: #a4a4ae;
-  --accent: #e8590c;
+  --accent: #1d1d21;
+  --accent-hover: #34343a;
   --accent-contrast: #ffffff;
-  --accent-soft: rgba(232, 89, 12, 0.1);
-  --accent-glow: rgba(255, 122, 40, 0.35);
-  --selection: rgba(255, 138, 60, 0.28);
+  --accent-soft: rgba(20, 20, 30, 0.08);
+  --accent-glow: rgba(20, 20, 30, 0.16);
+  --selection: rgba(20, 20, 30, 0.14);
   --shadow-modal: 0 24px 80px rgba(15, 15, 25, 0.22), 0 2px 12px rgba(15, 15, 25, 0.1);
   --shadow-menu: 0 8px 32px rgba(15, 15, 25, 0.16), 0 1px 4px rgba(15, 15, 25, 0.08);
 
   --syn-keyword: #a626a4;
   --syn-string: #50a14f;
   --syn-comment: #a0a1a7;
-  --syn-number: #986801;
+  --syn-number: #4f5661;
   --syn-function: #4078f2;
-  --syn-type: #c18401;
+  --syn-type: #4f5661;
   --syn-property: #e45649;
   --syn-code: #5c3e9e;
 
@@ -59,20 +60,21 @@
   --text-normal: #e7e7ec;
   --text-muted: #9d9da8;
   --text-faint: #64646e;
-  --accent: #ff8a4c;
-  --accent-contrast: #241105;
-  --accent-soft: rgba(255, 138, 76, 0.14);
-  --accent-glow: rgba(255, 138, 76, 0.3);
-  --selection: rgba(255, 138, 76, 0.3);
+  --accent: #f5f5f7;
+  --accent-hover: #d9d9de;
+  --accent-contrast: #101013;
+  --accent-soft: rgba(255, 255, 255, 0.12);
+  --accent-glow: rgba(255, 255, 255, 0.16);
+  --selection: rgba(255, 255, 255, 0.22);
   --shadow-modal: 0 24px 80px rgba(0, 0, 0, 0.55), 0 2px 12px rgba(0, 0, 0, 0.4);
   --shadow-menu: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 0, 0.3);
 
   --syn-keyword: #c678dd;
   --syn-string: #98c379;
   --syn-comment: #6b7280;
-  --syn-number: #d19a66;
+  --syn-number: #b7b7c1;
   --syn-function: #61afef;
-  --syn-type: #e5c07b;
+  --syn-type: #b7b7c1;
   --syn-property: #e06c75;
   --syn-code: #c8a5ff;
 
@@ -204,14 +206,14 @@ kbd {
 }
 
 .btn-primary {
-  background: linear-gradient(180deg, #ff8a3d, #f2600e);
+  background: var(--accent);
   border: none;
-  color: #fff;
-  box-shadow: 0 1px 3px rgba(230, 90, 15, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  color: var(--accent-contrast);
+  box-shadow: 0 1px 3px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(180deg, #ff9550, #fa6a17);
+  background: var(--accent-hover);
 }
 
 .btn-large {
@@ -266,7 +268,7 @@ kbd {
   place-items: center;
   position: relative;
   background:
-    radial-gradient(600px 400px at 50% -10%, var(--accent-soft), transparent 70%),
+    radial-gradient(600px 400px at 50% -10%, var(--bg-hover), transparent 70%),
     var(--bg-app);
 }
 
@@ -292,9 +294,9 @@ kbd {
   display: grid;
   place-items: center;
   border-radius: 18px;
-  color: #fff;
-  background: linear-gradient(140deg, #ffb347 0%, #ff7a1f 55%, #f04d0c 100%);
-  box-shadow: 0 10px 34px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.16),
+    0 0 0 1px var(--border);
   margin-bottom: 18px;
 }
 
@@ -2015,7 +2017,7 @@ button.tag:hover {
   height: 100%;
   min-width: 3px;
   border-radius: inherit;
-  background: linear-gradient(90deg, #ff8a3d, #f2600e);
+  background: var(--accent);
   transition: width 0.18s ease;
 }
 
@@ -2226,7 +2228,7 @@ button.tag:hover {
 .theme-preview.dark .theme-preview-line { background: #2c2c33; }
 
 .theme-preview-line.accent {
-  background: linear-gradient(90deg, #ffa14e, #f2600e) !important;
+  background: var(--accent) !important;
 }
 
 .theme-preview-line.w40 { width: 40%; }
@@ -2605,15 +2607,15 @@ button.tag:hover {
 }
 
 .extension-marketplace .extension-install-btn.available {
-  background: linear-gradient(180deg, #ff8a3d, #f2600e);
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-contrast);
   box-shadow:
-    0 1px 3px rgba(230, 90, 15, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    0 1px 3px var(--accent-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .extension-marketplace .extension-install-btn.available:hover {
-  background: linear-gradient(180deg, #ff9550, #fa6a17);
+  background: var(--accent-hover);
 }
 
 .extension-marketplace .extension-install-btn.installed {

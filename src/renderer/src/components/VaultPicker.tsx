@@ -1,5 +1,6 @@
-import { FolderOpen, Zap } from 'lucide-react'
+import { FolderOpen } from 'lucide-react'
 import { useStore } from '../store'
+import { ForgeAppLogo } from './ForgeLogo'
 
 export default function VaultPicker(): React.JSX.Element {
   const recentVaults = useStore((s) => s.recentVaults)
@@ -11,7 +12,7 @@ export default function VaultPicker(): React.JSX.Element {
       <div className="vault-picker-drag" />
       <div className="vault-picker-card">
         <div className="vault-picker-logo">
-          <Zap size={30} strokeWidth={2.2} />
+          <ForgeAppLogo size={68} />
         </div>
         <h1>Forge</h1>
         <p className="vault-picker-tagline">Your thoughts, connected. Plain Markdown, on your Mac.</p>

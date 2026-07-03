@@ -269,7 +269,7 @@ function graphTick() {
   for (const [ai, bi] of gEdges) {
     const a = gNodes[ai], b = gNodes[bi]
     const hot = gHover && (a === gHover || b === gHover)
-    gctx.strokeStyle = hot ? '#ff8a4c' : 'rgba(190,190,210,0.14)'
+    gctx.strokeStyle = hot ? '#f2f2f5' : 'rgba(190,190,210,0.14)'
     gctx.lineWidth = hot ? 1.6 : 1
     gctx.globalAlpha = gHover && !hot ? 0.35 : 1
     gctx.beginPath(); gctx.moveTo(a.x, a.y); gctx.lineTo(b.x, b.y); gctx.stroke()
@@ -279,8 +279,8 @@ function graphTick() {
     const r = 4 + n.deg * 1.4
     const hot = n === gHover || (neighbors && neighbors.has(n))
     gctx.globalAlpha = gHover && !hot ? 0.35 : 1
-    if (hot) { gctx.shadowColor = '#ff7a1f'; gctx.shadowBlur = 14 }
-    gctx.fillStyle = hot ? '#ff8a4c' : '#7c7c88'
+    if (hot) { gctx.shadowColor = '#ffffff'; gctx.shadowBlur = 14 }
+    gctx.fillStyle = hot ? '#f2f2f5' : '#7c7c88'
     gctx.beginPath(); gctx.arc(n.x, n.y, r, 0, Math.PI * 2); gctx.fill()
     gctx.shadowBlur = 0
     gctx.globalAlpha = gHover ? (hot ? 1 : 0.2) : 0.7
@@ -367,7 +367,7 @@ const COMMANDS = [
   { name: 'Go to: Live demo', hint: 'section', run: () => $('#demo').scrollIntoView() },
   { name: 'Go to: Graph playground', hint: 'section', run: () => $('#graph').scrollIntoView() },
   { name: 'Go to: Shortcuts', hint: 'section', run: () => $('#shortcuts').scrollIntoView() },
-  { name: 'Download Forge', hint: '⚡', run: () => $('#download').scrollIntoView() },
+  { name: 'Download Forge', hint: '⬢', run: () => $('#download').scrollIntoView() },
   { name: 'Shake the graph', hint: 'fun', run: () => { buildGraph(); $('#graph').scrollIntoView() } },
   { name: 'Do a barrel roll', hint: '???', run: barrelRoll },
   { name: 'Back to top', hint: '↑', run: () => scrollTo({ top: 0, behavior: 'smooth' }) }
@@ -398,7 +398,7 @@ function renderPalette() {
     paletteList.appendChild(btn)
   })
   if (matches.length === 0) {
-    paletteList.innerHTML = '<div style="padding:18px;text-align:center;color:var(--text-faint);font-size:13px">Nothing here… yet ⚡</div>'
+    paletteList.innerHTML = '<div style="padding:18px;text-align:center;color:var(--text-faint);font-size:13px">Nothing here… yet</div>'
   }
   return matches
 }
