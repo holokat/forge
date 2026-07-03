@@ -1092,6 +1092,17 @@ body.resizing .pane-resizer::after {
 .reading-view h3 { font-size: 1.17em; margin: 1.1em 0 0.35em; }
 .reading-view h4, .reading-view h5, .reading-view h6 { font-size: 1.02em; margin: 1em 0 0.3em; }
 .reading-view h1:first-child { margin-top: 0.2em; }
+.reading-view .heading-anchor {
+  margin-left: 8px;
+  color: var(--muted);
+  opacity: 0;
+  text-decoration: none;
+}
+
+.reading-view :is(h1, h2, h3, h4, h5, h6):hover .heading-anchor,
+.reading-view .heading-anchor:focus {
+  opacity: 1;
+}
 
 .reading-view p {
   margin: 0.4em 0 0.9em;
@@ -1472,6 +1483,126 @@ button.tag:hover {
   height: 32px;
 }
 
+.media-gallery-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 8px 8px;
+}
+
+.media-gallery-counts span {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  border-radius: 7px;
+  background: var(--bg-hover);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--text-faint);
+  font-size: 10.5px;
+  line-height: 1;
+}
+
+.media-gallery-counts strong {
+  color: var(--text-normal);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.media-gallery-list {
+  display: grid;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+.media-gallery-item {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bg-panel);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.media-gallery-preview,
+.media-gallery-pdf {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--bg-hover);
+  outline: 1px solid var(--media-outline);
+  outline-offset: -1px;
+}
+
+.media-gallery-preview {
+  max-height: 150px;
+  object-fit: cover;
+}
+
+.media-gallery-pdf {
+  height: 150px;
+  border: 0;
+}
+
+.media-gallery-pdf a {
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.media-gallery-caption {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px;
+  color: var(--text-muted);
+}
+
+.media-gallery-caption svg {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+}
+
+.media-gallery-caption span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.media-gallery-caption small {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: var(--bg-hover);
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.media-gallery-item audio {
+  display: block;
+  width: calc(100% - 16px);
+  height: 32px;
+  margin: 0 8px 8px;
+}
+
+.media-gallery-more {
+  padding: 2px 8px;
+  color: var(--text-faint);
+  font-size: 11.5px;
+}
+
 .outline-item {
   display: block;
   width: 100%;
@@ -1655,6 +1786,64 @@ button.tag:hover {
 
 .extension-health-grid span.is-warning strong {
   color: var(--text-normal);
+}
+
+.extension-task-grid {
+  padding-bottom: 8px;
+}
+
+.extension-task-list {
+  display: grid;
+  gap: 6px;
+  padding: 0 8px;
+}
+
+.extension-task-list button {
+  min-height: 40px;
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border-radius: 7px;
+  background: var(--bg-hover);
+  box-shadow: inset 0 0 0 1px var(--border);
+  text-align: left;
+  transition-property: background-color, color, transform, box-shadow;
+  transition-duration: 0.14s;
+  transition-timing-function: ease;
+}
+
+.extension-task-list button:hover {
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.extension-task-list button:active {
+  transform: scale(0.96);
+}
+
+.extension-task-list span,
+.extension-task-list strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.extension-task-list span {
+  color: var(--text-faint);
+  font-size: 10.5px;
+  line-height: 1;
+}
+
+.extension-task-list strong {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.extension-task-more {
+  padding: 2px 8px;
+  color: var(--text-faint);
+  font-size: 11.5px;
 }
 
 .extension-compact-list {

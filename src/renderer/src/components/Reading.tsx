@@ -65,6 +65,16 @@ function targetFromLink(link: HTMLAnchorElement): string | null {
   return markdownHrefTarget(link.getAttribute('href'))
 }
 
+function hashTargetFromLink(link: HTMLAnchorElement): string | null {
+  const href = link.getAttribute('href')?.trim() ?? ''
+  if (!href.startsWith('#') || href.length < 2) return null
+  try {
+    return decodeURIComponent(href.slice(1))
+  } catch {
+    return href.slice(1)
+  }
+}
+
 export default function Reading({ path }: { path: string }): React.JSX.Element {
   const vault = useStore((s) => s.vault)!
   const files = useStore((s) => s.files)
@@ -171,7 +181,7 @@ export default function Reading({ path }: { path: string }): React.JSX.Element {
   const linkFromEvent = (target: EventTarget | null): HTMLAnchorElement | null => {
     const root = ref.current
     if (!(target instanceof HTMLElement) || !root) return null
-    const link = target.closest<HTMLAnchorElement>('a.internal-link, a.external-link')
+    const link = target.closest<HTMLAnchorElement>('a.internal-link, a.external-link, a.heading-link')
     return link && root.contains(link) ? link : null
   }
 
@@ -203,6 +213,15 @@ export default function Reading({ path }: { path: string }): React.JSX.Element {
   const onClick = (e: React.MouseEvent): void => {
     const link = linkFromEvent(e.target)
     if (link) {
+      const hashTarget = hashTargetFromLink(link)
+      if (hashTarget) {
+        const target = ref.current?.querySelector<HTMLElement>(`#${CSS.escape(hashTarget)}`)
+        if (!target) return
+        e.preventDefault()
+        target.scrollIntoView({ block: 'start', behavior: 'smooth' })
+        return
+      }
+
       const target = targetFromLink(link)
       if (!target) return
       const store = useStore.getState()

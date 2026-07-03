@@ -33,6 +33,7 @@ forge validate-extension /path/to/extension-folder --json
 forge --vault /path/to/vault list
 forge --vault /path/to/vault create-folder Projects
 forge --vault /path/to/vault create-doc Projects/Plan --title "Plan"
+forge --vault /path/to/vault seed-templates --kinds daily,meeting,agentTask --json
 forge --vault /path/to/vault templates --json
 forge --vault /path/to/vault create-template Meeting --content "# {{title}}\n\n## Notes\n"
 forge --vault /path/to/vault create-from-template Meeting Projects/Kickoff --title "Kickoff"
@@ -53,6 +54,7 @@ From a source checkout:
 npm run agent -- built-in-templates --json
 npm run agent -- built-in-extensions --json
 npm run agent -- validate-extension examples/extensions --recursive --json
+npm run agent -- --vault /path/to/vault seed-templates --folder Templates --kinds daily,meeting
 npm run agent -- --vault /path/to/vault analyze --json
 ```
 
@@ -146,6 +148,15 @@ forge --vault /path/to/vault templates --json
 ```
 
 `built-in-templates` does not need a vault. It lists the bundled starter template pack that the app can seed, including each template kind, suggested filename, placeholder fields, and built-in variables. Add `--content` when an agent needs the complete starter Markdown. `templates --json` lists the templates that actually exist in the selected vault.
+
+To install starter templates into the selected vault, use `seed-templates`:
+
+```bash
+forge --vault /path/to/vault seed-templates --kinds daily,meeting,agentTask --json
+forge --vault /path/to/vault seed-templates --folder "Team Templates" --overwrite
+```
+
+`seed-templates` writes Markdown files from the bundled starter catalog into the configured templates folder, or the folder passed with `--folder`. Omit `--kinds` to seed the full starter pack. Existing template files are skipped unless `--overwrite` is passed, so agents can safely run the command before `create-from-template`.
 
 Supported placeholders:
 

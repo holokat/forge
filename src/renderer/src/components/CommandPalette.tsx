@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getActiveEditor } from '../editor/active'
 import { createExtensionRuntime } from '../extensions/runtime'
 import { fuzzyFilter } from '../lib/fuzzy'
-import { baseName, isMarkdown } from '../lib/parse'
+import { baseName, isMarkdown, parseNote, type Heading } from '../lib/parse'
 import { parseTemplateVariables, renderTemplate, type TemplateVariable } from '../lib/templates'
 import { activeTab, useStore } from '../store'
 
@@ -224,6 +224,153 @@ function wrapSelection(): void {
   view.focus()
 }
 
+function linesToChecklist(): void {
+  const view = getActiveEditor()
+  const selection = selectedMarkdown()
+  if (!view || !selection) {
+    window.alert('Select Markdown before running this transform.')
+    return
+  }
+  const next = selection.text
+    .split('\n')
+    .map((line) => {
+      if (!line.trim()) return line
+      if (/^\s*[-*+]\s+\[[ xX]\]\s+/.test(line)) return line
+      const indent = line.match(/^\s*/)?.[0] ?? ''
+      const text = line.trim().replace(/^[-*+]\s+/, '')
+      return `${indent}- [ ] ${text}`
+    })
+    .join('\n')
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: next },
+    selection: { anchor: selection.from, head: selection.from + next.length }
+  })
+  view.focus()
+}
+
+function sortSelectedLines(): void {
+  const view = getActiveEditor()
+  const selection = selectedMarkdown()
+  if (!view || !selection) {
+    window.alert('Select Markdown before running this transform.')
+    return
+  }
+  const lines = selection.text.split('\n')
+  const trailingEmpty = lines.length > 1 && lines[lines.length - 1] === ''
+  const sortable = trailingEmpty ? lines.slice(0, -1) : lines
+  const next = [...sortable].sort((a, b) => a.trim().localeCompare(b.trim(), undefined, { sensitivity: 'base' }))
+  const content = trailingEmpty ? `${next.join('\n')}\n` : next.join('\n')
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: content },
+    selection: { anchor: selection.from, head: selection.from + content.length }
+  })
+  view.focus()
+}
+
+function wrapSelectionAsCallout(): void {
+  const view = getActiveEditor()
+  const selection = selectedMarkdown()
+  if (!view || !selection) {
+    window.alert('Select Markdown before running this transform.')
+    return
+  }
+  const type = (window.prompt('Callout type', 'note') ?? '').trim()
+  if (!type) return
+  const title = (window.prompt('Callout title', type[0].toUpperCase() + type.slice(1)) ?? '').trim()
+  const body = selection.text
+    .split('\n')
+    .map((line) => `> ${line}`)
+    .join('\n')
+  const next = `> [!${type}]${title ? ` ${title}` : ''}\n${body}`
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: next },
+    selection: { anchor: selection.from, head: selection.from + next.length }
+  })
+  view.focus()
+}
+
+function stripInlineMarkdown(value: string): string {
+  return String(value ?? '')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[*_~]/g, '')
+    .trim()
+}
+
+function slugifyHeading(value: string, fallback = 'section'): string {
+  const slug = stripInlineMarkdown(value)
+    .trim()
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^\p{Letter}\p{Number}\s/_-]/gu, '')
+    .replace(/[\/_\s]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+  return slug || fallback
+}
+
+function uniqueHeadingSlug(value: string, used: Set<string>, fallback: string): string {
+  const base = slugifyHeading(value, fallback)
+  let slug = base
+  let index = 2
+  while (used.has(slug)) {
+    slug = `${base}-${index}`
+    index += 1
+  }
+  used.add(slug)
+  return slug
+}
+
+function tocLinkLabel(value: string): string {
+  return value.replace(/\]/g, '\\]').replace(/\s+/g, ' ').trim()
+}
+
+function generatedTableOfContents(headings: Heading[]): string {
+  const used = new Set<string>()
+  const withSlugs = headings.map((heading, index) => ({
+    heading,
+    index,
+    slug: uniqueHeadingSlug(heading.text, used, `heading-${index + 1}`)
+  }))
+  const visibleHeadings = withSlugs.filter(({ heading, index }) => {
+    if (/^table of contents$/i.test(heading.text.trim())) return false
+    return !(index === 0 && heading.level === 1 && headings.length > 1)
+  })
+  if (visibleHeadings.length === 0) return ''
+  const minLevel = Math.min(...visibleHeadings.map(({ heading }) => heading.level))
+
+  return visibleHeadings
+    .map(({ heading, slug }) => {
+      const indent = '  '.repeat(Math.max(0, heading.level - minLevel))
+      const label = tocLinkLabel(heading.text)
+      return `${indent}- [${label}](#${slug})`
+    })
+    .join('\n')
+}
+
+function insertGeneratedTableOfContents(path: string): void {
+  const view = getActiveEditor()
+  const headings = view ? parseNote(view.state.doc.toString()).headings : useStore.getState().index[path]?.headings ?? []
+  const body = generatedTableOfContents(headings)
+  if (!view || !body) {
+    window.alert('Add headings to this note before inserting a table of contents.')
+    return
+  }
+
+  const selection = view.state.selection.main
+  const before = selection.from > 0 ? view.state.doc.sliceString(selection.from - 1, selection.from) : '\n'
+  const after = selection.to < view.state.doc.length ? view.state.doc.sliceString(selection.to, selection.to + 1) : '\n'
+  const prefix = before === '\n' ? '' : '\n\n'
+  const suffix = after === '\n' ? '\n' : '\n\n'
+  const insert = `${prefix}## Table of Contents\n\n${body}${suffix}`
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert },
+    selection: { anchor: selection.from + insert.length }
+  })
+  view.focus()
+}
+
 export function useListNav(count: number, onPick: (index: number) => void): {
   selected: number
   setSelected: (i: number) => void
@@ -303,6 +450,18 @@ export default function CommandPalette(): React.JSX.Element {
         if (transforms.has('wrap-selection')) {
           list.push({ name: 'Markdown: Wrap selection', action: close(() => wrapSelection()) })
         }
+        if (transforms.has('lines-to-checklist')) {
+          list.push({ name: 'Markdown: Convert lines to checklist', action: close(() => linesToChecklist()) })
+        }
+        if (transforms.has('sort-lines')) {
+          list.push({ name: 'Markdown: Sort selected lines', action: close(() => sortSelectedLines()) })
+        }
+        if (transforms.has('callout')) {
+          list.push({ name: 'Markdown: Wrap selection as callout', action: close(() => wrapSelectionAsCallout()) })
+        }
+      }
+      if (transforms.has('insert-table-of-contents')) {
+        list.push({ name: 'Markdown: Insert table of contents', action: close(() => insertGeneratedTableOfContents(path)) })
       }
       list.push(
         { name: 'Insert template at cursor', action: close(() => insertTemplateAtCursor(path).catch(console.error)) },

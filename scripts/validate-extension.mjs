@@ -15,7 +15,15 @@ const POINTS = extensionPointDefinitions().map((point) => ({
 const CATEGORIES = new Set(['capture', 'editing', 'navigation', 'organization', 'publishing', 'visualization'])
 const PERMISSIONS = new Set(['clipboard:write', 'settings:read', 'vault:metadata', 'vault:read', 'vault:write', 'workspace:ui'])
 const CONTRIBUTION_KINDS = new Set(['command', 'markdown-transform', 'metadata-provider', 'sidebar-widget', 'view'])
-const MARKDOWN_TRANSFORMS = new Set(['append-template', 'normalize-headings', 'wrap-selection'])
+const MARKDOWN_TRANSFORMS = new Set([
+  'append-template',
+  'normalize-headings',
+  'wrap-selection',
+  'lines-to-checklist',
+  'sort-lines',
+  'callout',
+  'insert-table-of-contents'
+])
 const SIDEBAR_WIDGETS = new Set([
   'reading-stats',
   'daily-note',
@@ -25,6 +33,8 @@ const SIDEBAR_WIDGETS = new Set([
   'backlinks',
   'unlinked-mentions',
   'tags',
+  'tasks',
+  'media-gallery',
   'link-health',
   'publish-checklist'
 ])

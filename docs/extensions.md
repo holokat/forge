@@ -52,15 +52,16 @@ Forge ships practical built-in manifests that describe local features without ex
 | --- | --- | --- |
 | Daily Notes | command, sidebar widget | Command palette and Today sidebar widget |
 | Reading Stats | metadata provider, sidebar widget | Active-note counts and Reading stats sidebar widget |
-| Markdown Tools | Markdown transforms | Selection transforms in the command palette |
+| Markdown Tools | Markdown transforms | Heading cleanup, wrapping, checklist conversion, line sorting, callout formatting, and generated table-of-contents insertion in the command palette |
 | Graph Insights | view | Graph workspace view |
 | Backlinks | metadata provider, sidebar widget | Backlinks and unlinked mentions from the local index |
 | Link Health | metadata provider, sidebar widget | Unresolved wikilink metadata, local link counts, and broken-link checks |
 | Tag Index | metadata provider, sidebar widget | Active-note tags, tag search filters, and publish tag pages |
 | Outline and Table of Contents | metadata provider, sidebar widget | Parsed headings and clickable right-sidebar outline |
+| Task Summary | metadata provider, sidebar widget | Open/completed task counts and active-note task navigation |
 | Publish Checklist | metadata provider, sidebar widget | Publish-page checklist metadata and static publishing readiness checks |
 | Frontmatter Inspector | metadata provider, sidebar widget | Parsed properties, aliases, and title metadata |
-| Media Player | sidebar widget | Linked local audio attachments for voice notes and imported media |
+| Media Gallery | sidebar widget | Linked local image, video, audio, PDF, and common file attachments |
 
 ## Adding A Bundled Extension
 
@@ -136,7 +137,24 @@ npm run extensions:validate -- examples/extensions --recursive
 npm run extensions:validate -- /path/to/forge-extension.json --json
 ```
 
-Current examples cover daily-note commands, reading stats, link health, tag/outline metadata, publish checklists, and frontmatter inspection.
+Current examples cover daily-note commands, reading stats, link health, tag/outline metadata, publish checklists, frontmatter inspection, task panels/checklists, generated table-of-contents insertion, callout formatting, and media attachments.
+
+## Example Coverage
+
+The manifests in `examples/extensions/` are local-folder examples for contributors. They intentionally use only contribution kinds and values accepted by the current validator:
+
+| Example | Current valid coverage | Planned coverage not represented as a manifest |
+| --- | --- | --- |
+| `daily-notes` | Safe command declaration for opening today's note | Rich recurring-note rules |
+| `reading-stats` | Metadata provider and reading stats sidebar widget | Per-folder reading analytics |
+| `link-health` | Metadata provider and link-health sidebar widget | Bulk link repair actions |
+| `tag-outline` | Tag and heading metadata plus tags and outline sidebar widgets | Generated table-of-contents insertion |
+| `publish-checklist` | Publish metadata and publish checklist sidebar widget | Custom checklist rule packs |
+| `frontmatter-inspector` | Frontmatter metadata and properties sidebar widget | Editable property schemas |
+| `tasks-checklist` | Task checklist metadata, tasks sidebar widget, and `lines-to-checklist` Markdown transform | Cross-note task queries and recurring task rules |
+| `table-of-contents-insertion` | Heading metadata plus the supported `insert-table-of-contents` Markdown transform | Editable TOC formatting presets |
+| `media-attachments` | Attachment metadata fields plus the supported `media-gallery` sidebar widget | Attachment actions such as reveal, copy link, and batch organization |
+| `callout-formatting` | Supported `callout` Markdown transform | Callout style presets and reusable callout templates |
 
 Validation checks:
 

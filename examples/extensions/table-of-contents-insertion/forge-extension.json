@@ -1,0 +1,55 @@
+{
+  "manifestVersion": 1,
+  "id": "example.table-of-contents-insertion",
+  "name": "table-of-contents-insertion",
+  "displayName": "Table of Contents Insertion Example",
+  "description": "Example declarative extension that combines heading metadata with Forge's generated table-of-contents transform.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["editing", "navigation", "organization"],
+  "keywords": ["toc", "outline", "headings", "template"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:read",
+      "reason": "Reads active-note headings already parsed from local Markdown."
+    },
+    {
+      "kind": "vault:write",
+      "reason": "Writes a bounded table-of-contents template insertion into the current note when requested."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.table-of-contents-insertion.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Table of contents metadata",
+      "description": "Provides heading text, levels, line numbers, and table-of-contents metadata for the active note.",
+      "fields": ["headings", "headingCount", "tableOfContents"]
+    },
+    {
+      "id": "example.table-of-contents-insertion.transform",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Insert generated table of contents",
+      "description": "Declares Forge's supported generated table-of-contents transform for the active note.",
+      "transform": "insert-table-of-contents"
+    }
+  ]
+}

@@ -1,5 +1,20 @@
 import { useMemo, useState } from 'react'
-import { CalendarDays, CheckCircle2, CircleAlert, FileAudio, Link2, ListChecks, Network, Timer } from 'lucide-react'
+import {
+  CalendarDays,
+  CheckCircle2,
+  CircleAlert,
+  File,
+  FileArchive,
+  FileAudio,
+  FileImage,
+  FileText,
+  FileVideo,
+  Link2,
+  ListChecks,
+  Network,
+  SquareCheckBig,
+  Timer
+} from 'lucide-react'
 import { getActiveEditor } from '../editor/active'
 import { scrollToLine } from '../editor/extensions'
 import { createExtensionRuntime, type ExtensionRuntimeCatalog } from '../extensions/runtime'
@@ -22,6 +37,22 @@ interface MentionMatch {
   text: string
   line: string
   lineNumber: number
+}
+
+interface TaskItem {
+  lineNumber: number
+  text: string
+  done: boolean
+}
+
+type MediaKind = 'image' | 'video' | 'audio' | 'pdf' | 'file'
+
+interface MediaAttachment {
+  kind: MediaKind
+  rel: string
+  name: string
+  url: string
+  extension: string
 }
 
 function escapeRegExp(value: string): string {
@@ -179,9 +210,93 @@ function linkedMediaCount(content: string, files: string[]): number {
   for (const match of content.matchAll(WIKILINK_RE)) {
     const target = linkTarget(match[1])
     const resolved = resolveLink(target, files)
-    if (resolved && (isImage(resolved) || isVideo(resolved) || isAudio(resolved))) count += 1
+    if (resolved && (isImage(resolved) || isVideo(resolved) || isAudio(resolved) || isPdf(resolved))) count += 1
   }
   return count
+}
+
+function fileExtension(rel: string): string {
+  const name = rel.split('/').pop() ?? rel
+  const match = /\.([A-Za-z0-9]+)$/.exec(name)
+  return match ? match[1].toLowerCase() : ''
+}
+
+function isPdf(rel: string): boolean {
+  return fileExtension(rel) === 'pdf'
+}
+
+function isCommonAttachment(rel: string): boolean {
+  return /(\.(docx?|xlsx?|pptx?|pages|numbers|key|txt|rtf|csv|tsv|json|ya?ml|zip|rar|7z|tar|gz|tgz|epub|ics))$/i.test(
+    rel
+  )
+}
+
+function mediaKind(rel: string): MediaKind | null {
+  if (isImage(rel)) return 'image'
+  if (isVideo(rel)) return 'video'
+  if (isAudio(rel)) return 'audio'
+  if (isPdf(rel)) return 'pdf'
+  if (isCommonAttachment(rel)) return 'file'
+  return null
+}
+
+function canPreviewImage(rel: string): boolean {
+  return /\.(png|jpe?g|gif|svg|webp|avif|bmp)$/i.test(rel)
+}
+
+function mediaKindLabel(kind: MediaKind): string {
+  switch (kind) {
+    case 'image':
+      return 'Image'
+    case 'video':
+      return 'Video'
+    case 'audio':
+      return 'Audio'
+    case 'pdf':
+      return 'PDF'
+    case 'file':
+      return 'File'
+  }
+}
+
+function MediaIcon({ kind }: { kind: MediaKind }): React.JSX.Element {
+  switch (kind) {
+    case 'image':
+      return <FileImage size={14} />
+    case 'video':
+      return <FileVideo size={14} />
+    case 'audio':
+      return <FileAudio size={14} />
+    case 'pdf':
+      return <FileText size={14} />
+    case 'file':
+      return <File size={14} />
+  }
+}
+
+function linkedMediaAttachments(content: string, files: string[], vault: string): MediaAttachment[] {
+  const found: MediaAttachment[] = []
+  const seen = new Set<string>()
+
+  for (const match of content.matchAll(WIKILINK_RE)) {
+    const target = linkTarget(match[1])
+    const resolved = resolveLink(target, files)
+    if (!resolved || seen.has(resolved)) continue
+
+    const kind = mediaKind(resolved)
+    if (!kind) continue
+
+    seen.add(resolved)
+    found.push({
+      kind,
+      rel: resolved,
+      name: baseName(resolved),
+      url: window.forge.assetUrl(vault, resolved),
+      extension: fileExtension(resolved).toUpperCase() || mediaKindLabel(kind)
+    })
+  }
+
+  return found
 }
 
 function unresolvedLinks(path: string, files: string[]): string[] {
@@ -189,6 +304,75 @@ function unresolvedLinks(path: string, files: string[]): string[] {
   if (!meta) return []
   return Array.from(new Set(meta.links.filter((target) => !resolveLink(target, files)))).sort((a, b) =>
     a.localeCompare(b)
+  )
+}
+
+function taskItems(content: string): TaskItem[] {
+  return content
+    .split('\n')
+    .map((line, index) => {
+      const match = /^(\s*)[-*+]\s+\[([ xX])\]\s+(.+)$/.exec(line)
+      if (!match) return null
+      return {
+        lineNumber: index,
+        text: match[3].trim(),
+        done: match[2].toLowerCase() === 'x'
+      }
+    })
+    .filter((item): item is TaskItem => Boolean(item))
+}
+
+function TaskSummary({ path }: { path: string }): React.JSX.Element | null {
+  const contentVersion = useStore((s) => s.contentVersion)
+  const content = noteContents.get(path) ?? ''
+  const tasks = useMemo(() => taskItems(content), [content, contentVersion])
+  const open = tasks.filter((task) => !task.done)
+  const done = tasks.length - open.length
+
+  if (tasks.length === 0) return null
+
+  return (
+    <div className="panel-section extension-widget">
+      <div className="panel-heading">
+        <span className="extension-widget-heading">
+          <SquareCheckBig size={13} />
+          Tasks
+        </span>
+        <span className="panel-count">{tasks.length}</span>
+      </div>
+      <div className="extension-stats-grid extension-task-grid">
+        <span>
+          <strong>{open.length.toLocaleString()}</strong>
+          open
+        </span>
+        <span>
+          <strong>{done.toLocaleString()}</strong>
+          done
+        </span>
+        <span>
+          <strong>{Math.round((done / tasks.length) * 100).toLocaleString()}%</strong>
+          complete
+        </span>
+      </div>
+      {open.length > 0 && (
+        <div className="extension-task-list">
+          {open.slice(0, 6).map((task) => (
+            <button
+              key={`${task.lineNumber}:${task.text}`}
+              type="button"
+              onClick={() => {
+                const view = getActiveEditor()
+                if (view) scrollToLine(view, task.lineNumber)
+              }}
+            >
+              <span>Line {task.lineNumber + 1}</span>
+              <strong>{task.text}</strong>
+            </button>
+          ))}
+          {open.length > 6 && <div className="extension-task-more">+{open.length - 6} more open tasks</div>}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -410,6 +594,87 @@ function Properties({ path }: { path: string }): React.JSX.Element | null {
   )
 }
 
+function MediaGalleryPreview({ item }: { item: MediaAttachment }): React.JSX.Element | null {
+  if (item.kind === 'image' && canPreviewImage(item.rel)) {
+    return <img className="media-gallery-preview" src={item.url} alt={item.name} loading="lazy" />
+  }
+
+  if (item.kind === 'video') {
+    return <video className="media-gallery-preview" controls preload="metadata" playsInline src={item.url} />
+  }
+
+  if (item.kind === 'pdf') {
+    return (
+      <object className="media-gallery-pdf" data={item.url} type="application/pdf" title={item.name}>
+        <a href={item.url}>Open PDF</a>
+      </object>
+    )
+  }
+
+  return null
+}
+
+function MediaGallery({ path }: { path: string }): React.JSX.Element | null {
+  const files = useStore((s) => s.files)
+  const vault = useStore((s) => s.vault)
+  const contentVersion = useStore((s) => s.contentVersion)
+  const content = noteContents.get(path) ?? ''
+  const mediaFiles = useMemo(
+    () => (vault ? linkedMediaAttachments(content, files, vault) : []),
+    [content, files, vault, contentVersion]
+  )
+
+  if (!vault || mediaFiles.length === 0) return null
+
+  const counts: Record<MediaKind, number> = { image: 0, video: 0, audio: 0, pdf: 0, file: 0 }
+  for (const item of mediaFiles) counts[item.kind] += 1
+
+  const countItems = [
+    { kind: 'image' as const, label: counts.image === 1 ? 'image' : 'images', count: counts.image },
+    { kind: 'video' as const, label: counts.video === 1 ? 'video' : 'videos', count: counts.video },
+    { kind: 'audio' as const, label: 'audio', count: counts.audio },
+    { kind: 'pdf' as const, label: counts.pdf === 1 ? 'PDF' : 'PDFs', count: counts.pdf },
+    { kind: 'file' as const, label: counts.file === 1 ? 'file' : 'files', count: counts.file }
+  ].filter((item) => item.count > 0)
+  const visibleMedia = mediaFiles.slice(0, 6)
+
+  return (
+    <div className="panel-section extension-widget media-gallery">
+      <div className="panel-heading">
+        <span className="extension-widget-heading">
+          <FileArchive size={13} />
+          Media gallery
+        </span>
+        <span className="panel-count">{mediaFiles.length}</span>
+      </div>
+      <div className="media-gallery-counts" aria-label="Linked media counts">
+        {countItems.map((item) => (
+          <span key={item.kind}>
+            <strong>{item.count.toLocaleString()}</strong>
+            {item.label}
+          </span>
+        ))}
+      </div>
+      <div className="media-gallery-list">
+        {visibleMedia.map((item) => (
+          <div className={`media-gallery-item is-${item.kind}`} key={item.rel}>
+            <MediaGalleryPreview item={item} />
+            <div className="media-gallery-caption">
+              <MediaIcon kind={item.kind} />
+              <span>{item.name}</span>
+              <small>{item.extension}</small>
+            </div>
+            {item.kind === 'audio' && <audio controls preload="metadata" src={item.url} />}
+          </div>
+        ))}
+        {mediaFiles.length > visibleMedia.length && (
+          <div className="media-gallery-more">+{mediaFiles.length - visibleMedia.length} more linked files</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function AudioAttachments({ path }: { path: string }): React.JSX.Element | null {
   const files = useStore((s) => s.files)
   const vault = useStore((s) => s.vault)
@@ -509,8 +774,10 @@ export default function SidebarRight(): React.JSX.Element {
       {path ? (
         <div className="sidebar-content panel-scroll">
           <ExtensionWidgets path={path} runtime={runtime} widgets={widgets} />
+          {widgets.has('tasks') && <TaskSummary path={path} />}
           {widgets.has('link-health') && <LinkHealth path={path} />}
           {widgets.has('publish-checklist') && <PublishChecklist path={path} />}
+          {widgets.has('media-gallery') && <MediaGallery path={path} />}
           {legacyWidgetEnabled(runtime, widgets, 'audio') && <AudioAttachments path={path} />}
           {legacyWidgetEnabled(runtime, widgets, 'frontmatter') && <Properties path={path} />}
           {legacyWidgetEnabled(runtime, widgets, 'outline') && <Outline path={path} />}

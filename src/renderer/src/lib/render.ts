@@ -8,6 +8,39 @@ interface RenderContext {
 }
 
 let ctx: RenderContext = { vault: '', files: [] }
+let headingSlugs = new Set<string>()
+
+function stripInlineMarkdown(value: string): string {
+  return String(value ?? '')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[*_~]/g, '')
+    .trim()
+}
+
+function slugify(value: string, fallback = 'section'): string {
+  const slug = stripInlineMarkdown(value)
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^\p{Letter}\p{Number}\s/_-]/gu, '')
+    .replace(/[\/_\s]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+  return slug || fallback
+}
+
+function uniqueSlug(value: string, fallback: string): string {
+  const base = slugify(value, fallback)
+  let slug = base
+  let index = 2
+  while (headingSlugs.has(slug)) {
+    slug = `${base}-${index}`
+    index += 1
+  }
+  headingSlugs.add(slug)
+  return slug
+}
 
 const wikilinkExt: TokenizerAndRendererExtension = {
   name: 'wikilink',
@@ -63,6 +96,11 @@ marked.use({
   breaks: false,
   extensions: [wikilinkExt, hashtagExt],
   renderer: {
+    heading({ tokens, depth, text }) {
+      const body = this.parser.parseInline(tokens)
+      const slug = uniqueSlug(text ?? body, `heading-${headingSlugs.size + 1}`)
+      return `<h${depth} id="${escapeHtml(slug)}">${body}<a class="heading-anchor" href="#${escapeHtml(slug)}" aria-label="Link to this heading">#</a></h${depth}>`
+    },
     image({ href, title, text }) {
       let src = href ?? ''
       if (!/^(https?:|data:|forge-asset:)/.test(src)) {
@@ -74,7 +112,11 @@ marked.use({
     link({ href, title, tokens }) {
       const body = this.parser.parseInline(tokens)
       const t = title ? ` title="${escapeHtml(title)}"` : ''
-      return `<a class="external-link" href="${escapeHtml(href ?? '')}" target="_blank" rel="noreferrer"${t}>${body}</a>`
+      const target = href ?? ''
+      if (target.startsWith('#')) {
+        return `<a class="heading-link" href="${escapeHtml(target)}"${t}>${body}</a>`
+      }
+      return `<a class="external-link" href="${escapeHtml(target)}" target="_blank" rel="noreferrer"${t}>${body}</a>`
     }
   }
 })
@@ -85,9 +127,10 @@ function escapeHtml(text: string): string {
 
 export function renderMarkdown(content: string, vault: string, files: string[]): string {
   ctx = { vault, files }
+  headingSlugs = new Set<string>()
   const html = marked.parse(content, { async: false })
   return DOMPurify.sanitize(html, {
-    ADD_ATTR: ['data-target', 'target', 'controls', 'preload', 'playsinline'],
+    ADD_ATTR: ['data-target', 'target', 'controls', 'preload', 'playsinline', 'id', 'aria-label'],
     ADD_TAGS: ['audio', 'video'],
     ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|forge-asset|data|file):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i
   })

@@ -37,6 +37,8 @@ Commands:
                                         Create a Markdown template
   create-from-template <template> <path> [--title <title>] [--folder <path>] [--vars <json>] [--var <key=value>] [--overwrite]
                                         Create a note from a template
+  seed-templates [--kinds <kind,...>] [--folder <path>] [--overwrite] [--json]
+                                        Copy bundled starter templates into the selected vault
   create-folder <path>                  Create a folder
   move <from> <to>                      Move or rename a file or folder
   search <query> [--limit <n>] [--json] Search Markdown filenames and contents
@@ -68,6 +70,7 @@ Template variables:
 
 Catalog and extension examples:
   forge built-in-templates --json
+  forge --vault /path/to/vault seed-templates --kinds daily,meeting,agentTask --json
   forge built-in-extensions --json
   forge validate-extension examples/extensions --recursive --json
 `
@@ -394,6 +397,31 @@ function operationTemplateVariables(op = {}) {
     throw new Error('Template variables must be an object.')
   }
   return normalizeTemplateVariables(variables)
+}
+
+function parseSeedTemplateKinds(value, { explicit = false } = {}) {
+  const kinds = []
+  for (const source of asArray(value)) {
+    if (source === true) throw new Error('--kinds expects a comma-separated list of template kinds.')
+    kinds.push(
+      ...String(source)
+        .split(',')
+        .map((kind) => kind.trim())
+        .filter(Boolean)
+    )
+  }
+
+  if (explicit && kinds.length === 0) {
+    throw new Error('--kinds expects at least one template kind.')
+  }
+
+  const seen = new Set()
+  return kinds.filter((kind) => {
+    const key = kind.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 async function walkVault(vault) {
@@ -772,6 +800,72 @@ function builtInTemplatesCommand(options = {}) {
   return builtInTemplateCatalog({ includeContent: Boolean(options.content) })
 }
 
+async function seedTemplatesCommand(vault, options = {}) {
+  const catalog = builtInTemplateCatalog({ includeContent: true })
+  const explicitKinds = options.kinds != null || options.kind != null
+  const requestedKinds = parseSeedTemplateKinds(options.kinds ?? options.kind, { explicit: explicitKinds })
+  const kindsByLower = new Map(catalog.templates.map((template) => [template.kind.toLowerCase(), template.kind]))
+  const unknownKinds = requestedKinds.filter((kind) => !kindsByLower.has(kind.toLowerCase()))
+  if (unknownKinds.length) {
+    throw new Error(
+      `Unknown template kind(s): ${unknownKinds.join(', ')}. Available kinds: ${catalog.templates
+        .map((template) => template.kind)
+        .join(', ')}`
+    )
+  }
+
+  const requested = new Set(requestedKinds.map((kind) => kind.toLowerCase()))
+  const selectedTemplates = requested.size
+    ? catalog.templates.filter((template) => requested.has(template.kind.toLowerCase()))
+    : catalog.templates
+  const folder = await templatesFolder(options)
+  const overwrite = Boolean(options.overwrite)
+  const templates = []
+
+  for (const template of selectedTemplates) {
+    const targetName = normalizeDocPath(safeRel(template.file))
+    const rel = folder ? path.posix.join(folder, targetName) : targetName
+    const { clean, abs } = safeJoin(vault, rel)
+    const stat = await fs.stat(abs).catch((error) => {
+      if (error?.code === 'ENOENT') return null
+      throw error
+    })
+    if (stat && !stat.isFile()) throw new Error(`Template target is not a file: ${clean}`)
+
+    if (stat && !overwrite) {
+      templates.push({
+        kind: template.kind,
+        label: template.label,
+        path: clean,
+        status: 'skipped',
+        bytes: stat.size
+      })
+      continue
+    }
+
+    const content = String(template.content ?? '')
+    await fs.mkdir(path.dirname(abs), { recursive: true })
+    await fs.writeFile(abs, content, 'utf8')
+    templates.push({
+      kind: template.kind,
+      label: template.label,
+      path: clean,
+      status: stat ? 'overwritten' : 'created',
+      bytes: Buffer.byteLength(content)
+    })
+  }
+
+  return {
+    vault,
+    templatesFolder: folder || '(vault root)',
+    count: templates.length,
+    created: templates.filter((template) => template.status === 'created').length,
+    overwritten: templates.filter((template) => template.status === 'overwritten').length,
+    skipped: templates.filter((template) => template.status === 'skipped').length,
+    templates
+  }
+}
+
 function builtInExtensionsCommand() {
   return builtInExtensionCatalog()
 }
@@ -787,6 +881,15 @@ function formatBuiltInTemplatesText(catalog) {
     const summary = `${template.kind}\t${template.file}\t${template.label}\tfields: ${fields}`
     return template.content ? `${summary}\n${template.content}` : summary
   }).join('\n\n')
+}
+
+function formatSeedTemplatesText(result) {
+  return [
+    `Templates folder: ${result.templatesFolder}`,
+    `Created: ${result.created}; Overwritten: ${result.overwritten}; Skipped: ${result.skipped}`,
+    '',
+    ...result.templates.map((template) => `${template.status}\t${template.kind}\t${template.path}`)
+  ].join('\n')
 }
 
 function formatBuiltInExtensionsText(catalog) {
@@ -860,6 +963,15 @@ async function runOperation(vault, op) {
         folder: op.folder ?? op.templatesFolder,
         overwrite: Boolean(op.overwrite),
         variables: operationTemplateVariables(op)
+      })
+    case 'seedTemplates':
+    case 'seed-templates':
+    case 'seedStarterTemplates':
+    case 'seed-starter-templates':
+      return seedTemplatesCommand(vault, {
+        folder: op.folder ?? op.templatesFolder,
+        kinds: op.kinds ?? op.kind,
+        overwrite: Boolean(op.overwrite)
       })
     case 'createFolder':
     case 'create-folder':
@@ -1025,6 +1137,17 @@ async function main() {
           { json }
         )
         break
+      case 'seed-templates':
+      case 'seed-starter-templates':
+        printResult(
+          await seedTemplatesCommand(vault, {
+            folder: options.folder ?? options.templatesFolder ?? options['templates-folder'],
+            kinds: options.kinds ?? options.kind,
+            overwrite: Boolean(options.overwrite)
+          }),
+          { json, text: formatSeedTemplatesText }
+        )
+        break
       case 'create-folder':
       case 'ensure-folder':
         printResult(await createFolderCommand(vault, positional[0]), { json })
@@ -1111,6 +1234,7 @@ export {
   resolveVault,
   runOperation,
   searchCommand,
+  seedTemplatesCommand,
   templatesCommand,
   writeCommand
 }

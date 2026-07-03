@@ -52,7 +52,14 @@ export interface CommandContribution extends BaseContribution {
 
 export interface MarkdownTransformContribution extends BaseContribution {
   kind: 'markdown-transform'
-  transform: 'append-template' | 'normalize-headings' | 'wrap-selection'
+  transform:
+    | 'append-template'
+    | 'normalize-headings'
+    | 'wrap-selection'
+    | 'lines-to-checklist'
+    | 'sort-lines'
+    | 'callout'
+    | 'insert-table-of-contents'
 }
 
 export interface MetadataProviderContribution extends BaseContribution {
@@ -71,6 +78,8 @@ export interface SidebarWidgetContribution extends BaseContribution {
     | 'backlinks'
     | 'unlinked-mentions'
     | 'tags'
+    | 'tasks'
+    | 'media-gallery'
     | 'link-health'
     | 'publish-checklist'
 }

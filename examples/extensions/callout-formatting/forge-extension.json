@@ -1,0 +1,44 @@
+{
+  "manifestVersion": 1,
+  "id": "example.callout-formatting",
+  "name": "callout-formatting",
+  "displayName": "Callout Formatting Example",
+  "description": "Example declarative extension that exposes Forge's safe callout Markdown transform without running arbitrary code.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["editing", "organization"],
+  "keywords": ["callout", "formatting", "markdown"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [{ "id": "forge.markdown.transforms", "label": "Markdown transforms" }],
+  "permissions": [
+    {
+      "kind": "vault:read",
+      "reason": "Reads selected Markdown text before wrapping it as a local callout."
+    },
+    {
+      "kind": "vault:write",
+      "reason": "Writes the callout-formatted Markdown back to the current note."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.callout-formatting.transform",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Wrap selection as callout",
+      "description": "Declares Forge's supported callout transform for selected Markdown.",
+      "transform": "callout"
+    }
+  ]
+}

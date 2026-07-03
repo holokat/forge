@@ -97,6 +97,26 @@ const BUILT_IN_RUNTIME_ROUTES: Record<
     implementation: 'CommandPalette.wrapSelection',
     status: 'wired'
   },
+  'forge.markdown-tools.lines-to-checklist': {
+    surface: 'editor-selection',
+    implementation: 'CommandPalette.linesToChecklist',
+    status: 'wired'
+  },
+  'forge.markdown-tools.sort-lines': {
+    surface: 'editor-selection',
+    implementation: 'CommandPalette.sortSelectedLines',
+    status: 'wired'
+  },
+  'forge.markdown-tools.callout': {
+    surface: 'editor-selection',
+    implementation: 'CommandPalette.wrapSelectionAsCallout',
+    status: 'wired'
+  },
+  'forge.markdown-tools.insert-table-of-contents': {
+    surface: 'editor-selection',
+    implementation: 'CommandPalette.insertGeneratedTableOfContents',
+    status: 'wired'
+  },
   'forge.graph-insights.view': {
     surface: 'workspace-view',
     implementation: 'store.openGraph',
@@ -137,6 +157,16 @@ const BUILT_IN_RUNTIME_ROUTES: Record<
     implementation: 'SidebarRight.Tags',
     status: 'wired'
   },
+  'forge.task-summary.metadata': {
+    surface: 'right-sidebar',
+    implementation: 'SidebarRight.taskItems',
+    status: 'wired'
+  },
+  'forge.task-summary.sidebar': {
+    surface: 'right-sidebar',
+    implementation: 'SidebarRight.TaskSummary',
+    status: 'wired'
+  },
   'forge.outline-toc.metadata': {
     surface: 'right-sidebar',
     implementation: 'parseNote.headings',
@@ -170,6 +200,11 @@ const BUILT_IN_RUNTIME_ROUTES: Record<
   'forge.media-player.sidebar': {
     surface: 'right-sidebar',
     implementation: 'SidebarRight.AudioAttachments',
+    status: 'wired'
+  },
+  'forge.media-player.gallery': {
+    surface: 'right-sidebar',
+    implementation: 'SidebarRight.MediaGallery',
     status: 'wired'
   }
 }

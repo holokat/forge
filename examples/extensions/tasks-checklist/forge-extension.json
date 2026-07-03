@@ -1,0 +1,64 @@
+{
+  "manifestVersion": 1,
+  "id": "example.tasks-checklist",
+  "name": "tasks-checklist",
+  "displayName": "Tasks Checklist Example",
+  "description": "Example declarative extension that exposes Markdown task checklist metadata, a task sidebar widget, and a safe checklist transform without running arbitrary code.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["editing", "organization"],
+  "keywords": ["tasks", "checklist", "todo"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:read",
+      "reason": "Reads local Markdown task list items from notes already available to Forge."
+    },
+    {
+      "kind": "vault:write",
+      "reason": "Writes a bounded checklist transform back to the current note when requested."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.tasks-checklist.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Task checklist metadata",
+      "description": "Declares task item, open task, completed task, and completion ratio metadata for local notes.",
+      "fields": ["tasks", "openTasks", "completedTasks", "taskCompletionPercent"]
+    },
+    {
+      "id": "example.tasks-checklist.sidebar",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Task summary",
+      "description": "Declares Forge's supported local task summary sidebar widget.",
+      "widget": "tasks"
+    },
+    {
+      "id": "example.tasks-checklist.lines-to-checklist",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Convert lines to checklist",
+      "description": "Declares the supported checklist transform for selected Markdown lines.",
+      "transform": "lines-to-checklist"
+    }
+  ]
+}

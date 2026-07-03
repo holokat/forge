@@ -35,3 +35,23 @@ This checklist tracks the first practical wave of Obsidian-like Forge features t
 - [x] Add signed-registry validation and guarded remote registry install UI.
 - [x] Add practical local built-ins for backlinks, unresolved links, tag index, outline/table-of-contents, publish checklist, and frontmatter inspection.
 - [x] Add registry examples for link health, tag/outline metadata, publish checklists, and frontmatter inspection.
+
+## Wave 4: Agent and Knowledge Work Templates
+
+- [x] Add weekly review, source/literature note, and knowledge map/MOC starter templates.
+- [x] Add sprint plan, support ticket, experiment log, content outline, and interview notes starter templates.
+- [x] Mirror the new starter templates in the agent-facing catalog so CLI and MCP users can inspect their fields.
+- [x] Add callout library/snippets and agent review/QA starter templates.
+
+## Wave 4: Declarative Extension Examples
+
+- [x] Add a local task checklist example with task metadata, the tasks sidebar widget, and the `lines-to-checklist` transform.
+- [x] Add a table-of-contents insertion example using current heading metadata and the supported `insert-table-of-contents` transform.
+- [x] Add a callout formatting example using the supported `callout` Markdown transform.
+- [x] Add a local media attachments example using attachment metadata and the supported media gallery sidebar widget.
+- [x] Add a first-class tasks sidebar widget contribution value and a validated `lines-to-checklist` Markdown transform.
+- [x] Add a first-class callout formatting transform with callout type/title prompts.
+- [x] Add a sort-lines Markdown transform for selected Markdown cleanup.
+- [x] Add a first-class generated table-of-contents insertion transform instead of relying on generic template insertion.
+- [x] Add callout style presets and reusable callout templates on top of the first-class callout transform.
+- [x] Add image, video, PDF, and mixed-media gallery widget contribution values for local attachments.

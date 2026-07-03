@@ -1,0 +1,51 @@
+{
+  "manifestVersion": 1,
+  "id": "example.media-attachments",
+  "name": "media-attachments",
+  "displayName": "Media Attachments Example",
+  "description": "Example declarative extension that exposes linked local attachment metadata and the supported media gallery sidebar widget.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["capture", "editing", "organization"],
+  "keywords": ["attachments", "media", "audio", "gallery"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:read",
+      "reason": "Reads linked local attachments referenced from Markdown notes."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.media-attachments.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Linked attachment metadata",
+      "description": "Declares image, audio, video, and document attachment fields for local notes.",
+      "fields": ["linkedAttachments", "imageAttachments", "audioAttachments", "videoAttachments", "documentAttachments"]
+    },
+    {
+      "id": "example.media-attachments.gallery",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Media gallery",
+      "description": "Declares Forge's supported local media gallery sidebar widget for linked images, video, audio, PDFs, and common files.",
+      "widget": "media-gallery"
+    }
+  ]
+}

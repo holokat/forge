@@ -163,7 +163,7 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
     permissions: [
       {
         kind: 'vault:read',
-        reason: 'Reads selected Markdown text before applying a local transform.'
+        reason: 'Reads selected Markdown text and active-note headings before applying local transforms.'
       },
       {
         kind: 'vault:write',
@@ -184,8 +184,38 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         extensionPoint: 'forge.markdown.transforms',
         label: 'Wrap selection',
         transform: 'wrap-selection'
+      },
+      {
+        id: 'forge.markdown-tools.lines-to-checklist',
+        kind: 'markdown-transform',
+        extensionPoint: 'forge.markdown.transforms',
+        label: 'Convert lines to checklist',
+        transform: 'lines-to-checklist'
+      },
+      {
+        id: 'forge.markdown-tools.sort-lines',
+        kind: 'markdown-transform',
+        extensionPoint: 'forge.markdown.transforms',
+        label: 'Sort selected lines',
+        transform: 'sort-lines'
+      },
+      {
+        id: 'forge.markdown-tools.callout',
+        kind: 'markdown-transform',
+        extensionPoint: 'forge.markdown.transforms',
+        label: 'Wrap selection as callout',
+        transform: 'callout'
+      },
+      {
+        id: 'forge.markdown-tools.insert-table-of-contents',
+        kind: 'markdown-transform',
+        extensionPoint: 'forge.markdown.transforms',
+        label: 'Insert generated table of contents',
+        transform: 'insert-table-of-contents'
       }
-    ]
+    ],
+    defaultInstalled: true,
+    defaultEnabled: true
   },
   {
     manifestVersion: 1,
@@ -408,6 +438,49 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
   },
   {
     manifestVersion: 1,
+    id: 'forge.task-summary',
+    name: 'task-summary',
+    displayName: 'Task Summary',
+    description: 'Shows open, completed, and total Markdown checkbox tasks for the active note.',
+    version: '0.1.0',
+    publisher: 'Forge',
+    license: 'MIT',
+    repository: 'https://github.com/forge-notes/forge',
+    categories: ['editing', 'organization'],
+    keywords: ['tasks', 'checkboxes', 'todo', 'checklist'],
+    source: { kind: 'built-in', label: 'Bundled with Forge' },
+    runtime: declarativeRuntime,
+    extensionPoints: [
+      { id: 'forge.note.metadata', label: 'Note metadata' },
+      { id: 'forge.sidebar.widgets', label: 'Sidebar widgets' }
+    ],
+    permissions: [
+      {
+        kind: 'vault:read',
+        reason: 'Reads Markdown checkbox tasks already loaded from the active note.'
+      }
+    ],
+    contributes: [
+      {
+        id: 'forge.task-summary.metadata',
+        kind: 'metadata-provider',
+        extensionPoint: 'forge.note.metadata',
+        label: 'Task metadata',
+        fields: ['tasks', 'openTasks', 'completedTasks', 'taskCompletionPercent']
+      },
+      {
+        id: 'forge.task-summary.sidebar',
+        kind: 'sidebar-widget',
+        extensionPoint: 'forge.sidebar.widgets',
+        label: 'Task summary',
+        widget: 'tasks'
+      }
+    ],
+    defaultInstalled: true,
+    defaultEnabled: true
+  },
+  {
+    manifestVersion: 1,
     id: 'forge.publish-checklist',
     name: 'publish-checklist',
     displayName: 'Publish Checklist',
@@ -500,24 +573,31 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
     manifestVersion: 1,
     id: 'forge.media-player',
     name: 'media-player',
-    displayName: 'Media Player',
-    description: 'Shows playable linked audio attachments for local voice recordings and imported media.',
+    displayName: 'Media Gallery',
+    description: 'Shows linked local images, video, audio, PDFs, and common attachments from the active note.',
     version: '0.1.0',
     publisher: 'Forge',
     license: 'MIT',
     repository: 'https://github.com/forge-notes/forge',
-    categories: ['capture', 'editing'],
-    keywords: ['audio', 'recordings', 'attachments', 'voice'],
+    categories: ['capture', 'editing', 'organization'],
+    keywords: ['media', 'audio', 'recordings', 'attachments', 'voice', 'gallery'],
     source: { kind: 'built-in', label: 'Bundled with Forge' },
     runtime: declarativeRuntime,
     extensionPoints: [{ id: 'forge.sidebar.widgets', label: 'Sidebar widgets' }],
     permissions: [
       {
         kind: 'vault:read',
-        reason: 'Reads linked local audio attachments for playback.'
+        reason: 'Reads linked local attachments for local preview and playback.'
       }
     ],
     contributes: [
+      {
+        id: 'forge.media-player.gallery',
+        kind: 'sidebar-widget',
+        extensionPoint: 'forge.sidebar.widgets',
+        label: 'Media gallery',
+        widget: 'media-gallery'
+      },
       {
         id: 'forge.media-player.sidebar',
         kind: 'sidebar-widget',

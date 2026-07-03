@@ -55,7 +55,15 @@ const CONTRIBUTION_KINDS = new Set<ExtensionContributionKind>([
   'view'
 ])
 
-const MARKDOWN_TRANSFORMS = new Set(['append-template', 'normalize-headings', 'wrap-selection'])
+const MARKDOWN_TRANSFORMS = new Set([
+  'append-template',
+  'normalize-headings',
+  'wrap-selection',
+  'lines-to-checklist',
+  'sort-lines',
+  'callout',
+  'insert-table-of-contents'
+])
 const SIDEBAR_WIDGETS = new Set([
   'reading-stats',
   'daily-note',
@@ -65,6 +73,8 @@ const SIDEBAR_WIDGETS = new Set([
   'backlinks',
   'unlinked-mentions',
   'tags',
+  'tasks',
+  'media-gallery',
   'link-health',
   'publish-checklist'
 ])
