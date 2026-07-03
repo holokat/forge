@@ -10,6 +10,7 @@ Forge does not execute arbitrary third-party JavaScript. Extension manifests dec
 - Manifest and extension point types live in `src/renderer/src/extensions/manifest.ts`.
 - Runtime hook routing lives in `src/renderer/src/extensions/runtime.ts`.
 - Manifest and registry validation lives in `src/renderer/src/extensions/validation.ts`.
+- Agent-facing catalog reader and fallback data live in `scripts/lib/agent-catalog.mjs`.
 - User install and enable state is stored as `extensionSettings` in Forge settings.
 - Extensions do not execute arbitrary code yet.
 - Extensions do not get network access yet.
@@ -39,17 +40,48 @@ Enabled extensions are resolved into an `ExtensionRuntimeCatalog`:
 - `views`
 - `routes`
 
-Routes map a contribution to a Forge-owned implementation surface such as the command palette, editor selection transforms, note footer metadata, right sidebar widgets, or workspace views. Current bundled contributions are wired to visible app behavior. Future third-party contributions without an implemented route are treated as declared but not wired.
+Routes map a contribution to a Forge-owned implementation surface such as the command palette, editor selection transforms, note footer metadata, right sidebar widgets, or workspace views. Each route also includes `metadata` with the extension point, contribution description, permission kinds, source kind, and original declarative contribution. Current bundled contributions are wired to visible app behavior. Future third-party contributions without an implemented route are treated as declared but not wired.
 
 This keeps the marketplace honest: a manifest can be installed and enabled, but Forge still shows how many hooks are active and how many are wired to real app behavior.
+
+## Bundled Local Extensions
+
+Forge ships practical built-in manifests that describe local features without executing extension code:
+
+| Extension | Contributions | Local surfaces |
+| --- | --- | --- |
+| Daily Notes | command, sidebar widget | Command palette and Today sidebar widget |
+| Reading Stats | metadata provider, sidebar widget | Active-note counts and Reading stats sidebar widget |
+| Markdown Tools | Markdown transforms | Selection transforms in the command palette |
+| Graph Insights | view | Graph workspace view |
+| Backlinks | metadata provider, sidebar widget | Backlinks and unlinked mentions from the local index |
+| Link Health | metadata provider, sidebar widget | Unresolved wikilink metadata, local link counts, and broken-link checks |
+| Tag Index | metadata provider, sidebar widget | Active-note tags, tag search filters, and publish tag pages |
+| Outline and Table of Contents | metadata provider, sidebar widget | Parsed headings and clickable right-sidebar outline |
+| Publish Checklist | metadata provider, sidebar widget | Publish-page checklist metadata and static publishing readiness checks |
+| Frontmatter Inspector | metadata provider, sidebar widget | Parsed properties, aliases, and title metadata |
+| Media Player | sidebar widget | Linked local audio attachments for voice notes and imported media |
 
 ## Adding A Bundled Extension
 
 1. Add a manifest to `LOCAL_EXTENSION_MANIFESTS`.
 2. Keep `runtime.kind` as `declarative`.
 3. Declare only the permissions needed by the contribution.
-4. Add UI or command integration separately, gated by `enabledExtensions` or `extensionSettings`.
-5. Update this document when adding a new extension point.
+4. Keep the packaged registry resource and `scripts/lib/agent-catalog.mjs` fallback data current so agents can discover it from the CLI.
+5. Add UI or command integration separately, gated by `enabledExtensions` or `extensionSettings`.
+6. Update this document when adding a new extension point.
+
+Agents can list the bundled extension catalog without opening the app or selecting a vault:
+
+```bash
+forge built-in-extensions --json
+```
+
+From a source checkout:
+
+```bash
+npm run agent -- built-in-extensions --json
+```
 
 ## Local Folder Extension Manifests
 
@@ -97,10 +129,14 @@ Open-source contributors can prototype an extension in any folder with a `forge-
 Validate a manifest or folder before proposing it:
 
 ```bash
+npm run agent -- validate-extension examples/extensions/daily-notes
+npm run agent -- validate-extension examples/extensions --recursive --json
 npm run extensions:validate -- examples/extensions/daily-notes
 npm run extensions:validate -- examples/extensions --recursive
 npm run extensions:validate -- /path/to/forge-extension.json --json
 ```
+
+Current examples cover daily-note commands, reading stats, link health, tag/outline metadata, publish checklists, and frontmatter inspection.
 
 Validation checks:
 

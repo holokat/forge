@@ -1,0 +1,51 @@
+{
+  "manifestVersion": 1,
+  "id": "example.link-health",
+  "name": "link-health",
+  "displayName": "Link Health Example",
+  "description": "Example declarative extension that exposes unresolved wikilink metadata and a local link-health view without running code.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["navigation", "organization", "publishing"],
+  "keywords": ["wikilinks", "broken links", "unresolved links"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:metadata",
+      "reason": "Compares wikilinks with the local note index already built by Forge."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.link-health.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Unresolved link metadata",
+      "description": "Reports unresolved wikilinks and broken-link counts from the local vault index.",
+      "fields": ["resolvedLinks", "unresolvedLinks", "brokenLinkCount"]
+    },
+    {
+      "id": "example.link-health.sidebar",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Link health",
+      "description": "Declares a local link-health sidebar widget backed by Forge-owned vault metadata.",
+      "widget": "link-health"
+    }
+  ]
+}

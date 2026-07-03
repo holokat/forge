@@ -62,7 +62,17 @@ export interface MetadataProviderContribution extends BaseContribution {
 
 export interface SidebarWidgetContribution extends BaseContribution {
   kind: 'sidebar-widget'
-  widget: 'reading-stats' | 'daily-note' | 'backlink-health'
+  widget:
+    | 'reading-stats'
+    | 'daily-note'
+    | 'audio'
+    | 'frontmatter'
+    | 'outline'
+    | 'backlinks'
+    | 'unlinked-mentions'
+    | 'tags'
+    | 'link-health'
+    | 'publish-checklist'
 }
 
 export interface ViewContribution extends BaseContribution {

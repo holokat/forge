@@ -1,0 +1,49 @@
+{
+  "manifestVersion": 1,
+  "id": "example.frontmatter-inspector",
+  "name": "frontmatter-inspector",
+  "displayName": "Frontmatter Inspector Example",
+  "description": "Example declarative extension that exposes parsed frontmatter properties and aliases without running arbitrary code.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["editing", "organization"],
+  "keywords": ["frontmatter", "properties", "metadata"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:read",
+      "reason": "Reads frontmatter already parsed from local Markdown notes."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.frontmatter-inspector.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Frontmatter metadata",
+      "fields": ["frontmatterProperties", "aliases", "title"]
+    },
+    {
+      "id": "example.frontmatter-inspector.sidebar",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Properties",
+      "widget": "frontmatter"
+    }
+  ]
+}

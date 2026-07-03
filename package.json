@@ -92,8 +92,16 @@
         "to": "scripts/forge-publish.mjs"
       },
       {
+        "from": "scripts/validate-extension.mjs",
+        "to": "scripts/validate-extension.mjs"
+      },
+      {
         "from": "scripts/lib",
         "to": "scripts/lib"
+      },
+      {
+        "from": "src/renderer/src/extensions/registry.ts",
+        "to": "src/renderer/src/extensions/registry.ts"
       }
     ],
     "mac": {

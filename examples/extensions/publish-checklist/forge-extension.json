@@ -1,0 +1,51 @@
+{
+  "manifestVersion": 1,
+  "id": "example.publish-checklist",
+  "name": "publish-checklist",
+  "displayName": "Publish Checklist Example",
+  "description": "Example declarative extension that exposes local publishing readiness metadata and the built-in static publishing checklist surface.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["publishing", "organization"],
+  "keywords": ["publish", "checklist", "static site"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:read",
+      "reason": "Reads publish-page frontmatter and Markdown checklist items from local notes."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.publish-checklist.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Publishing checklist metadata",
+      "description": "Identifies publish status, slugs, checklist items, and readiness signals.",
+      "fields": ["publishStatus", "publishSlug", "publishChecklistItems", "publishReady"]
+    },
+    {
+      "id": "example.publish-checklist.sidebar",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Publish checklist",
+      "description": "Declares a local publish checklist sidebar widget backed by Forge's static publishing workflow.",
+      "widget": "publish-checklist"
+    }
+  ]
+}

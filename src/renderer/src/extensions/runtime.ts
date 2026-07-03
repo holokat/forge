@@ -4,6 +4,7 @@ import type {
   ExtensionContribution,
   ExtensionContributionKind,
   ExtensionManifest,
+  ExtensionPermissionKind,
   ExtensionRegistry,
   MarkdownTransformContribution,
   MetadataProviderContribution,
@@ -22,6 +23,14 @@ export type ExtensionRuntimeSurface =
   | 'workspace-view'
   | 'extension-api'
 
+export interface ExtensionRuntimeRouteMetadata {
+  extensionPoint: string
+  description?: string
+  permissionKinds: ExtensionPermissionKind[]
+  sourceKind: ExtensionManifest['source']['kind']
+  contribution: ExtensionContribution
+}
+
 export interface ExtensionRuntimeRoute {
   id: string
   extensionId: string
@@ -31,6 +40,7 @@ export interface ExtensionRuntimeRoute {
   surface: ExtensionRuntimeSurface
   implementation: string
   status: 'wired' | 'declared'
+  metadata: ExtensionRuntimeRouteMetadata
 }
 
 export interface ExtensionRuntimeManifest {
@@ -91,6 +101,76 @@ const BUILT_IN_RUNTIME_ROUTES: Record<
     surface: 'workspace-view',
     implementation: 'store.openGraph',
     status: 'wired'
+  },
+  'forge.backlinks.metadata': {
+    surface: 'right-sidebar',
+    implementation: 'store.backlinksFor',
+    status: 'wired'
+  },
+  'forge.backlinks.sidebar': {
+    surface: 'right-sidebar',
+    implementation: 'SidebarRight.Backlinks',
+    status: 'wired'
+  },
+  'forge.unlinked-mentions.sidebar': {
+    surface: 'right-sidebar',
+    implementation: 'SidebarRight.UnlinkedMentions',
+    status: 'wired'
+  },
+  'forge.link-health.metadata': {
+    surface: 'right-sidebar',
+    implementation: 'parseNote.links + resolveLink',
+    status: 'wired'
+  },
+  'forge.link-health.sidebar': {
+    surface: 'right-sidebar',
+    implementation: 'SidebarRight.LinkHealth',
+    status: 'wired'
+  },
+  'forge.tag-index.metadata': {
+    surface: 'right-sidebar',
+    implementation: 'parseNote.tags',
+    status: 'wired'
+  },
+  'forge.tag-index.sidebar': {
+    surface: 'right-sidebar',
+    implementation: 'SidebarRight.Tags',
+    status: 'wired'
+  },
+  'forge.outline-toc.metadata': {
+    surface: 'right-sidebar',
+    implementation: 'parseNote.headings',
+    status: 'wired'
+  },
+  'forge.outline-toc.sidebar': {
+    surface: 'right-sidebar',
+    implementation: 'SidebarRight.Outline',
+    status: 'wired'
+  },
+  'forge.publish-checklist.metadata': {
+    surface: 'right-sidebar',
+    implementation: 'parseNote.headings + parseFrontmatter.properties + resolveLink',
+    status: 'wired'
+  },
+  'forge.publish-checklist.sidebar': {
+    surface: 'right-sidebar',
+    implementation: 'SidebarRight.PublishChecklist',
+    status: 'wired'
+  },
+  'forge.frontmatter-inspector.metadata': {
+    surface: 'right-sidebar',
+    implementation: 'parseFrontmatter.properties',
+    status: 'wired'
+  },
+  'forge.frontmatter-inspector.sidebar': {
+    surface: 'right-sidebar',
+    implementation: 'SidebarRight.Properties',
+    status: 'wired'
+  },
+  'forge.media-player.sidebar': {
+    surface: 'right-sidebar',
+    implementation: 'SidebarRight.AudioAttachments',
+    status: 'wired'
   }
 }
 
@@ -107,6 +187,13 @@ function routeForContribution(manifest: ExtensionManifest, contribution: Extensi
     contributionId: contribution.id,
     kind: contribution.kind,
     label: contribution.label,
+    metadata: {
+      extensionPoint: contribution.extensionPoint,
+      description: contribution.description,
+      permissionKinds: manifest.permissions.map((permission) => permission.kind),
+      sourceKind: manifest.source.kind,
+      contribution
+    },
     ...route
   }
 }

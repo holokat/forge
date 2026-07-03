@@ -1,14 +1,466 @@
-import type { ExtensionManifest, ExtensionPointDefinition, ExtensionRegistry, ExtensionRuntimePolicy } from './manifest'
-import { formatExtensionIssue, validateExtensionRegistry } from './validation'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const declarativeRuntime: ExtensionRuntimePolicy = {
+const builtInTemplateVariables = ['title', 'date', 'time', 'datetime', 'vault', 'template', 'folder']
+const builtInVariableSet = new Set(builtInTemplateVariables)
+const lines = (...items) => items.join('\n')
+
+export const BUILT_IN_STARTER_TEMPLATES = [
+  {
+    kind: 'daily',
+    label: 'Daily',
+    detail: 'Date-based planning',
+    file: 'Daily.md',
+    content: lines(
+      '---',
+      'date: {{date}}',
+      'tags: [daily]',
+      '---',
+      '',
+      '# {{date}}',
+      '',
+      '## Focus',
+      '{{prompt:Focus}}',
+      '',
+      '## Schedule',
+      '',
+      '## Notes',
+      '',
+      '## Tasks',
+      ''
+    )
+  },
+  {
+    kind: 'meeting',
+    label: 'Meeting notes',
+    detail: 'Agenda, decisions, action items',
+    file: 'Meeting Notes.md',
+    content: lines(
+      '---',
+      'type: meeting',
+      'date: {{date}}',
+      'tags: [meeting]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Attendees',
+      '{{prompt:Attendees}}',
+      '',
+      '## Agenda',
+      '{{prompt:Agenda}}',
+      '',
+      '## Notes',
+      '',
+      '## Decisions',
+      '',
+      '## Action items',
+      ''
+    )
+  },
+  {
+    kind: 'project',
+    label: 'Project plan',
+    detail: 'Scope, milestones, risks',
+    file: 'Project Plan.md',
+    content: lines(
+      '---',
+      'type: project',
+      'status: {{select:Status|Planning,Active,Paused,Done}}',
+      'tags: [project]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Goal',
+      '{{prompt:Goal}}',
+      '',
+      '## Scope',
+      '',
+      '## Milestones',
+      '',
+      '## Open questions',
+      ''
+    )
+  },
+  {
+    kind: 'person',
+    label: 'Person',
+    detail: 'Relationship notes',
+    file: 'Person.md',
+    content: lines(
+      '---',
+      'type: person',
+      'tags: [person]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Role',
+      '{{prompt:Role}}',
+      '',
+      '## Context',
+      '',
+      '## Notes',
+      '',
+      '## Follow-ups',
+      ''
+    )
+  },
+  {
+    kind: 'research',
+    label: 'Research brief',
+    detail: 'Questions, sources, synthesis',
+    file: 'Research Brief.md',
+    content: lines(
+      '---',
+      'type: research',
+      'created: {{date}}',
+      'tags: [research]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Question',
+      '{{prompt:Research question}}',
+      '',
+      '## Sources',
+      '',
+      '## Findings',
+      '',
+      '## Synthesis',
+      ''
+    )
+  },
+  {
+    kind: 'agentTask',
+    label: 'Agent task',
+    detail: 'Precise AI work briefs',
+    file: 'Agent Task Brief.md',
+    content: lines(
+      '---',
+      'type: agent-task',
+      'status: {{select:Status|Ready,In progress,Blocked,Done}}',
+      'created: {{date}}',
+      'tags: [agent, task]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Objective',
+      '{{prompt:Objective}}',
+      '',
+      '## Context',
+      '- Vault: {{vault}}',
+      '- Folder: {{folder}}',
+      '- Related notes: {{prompt:Related notes}}',
+      '',
+      '## Constraints',
+      '- Preserve existing user changes.',
+      '- Keep paths relative to the vault.',
+      '- Prefer small, reviewable edits.',
+      '',
+      '## Checklist',
+      '- [ ] Inspect current state',
+      '- [ ] Implement the requested change',
+      '- [ ] Verify behavior',
+      '- [ ] Summarize outcome',
+      '',
+      '## Result',
+      ''
+    )
+  },
+  {
+    kind: 'seoBrief',
+    label: 'SEO brief',
+    detail: 'Search-focused content planning',
+    file: 'SEO Content Brief.md',
+    content: lines(
+      '---',
+      'type: seo-brief',
+      'status: {{select:Status|Brief,Drafting,Review,Published}}',
+      'created: {{date}}',
+      'tags: [seo, content]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Search Target',
+      '- Primary keyword: {{prompt:Primary keyword}}',
+      '- Secondary keywords: {{prompt:Secondary keywords}}',
+      '- Audience: {{prompt:Audience}}',
+      '- Search intent: {{select:Search intent|Informational,Commercial,Transactional,Navigational}}',
+      '',
+      '## Angle',
+      '{{prompt:Angle}}',
+      '',
+      '## Outline',
+      '- H1: {{title}}',
+      '- H2:',
+      '- H2:',
+      '- H2:',
+      '',
+      '## Internal Links',
+      '- ',
+      '',
+      '## Notes for Agent',
+      '- Preserve factual uncertainty.',
+      '- Suggest sources before drafting claims.',
+      '- Keep headings scannable.',
+      ''
+    )
+  },
+  {
+    kind: 'productSpec',
+    label: 'PRD',
+    detail: 'Requirements and launch criteria',
+    file: 'PRD.md',
+    content: lines(
+      '---',
+      'type: product-spec',
+      'status: {{select:Status|Draft,Ready,Building,Shipped}}',
+      'created: {{date}}',
+      'tags: [product, spec]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Problem',
+      '{{prompt:Problem}}',
+      '',
+      '## User',
+      '{{prompt:User}}',
+      '',
+      '## Goals',
+      '- ',
+      '',
+      '## Non-goals',
+      '- ',
+      '',
+      '## Requirements',
+      '- ',
+      '',
+      '## Open Questions',
+      '- ',
+      '',
+      '## Launch Notes',
+      ''
+    )
+  },
+  {
+    kind: 'bugReport',
+    label: 'Bug report',
+    detail: 'Repro, impact, fix notes',
+    file: 'Bug Report.md',
+    content: lines(
+      '---',
+      'type: bug',
+      "status: {{select:Status|New,Triaged,Fixing,Fixed,Won't fix}}",
+      'severity: {{select:Severity|Low,Medium,High,Critical}}',
+      'created: {{date}}',
+      'tags: [bug]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Summary',
+      '{{prompt:Summary}}',
+      '',
+      '## Environment',
+      '{{prompt:Environment}}',
+      '',
+      '## Steps to Reproduce',
+      '1. ',
+      '2. ',
+      '3. ',
+      '',
+      '## Expected',
+      '',
+      '## Actual',
+      '',
+      '## Notes / Fix',
+      ''
+    )
+  },
+  {
+    kind: 'decision',
+    label: 'Decision record',
+    detail: 'Options and rationale',
+    file: 'Decision Record.md',
+    content: lines(
+      '---',
+      'type: decision',
+      'status: {{select:Status|Proposed,Accepted,Rejected,Revisited}}',
+      'date: {{date}}',
+      'tags: [decision]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Decision',
+      '{{prompt:Decision}}',
+      '',
+      '## Context',
+      '',
+      '## Options',
+      '- Option A:',
+      '- Option B:',
+      '',
+      '## Rationale',
+      '',
+      '## Consequences',
+      '- ',
+      ''
+    )
+  },
+  {
+    kind: 'releaseNotes',
+    label: 'Release notes',
+    detail: 'User-facing changes',
+    file: 'Release Notes.md',
+    content: lines(
+      '---',
+      'type: release-notes',
+      'version: {{prompt:Version}}',
+      'date: {{date}}',
+      'tags: [release]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Highlights',
+      '- ',
+      '',
+      '## Added',
+      '- ',
+      '',
+      '## Improved',
+      '- ',
+      '',
+      '## Fixed',
+      '- ',
+      '',
+      '## Notes',
+      ''
+    )
+  },
+  {
+    kind: 'changelog',
+    label: 'Changelog entry',
+    detail: 'Forge-style product entries',
+    file: 'Changelog Entry.md',
+    content: lines(
+      '---',
+      'type: changelog',
+      'date: {{datetime}}',
+      'change_type: {{select:Change type|Feature,Improvement,Fix,Docs,Internal}}',
+      'tags: [forge, changelog]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Summary',
+      '{{prompt:Summary}}',
+      '',
+      '## User Impact',
+      '{{prompt:User impact}}',
+      '',
+      '## Website Copy Notes',
+      '',
+      '## Implementation Notes',
+      ''
+    )
+  },
+  {
+    kind: 'transcriptCleanup',
+    label: 'Transcript cleanup',
+    detail: 'Raw transcript to polished notes',
+    file: 'Transcript Cleanup.md',
+    content: lines(
+      '---',
+      'type: transcript-cleanup',
+      'status: {{select:Status|Raw,Cleaning,Reviewed,Published}}',
+      'source: {{prompt:Source recording or note}}',
+      'created: {{date}}',
+      'tags: [transcript, voice]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Cleanup Instructions',
+      '{{prompt:Cleanup instructions}}',
+      '',
+      '## Speaker Notes',
+      '{{prompt:Speaker names}}',
+      '',
+      '## Raw Transcript',
+      '',
+      '## Cleaned Transcript',
+      '',
+      '## Summary',
+      '- ',
+      '',
+      '## Key Points',
+      '- ',
+      '',
+      '## Action Items',
+      '- [ ] ',
+      '',
+      '## Quotes to Preserve',
+      '- ',
+      '',
+      '## Follow-up Questions',
+      '- ',
+      '',
+      '## Agent Instructions',
+      '- Preserve speaker intent.',
+      '- Remove filler and obvious transcription mistakes.',
+      '- Keep uncertain phrases marked with [?].',
+      '- Do not invent facts that are not in the transcript.'
+    )
+  },
+  {
+    kind: 'publishPage',
+    label: 'Publish page',
+    detail: 'Public Markdown pages',
+    file: 'Publish Page.md',
+    content: lines(
+      '---',
+      'type: publish-page',
+      'status: {{select:Status|Draft,Review,Published}}',
+      'slug: {{prompt:Slug}}',
+      'created: {{date}}',
+      'tags: [publish]',
+      '---',
+      '',
+      '# {{title}}',
+      '',
+      '## Summary',
+      '{{prompt:Summary}}',
+      '',
+      '## Body',
+      '',
+      '## Assets',
+      '- ',
+      '',
+      '## Publishing Checklist',
+      '- [ ] Check links',
+      '- [ ] Check images and media',
+      '- [ ] Export static site',
+      ''
+    )
+  }
+]
+
+const declarativeRuntime = {
   kind: 'declarative',
   networkAccess: false,
   arbitraryCode: false,
   allowedHosts: []
 }
 
-export const LOCAL_EXTENSION_POINTS: readonly ExtensionPointDefinition[] = [
+export const BUILT_IN_EXTENSION_POINTS = [
   {
     id: 'forge.commands',
     kind: 'command',
@@ -54,9 +506,9 @@ export const LOCAL_EXTENSION_POINTS: readonly ExtensionPointDefinition[] = [
     owner: 'forge',
     allowedContributionKinds: ['view']
   }
-] as const
+]
 
-export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
+export const BUILT_IN_EXTENSION_MANIFESTS = [
   {
     manifestVersion: 1,
     id: 'forge.daily-notes',
@@ -248,7 +700,6 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         kind: 'metadata-provider',
         extensionPoint: 'forge.note.metadata',
         label: 'Backlink metadata',
-        description: 'Counts linked sources and unlinked mention candidates for the active note.',
         fields: ['backlinks', 'backlinkCount', 'unlinkedMentions', 'unlinkedMentionCount']
       },
       {
@@ -256,7 +707,6 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         kind: 'sidebar-widget',
         extensionPoint: 'forge.sidebar.widgets',
         label: 'Backlinks',
-        description: 'Lists notes that link to the active note from the right sidebar.',
         widget: 'backlinks'
       },
       {
@@ -264,7 +714,6 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         kind: 'sidebar-widget',
         extensionPoint: 'forge.sidebar.widgets',
         label: 'Unlinked mentions',
-        description: 'Lists safe plain-text mentions that can be converted into wikilinks.',
         widget: 'unlinked-mentions'
       }
     ],
@@ -301,7 +750,6 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         kind: 'metadata-provider',
         extensionPoint: 'forge.note.metadata',
         label: 'Unresolved link metadata',
-        description: 'Reports unresolved wikilinks and broken-link counts derived from the local index.',
         fields: ['resolvedLinks', 'unresolvedLinks', 'brokenLinkCount']
       },
       {
@@ -309,7 +757,6 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         kind: 'sidebar-widget',
         extensionPoint: 'forge.sidebar.widgets',
         label: 'Link health',
-        description: 'Shows local outgoing-link, broken-link, and backlink counts in the right sidebar.',
         widget: 'link-health'
       }
     ],
@@ -346,7 +793,6 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         kind: 'metadata-provider',
         extensionPoint: 'forge.note.metadata',
         label: 'Tag metadata',
-        description: 'Provides active-note tags and tag counts from the local note index.',
         fields: ['tags', 'tagCount', 'frontmatterTags', 'inlineTags']
       },
       {
@@ -354,7 +800,6 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         kind: 'sidebar-widget',
         extensionPoint: 'forge.sidebar.widgets',
         label: 'Tags',
-        description: 'Shows active-note tag chips in the right sidebar.',
         widget: 'tags'
       }
     ],
@@ -391,7 +836,6 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         kind: 'metadata-provider',
         extensionPoint: 'forge.note.metadata',
         label: 'Heading outline metadata',
-        description: 'Provides heading text, levels, line numbers, and heading counts for the active note.',
         fields: ['headings', 'headingCount', 'tableOfContents']
       },
       {
@@ -399,7 +843,6 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         kind: 'sidebar-widget',
         extensionPoint: 'forge.sidebar.widgets',
         label: 'Outline',
-        description: 'Shows active-note headings as a clickable right-sidebar outline.',
         widget: 'outline'
       }
     ],
@@ -436,7 +879,6 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         kind: 'metadata-provider',
         extensionPoint: 'forge.note.metadata',
         label: 'Publishing checklist metadata',
-        description: 'Identifies publish-page status, slugs, checklist items, and readiness signals.',
         fields: ['publishStatus', 'publishSlug', 'publishChecklistItems', 'publishReady']
       },
       {
@@ -444,7 +886,6 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         kind: 'sidebar-widget',
         extensionPoint: 'forge.sidebar.widgets',
         label: 'Publish checklist',
-        description: 'Shows local publish readiness checks in the right sidebar.',
         widget: 'publish-checklist'
       }
     ],
@@ -481,7 +922,6 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         kind: 'metadata-provider',
         extensionPoint: 'forge.note.metadata',
         label: 'Frontmatter metadata',
-        description: 'Provides parsed frontmatter properties, aliases, and title overrides for the active note.',
         fields: ['frontmatterProperties', 'aliases', 'title']
       },
       {
@@ -489,7 +929,6 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
         kind: 'sidebar-widget',
         extensionPoint: 'forge.sidebar.widgets',
         label: 'Properties',
-        description: 'Shows active-note frontmatter properties in the right sidebar.',
         widget: 'frontmatter'
       }
     ],
@@ -529,39 +968,143 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
     defaultInstalled: true,
     defaultEnabled: true
   }
-] as const
+]
 
-export const LOCAL_EXTENSION_REGISTRY: ExtensionRegistry = {
-  points: LOCAL_EXTENSION_POINTS,
-  manifests: LOCAL_EXTENSION_MANIFESTS
+let sourceRegistryCache
+
+function packageRoot() {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 }
 
-export function getLocalExtension(id: string): ExtensionManifest | undefined {
-  return LOCAL_EXTENSION_MANIFESTS.find((manifest) => manifest.id === id)
+function extractConstArray(source, exportName) {
+  const marker = `export const ${exportName}`
+  const markerIndex = source.indexOf(marker)
+  if (markerIndex === -1) return ''
+  const assignment = source.indexOf('=', markerIndex)
+  if (assignment === -1) return ''
+  const start = source.indexOf('[', assignment)
+  if (start === -1) return ''
+
+  let depth = 0
+  let quote = ''
+  let escaped = false
+  for (let index = start; index < source.length; index++) {
+    const char = source[index]
+    if (quote) {
+      if (escaped) {
+        escaped = false
+      } else if (char === '\\') {
+        escaped = true
+      } else if (char === quote) {
+        quote = ''
+      }
+      continue
+    }
+
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char
+      continue
+    }
+    if (char === '[') depth++
+    if (char === ']') {
+      depth--
+      if (depth === 0) return source.slice(start, index + 1)
+    }
+  }
+  return ''
 }
 
-export function searchLocalExtensions(query: string, manifests = LOCAL_EXTENSION_MANIFESTS): ExtensionManifest[] {
-  const normalized = query.trim().toLowerCase()
-  if (!normalized) return [...manifests]
+function readSourceRegistryCatalog() {
+  if (sourceRegistryCache !== undefined) return sourceRegistryCache
 
-  return manifests.filter((manifest) => {
-    const haystack = [
-      manifest.displayName,
-      manifest.name,
-      manifest.description,
-      manifest.publisher,
-      manifest.license,
-      ...manifest.categories,
-      ...manifest.keywords,
-      ...manifest.extensionPoints.map((point) => point.label)
-    ]
-      .join(' ')
-      .toLowerCase()
+  sourceRegistryCache = null
+  const registryPath = path.join(packageRoot(), 'src', 'renderer', 'src', 'extensions', 'registry.ts')
+  if (!fs.existsSync(registryPath)) return sourceRegistryCache
 
-    return haystack.includes(normalized)
-  })
+  try {
+    const source = fs.readFileSync(registryPath, 'utf8')
+    const pointsSource = extractConstArray(source, 'LOCAL_EXTENSION_POINTS')
+    const manifestsSource = extractConstArray(source, 'LOCAL_EXTENSION_MANIFESTS')
+    if (!pointsSource || !manifestsSource) return sourceRegistryCache
+
+    const points = Function(`return (${pointsSource})`)()
+    const manifests = Function('declarativeRuntime', `return (${manifestsSource})`)(declarativeRuntime)
+    if (Array.isArray(points) && Array.isArray(manifests)) {
+      sourceRegistryCache = { points, manifests, source: registryPath }
+    }
+  } catch {
+    sourceRegistryCache = null
+  }
+
+  return sourceRegistryCache
 }
 
-export function registryDiagnostics(registry = LOCAL_EXTENSION_REGISTRY): string[] {
-  return validateExtensionRegistry(registry).issues.map(formatExtensionIssue)
+export function extensionPointDefinitions() {
+  return readSourceRegistryCatalog()?.points ?? BUILT_IN_EXTENSION_POINTS
+}
+
+export function parseTemplatePlaceholders(content) {
+  const placeholders = []
+  const seen = new Set()
+
+  for (const match of content.matchAll(/\{\{\s*([^{}\n]+?)\s*\}\}/g)) {
+    const raw = match[1].trim()
+    const prompt = /^prompt\s*:\s*(.+)$/i.exec(raw)
+    const select = /^select\s*:\s*([^|]+)(?:\|(.*))?$/i.exec(raw)
+    const key = prompt?.[1]?.trim() || select?.[1]?.trim() || raw
+    const kind = prompt ? 'prompt' : select ? 'select' : builtInVariableSet.has(raw.toLowerCase()) ? 'built-in' : 'custom'
+    const options = select?.[2]
+      ? select[2].split(/[|,]/).map((option) => option.trim()).filter(Boolean)
+      : []
+    const id = `${kind}:${key.toLowerCase()}:${options.join('|')}`
+    if (seen.has(id)) continue
+    seen.add(id)
+    placeholders.push({
+      key,
+      kind,
+      placeholder: `{{${raw}}}`,
+      ...(options.length ? { options } : {})
+    })
+  }
+
+  return placeholders
+}
+
+export function builtInTemplateCatalog({ includeContent = false } = {}) {
+  return {
+    builtInVariables: builtInTemplateVariables,
+    count: BUILT_IN_STARTER_TEMPLATES.length,
+    templates: BUILT_IN_STARTER_TEMPLATES.map((template) => {
+      const placeholders = parseTemplatePlaceholders(template.content)
+      return {
+        kind: template.kind,
+        label: template.label,
+        detail: template.detail,
+        file: template.file,
+        fields: placeholders.filter((field) => field.kind !== 'built-in'),
+        placeholders,
+        ...(includeContent ? { content: template.content } : {})
+      }
+    })
+  }
+}
+
+export function builtInExtensionCatalog() {
+  const sourceCatalog = readSourceRegistryCatalog()
+  const points = sourceCatalog?.points ?? BUILT_IN_EXTENSION_POINTS
+  const manifests = sourceCatalog?.manifests ?? BUILT_IN_EXTENSION_MANIFESTS
+  const contributionCount = manifests.reduce((total, manifest) => total + manifest.contributes.length, 0)
+  const permissionKinds = Array.from(
+    new Set(manifests.flatMap((manifest) => manifest.permissions.map((permission) => permission.kind)))
+  ).sort()
+
+  return {
+    count: manifests.length,
+    pointCount: points.length,
+    contributionCount,
+    permissionKinds,
+    source: sourceCatalog ? 'source-registry' : 'script-fallback',
+    points,
+    manifests
+  }
 }

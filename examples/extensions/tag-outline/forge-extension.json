@@ -1,0 +1,63 @@
+{
+  "manifestVersion": 1,
+  "id": "example.tag-outline",
+  "name": "tag-outline",
+  "displayName": "Tag and Outline Example",
+  "description": "Example declarative extension that exposes tags, heading outlines, and local sidebar widgets from Forge's parsed Markdown index.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["editing", "navigation", "organization"],
+  "keywords": ["tags", "outline", "table of contents"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:metadata",
+      "reason": "Reads tags and headings already parsed from local Markdown notes."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.tag-outline.tags",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Tag metadata",
+      "fields": ["tags", "tagCount", "frontmatterTags", "inlineTags"]
+    },
+    {
+      "id": "example.tag-outline.outline",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Outline metadata",
+      "fields": ["headings", "headingCount", "tableOfContents"]
+    },
+    {
+      "id": "example.tag-outline.tags-widget",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Tags",
+      "widget": "tags"
+    },
+    {
+      "id": "example.tag-outline.outline-widget",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Outline",
+      "widget": "outline"
+    }
+  ]
+}

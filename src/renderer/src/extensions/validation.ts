@@ -56,7 +56,18 @@ const CONTRIBUTION_KINDS = new Set<ExtensionContributionKind>([
 ])
 
 const MARKDOWN_TRANSFORMS = new Set(['append-template', 'normalize-headings', 'wrap-selection'])
-const SIDEBAR_WIDGETS = new Set(['reading-stats', 'daily-note', 'backlink-health'])
+const SIDEBAR_WIDGETS = new Set([
+  'reading-stats',
+  'daily-note',
+  'audio',
+  'frontmatter',
+  'outline',
+  'backlinks',
+  'unlinked-mentions',
+  'tags',
+  'link-health',
+  'publish-checklist'
+])
 const VIEWS = new Set(['graph-insights', 'outline-board'])
 
 function isRecord(value: unknown): value is Record<string, unknown> {

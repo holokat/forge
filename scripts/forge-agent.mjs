@@ -5,6 +5,8 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { publishVault } from './lib/publisher.mjs'
+import { builtInExtensionCatalog, builtInTemplateCatalog } from './lib/agent-catalog.mjs'
+import { formatValidationResults, validateExtensionInputs } from './validate-extension.mjs'
 
 const WIKILINK_RE = /\[\[([^[\]]+?)\]\]/g
 const TAG_RE = /(^|[\s([])#([A-Za-z][\w/-]*)/g
@@ -42,6 +44,11 @@ Commands:
   publish --out <folder> [--title <s>] [--clean] [--json]
                                         Export the vault to static HTML
   batch [file|-] [--json]               Run JSON operations in one transaction-like sequence
+  built-in-templates [--json] [--content]
+                                        List bundled starter templates and their variables
+  built-in-extensions [--json]          List bundled extension points and manifests
+  validate-extension <path...> [--json] [--recursive]
+                                        Validate local forge-extension.json manifests
 
 Batch shape:
   {
@@ -58,6 +65,11 @@ Template variables:
   Built-ins: {{title}}, {{date}}, {{time}}, {{datetime}}, {{vault}}, {{template}}, {{folder}}
   Custom variables: {{client}}, {{prompt:Audience}}, {{select:Status|Draft,Final}}
   CLI examples: --vars '{"client":"Acme"}' --var Audience=Developers
+
+Catalog and extension examples:
+  forge built-in-templates --json
+  forge built-in-extensions --json
+  forge validate-extension examples/extensions --recursive --json
 `
 
 function parseArgv(argv) {
@@ -756,6 +768,58 @@ async function publishCommand(vault, { output = '', title = '', clean = false } 
   }
 }
 
+function builtInTemplatesCommand(options = {}) {
+  return builtInTemplateCatalog({ includeContent: Boolean(options.content) })
+}
+
+function builtInExtensionsCommand() {
+  return builtInExtensionCatalog()
+}
+
+function formatTemplateField(field) {
+  if (field.kind === 'select') return `${field.key}=[${field.options.join('|')}]`
+  return field.key
+}
+
+function formatBuiltInTemplatesText(catalog) {
+  return catalog.templates.map((template) => {
+    const fields = template.fields.length ? template.fields.map(formatTemplateField).join(', ') : 'none'
+    const summary = `${template.kind}\t${template.file}\t${template.label}\tfields: ${fields}`
+    return template.content ? `${summary}\n${template.content}` : summary
+  }).join('\n\n')
+}
+
+function formatBuiltInExtensionsText(catalog) {
+  const points = catalog.points.map((point) => (
+    `${point.id}\t${point.label}\tallows: ${point.allowedContributionKinds.join(', ')}`
+  ))
+  const manifests = catalog.manifests.map((manifest) => {
+    const contributions = manifest.contributes.map((contribution) => contribution.kind).join(', ')
+    const permissions = manifest.permissions.map((permission) => permission.kind).join(', ') || 'none'
+    return `${manifest.id}\t${manifest.displayName}\tcontributes: ${contributions}\tpermissions: ${permissions}`
+  })
+  return [
+    `Extension points: ${catalog.pointCount}`,
+    ...points,
+    '',
+    `Built-in extensions: ${catalog.count}`,
+    ...manifests
+  ].join('\n')
+}
+
+function noVaultCommand(command) {
+  return [
+    'built-in-templates',
+    'starter-templates',
+    'list-built-in-templates',
+    'built-in-extensions',
+    'extension-catalog',
+    'list-built-in-extensions',
+    'validate-extension',
+    'validate-extensions'
+  ].includes(command)
+}
+
 async function runOperation(vault, op) {
   const action = op.action || op.command
   if (!action) throw new Error('Batch operation is missing action.')
@@ -860,6 +924,29 @@ async function main() {
   const json = globals.json || Boolean(options.json)
 
   try {
+    if (noVaultCommand(command)) {
+      switch (command) {
+        case 'built-in-templates':
+        case 'starter-templates':
+        case 'list-built-in-templates':
+          printResult(builtInTemplatesCommand(options), { json, text: formatBuiltInTemplatesText })
+          return
+        case 'built-in-extensions':
+        case 'extension-catalog':
+        case 'list-built-in-extensions':
+          printResult(builtInExtensionsCommand(), { json, text: formatBuiltInExtensionsText })
+          return
+        case 'validate-extension':
+        case 'validate-extensions': {
+          if (positional.length === 0) throw new Error('validate-extension requires at least one manifest file or folder path.')
+          const validation = await validateExtensionInputs(positional, { recursive: Boolean(options.recursive) })
+          printResult(validation, { json, text: formatValidationResults })
+          if (!validation.valid) process.exitCode = 1
+          return
+        }
+      }
+    }
+
     if (command === 'batch') {
       printResult(await batchCommand(globals.vault, positional[0]), { json: true })
       return
@@ -1009,6 +1096,8 @@ export {
   analyzeCommand,
   appendCommand,
   batchCommand,
+  builtInExtensionsCommand,
+  builtInTemplatesCommand,
   createFromTemplateCommand,
   createDocCommand,
   createFolderCommand,

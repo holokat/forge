@@ -2,22 +2,32 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import { extensionPointDefinitions } from './lib/agent-catalog.mjs'
 
 const MANIFEST_FILE = 'forge-extension.json'
 
-const POINTS = [
-  { id: 'forge.commands', allowed: ['command'] },
-  { id: 'forge.markdown.transforms', allowed: ['markdown-transform'] },
-  { id: 'forge.note.metadata', allowed: ['metadata-provider'] },
-  { id: 'forge.sidebar.widgets', allowed: ['sidebar-widget'] },
-  { id: 'forge.views', allowed: ['view'] }
-]
+const POINTS = extensionPointDefinitions().map((point) => ({
+  id: point.id,
+  allowed: point.allowedContributionKinds
+}))
 
 const CATEGORIES = new Set(['capture', 'editing', 'navigation', 'organization', 'publishing', 'visualization'])
 const PERMISSIONS = new Set(['clipboard:write', 'settings:read', 'vault:metadata', 'vault:read', 'vault:write', 'workspace:ui'])
 const CONTRIBUTION_KINDS = new Set(['command', 'markdown-transform', 'metadata-provider', 'sidebar-widget', 'view'])
 const MARKDOWN_TRANSFORMS = new Set(['append-template', 'normalize-headings', 'wrap-selection'])
-const SIDEBAR_WIDGETS = new Set(['reading-stats', 'daily-note', 'backlink-health'])
+const SIDEBAR_WIDGETS = new Set([
+  'reading-stats',
+  'daily-note',
+  'audio',
+  'frontmatter',
+  'outline',
+  'backlinks',
+  'unlinked-mentions',
+  'tags',
+  'link-health',
+  'publish-checklist'
+])
 const VIEWS = new Set(['graph-insights', 'outline-board'])
 const ID_RE = /^[a-z0-9][a-z0-9.-]*$/
 const SEMVER_RE = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/
@@ -223,17 +233,7 @@ function formatIssue(issue) {
   return issue.path ? `${label}: ${issue.path}: ${issue.message}` : `${label}: ${issue.message}`
 }
 
-async function main() {
-  const args = process.argv.slice(2)
-  const json = args.includes('--json')
-  const recursive = args.includes('--recursive')
-  const inputs = args.filter((arg) => arg !== '--json' && arg !== '--recursive')
-
-  if (inputs.includes('--help') || inputs.includes('-h') || inputs.length === 0) {
-    usage()
-    process.exit(inputs.length === 0 ? 1 : 0)
-  }
-
+async function validateExtensionInputs(inputs, { recursive = false } = {}) {
   const results = []
   for (const input of inputs) {
     const manifestPaths = await discoverManifests(input, recursive)
@@ -263,20 +263,54 @@ async function main() {
     }
   }
 
-  if (json) {
-    console.log(JSON.stringify({ valid: results.every((result) => result.valid), results }, null, 2))
-  } else {
-    for (const result of results) {
-      const label = result.manifestPath ?? result.input
-      console.log(`${result.valid ? 'OK' : 'FAIL'} ${label}`)
-      for (const issue of result.issues) console.log(`  ${formatIssue(issue)}`)
-    }
-  }
-
-  process.exit(results.every((result) => result.valid) ? 0 : 1)
+  return { valid: results.every((result) => result.valid), results }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error)
-  process.exit(1)
-})
+function formatValidationResults(validation) {
+  return validation.results.map((result) => {
+    const label = result.manifestPath ?? result.input
+    const lines = [`${result.valid ? 'OK' : 'FAIL'} ${label}`]
+    for (const issue of result.issues) lines.push(`  ${formatIssue(issue)}`)
+    return lines.join('\n')
+  }).join('\n')
+}
+
+async function main() {
+  const args = process.argv.slice(2)
+  const json = args.includes('--json')
+  const recursive = args.includes('--recursive')
+  const inputs = args.filter((arg) => arg !== '--json' && arg !== '--recursive')
+
+  if (inputs.includes('--help') || inputs.includes('-h') || inputs.length === 0) {
+    usage()
+    process.exit(inputs.length === 0 ? 1 : 0)
+  }
+
+  const validation = await validateExtensionInputs(inputs, { recursive })
+  if (json) {
+    console.log(JSON.stringify(validation, null, 2))
+  } else {
+    console.log(formatValidationResults(validation))
+  }
+
+  process.exit(validation.valid ? 0 : 1)
+}
+
+function isDirectRun() {
+  return Boolean(process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+}
+
+export {
+  discoverManifests,
+  formatIssue,
+  formatValidationResults,
+  validateExtensionInputs,
+  validateManifest
+}
+
+if (isDirectRun()) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error)
+    process.exit(1)
+  })
+}

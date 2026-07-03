@@ -5,7 +5,7 @@ This checklist tracks the first practical wave of Obsidian-like Forge features t
 ## Wave 1: Ship Now
 
 - [x] Define the high-value template/plugin implementation plan.
-- [x] Expand the built-in starter template pack beyond daily, meeting, project, person, and research.
+- [x] Expand the built-in starter template pack with agent/user templates for daily notes, meeting notes, agent task briefs, SEO/content briefs, research briefs, PRDs, project plans, bug reports, decision records, publish pages, changelog entries, and transcript cleanup.
 - [x] Add template variables so templates can ask for values at creation time.
 - [x] Expose template variable values through CLI and MCP creation flows.
 - [x] Add an Obsidian-like note preview for internal links in reading mode.
@@ -33,3 +33,5 @@ This checklist tracks the first practical wave of Obsidian-like Forge features t
 - [x] Publish a minimal extension SDK with examples.
 - [x] Route every declared built-in hook to visible UI before enabling remote installs.
 - [x] Add signed-registry validation and guarded remote registry install UI.
+- [x] Add practical local built-ins for backlinks, unresolved links, tag index, outline/table-of-contents, publish checklist, and frontmatter inspection.
+- [x] Add registry examples for link health, tag/outline metadata, publish checklists, and frontmatter inspection.

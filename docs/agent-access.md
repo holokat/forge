@@ -27,6 +27,9 @@ Forge resolves the vault in this order:
 ## CLI Examples
 
 ```bash
+forge built-in-templates --json
+forge built-in-extensions --json
+forge validate-extension /path/to/extension-folder --json
 forge --vault /path/to/vault list
 forge --vault /path/to/vault create-folder Projects
 forge --vault /path/to/vault create-doc Projects/Plan --title "Plan"
@@ -47,6 +50,9 @@ forge-publish --vault /path/to/vault --out /path/to/site --clean
 From a source checkout:
 
 ```bash
+npm run agent -- built-in-templates --json
+npm run agent -- built-in-extensions --json
+npm run agent -- validate-extension examples/extensions --recursive --json
 npm run agent -- --vault /path/to/vault analyze --json
 ```
 
@@ -130,7 +136,16 @@ For MCP clients:
 
 ## Templates
 
-Templates are Markdown files in the configured templates folder, usually `Templates/`. Use them for repeatable note shapes like daily notes, meetings, projects, people, research briefs, prompts, and publishing drafts.
+Templates are Markdown files in the configured templates folder, usually `Templates/`. Use them for repeatable note shapes like daily notes, meeting notes, agent task briefs, SEO/content briefs, research briefs, PRDs, project plans, bug reports, decision records, changelog entries, transcript cleanup notes, people, and publishing drafts.
+
+Use two list commands before creating from a template:
+
+```bash
+forge built-in-templates --json
+forge --vault /path/to/vault templates --json
+```
+
+`built-in-templates` does not need a vault. It lists the bundled starter template pack that the app can seed, including each template kind, suggested filename, placeholder fields, and built-in variables. Add `--content` when an agent needs the complete starter Markdown. `templates --json` lists the templates that actually exist in the selected vault.
 
 Supported placeholders:
 
@@ -173,3 +188,20 @@ Batch operations and MCP use the same values as a `variables` object:
 If a `prompt:` value is not supplied, Forge inserts an empty string. If a `select:` value is not supplied, Forge uses the first listed option. Unknown plain placeholders are preserved.
 
 Agents should call `forge templates --json` or `forge_templates` before creating from a template, then use `forge create-from-template` or `forge_create_from_template` so generated notes preserve the user’s preferred structure.
+
+## Extensions
+
+Agents can inspect bundled extension points and manifests without a vault:
+
+```bash
+forge built-in-extensions --json
+```
+
+Local declarative extension manifests can be checked before they are proposed or installed:
+
+```bash
+forge validate-extension /path/to/forge-extension.json --json
+forge validate-extension /path/to/extensions-folder --recursive --json
+```
+
+From a source checkout, the same checks are available through `npm run agent -- validate-extension ...` and `npm run extensions:validate -- ...`.
