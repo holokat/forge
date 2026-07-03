@@ -28,6 +28,11 @@ Options:
   --no-backlinks          Omit backlink sections from note pages
   --site-url <url>        Public URL for canonical links, RSS, sitemap, robots
   --social-image <url>    Open Graph image URL
+  --author <name>         Author name for metadata and JSON-LD
+  --language <tag>        HTML language tag, defaults to en
+  --robots <index|noindex>
+  --favicon <path|url>    Favicon URL or vault-relative asset path
+  --custom-footer <text>  Plain text footer shown on generated pages
   --no-rss                Skip rss.xml
   --no-sitemap            Skip sitemap.xml
   --no-robots             Skip robots.txt
@@ -106,6 +111,26 @@ function parseArgv(argv) {
       options.socialImage = argv[++i] ?? ''
     } else if (arg.startsWith('--social-image=')) {
       options.socialImage = arg.slice('--social-image='.length)
+    } else if (arg === '--author') {
+      options.author = argv[++i] ?? ''
+    } else if (arg.startsWith('--author=')) {
+      options.author = arg.slice('--author='.length)
+    } else if (arg === '--language') {
+      options.language = argv[++i] ?? ''
+    } else if (arg.startsWith('--language=')) {
+      options.language = arg.slice('--language='.length)
+    } else if (arg === '--robots') {
+      options.robotsMode = argv[++i] ?? ''
+    } else if (arg.startsWith('--robots=')) {
+      options.robotsMode = arg.slice('--robots='.length)
+    } else if (arg === '--favicon') {
+      options.favicon = argv[++i] ?? ''
+    } else if (arg.startsWith('--favicon=')) {
+      options.favicon = arg.slice('--favicon='.length)
+    } else if (arg === '--custom-footer') {
+      options.customFooter = argv[++i] ?? ''
+    } else if (arg.startsWith('--custom-footer=')) {
+      options.customFooter = arg.slice('--custom-footer='.length)
     } else if (arg === '--no-rss') {
       options.noRss = true
     } else if (arg === '--no-sitemap') {
@@ -167,6 +192,11 @@ function publishIntegrationsFromOptions(options = {}) {
     seoRss: {
       siteUrl: options.siteUrl,
       socialImage: options.socialImage,
+      authorName: options.author,
+      language: options.language,
+      robotsMode: options.robotsMode,
+      favicon: options.favicon,
+      customFooter: options.customFooter,
       rss: options.noRss ? false : undefined,
       sitemap: options.noSitemap ? false : undefined,
       robots: options.noRobots ? false : undefined

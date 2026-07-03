@@ -33,8 +33,8 @@ The desktop app can save multiple publishing profiles per vault. Each profile st
 
 Each site profile also has a Publishing integrations section with five provider-neutral primitives:
 
-- SEO/RSS: canonical URL, Open Graph metadata, `rss.xml`, `sitemap.xml`, and `robots.txt`.
-- Analytics: Plausible, Umami, or a custom snippet emitted into generated pages.
+- SEO/RSS: site title, description, canonical/base URL, Open Graph image, author name, language, index/noindex, favicon, custom footer, `feed.xml`, `sitemap.xml`, and `robots.txt`.
+- Analytics: Plausible, Umami, or a custom snippet emitted into generated pages. Custom snippets should only come from providers you trust.
 - Deploy targets: profile metadata for GitHub Pages, Cloudflare Pages, Netlify, Vercel, S3/R2, IPFS, or manual upload.
 - Embeds: optional `forge-embed` fenced blocks for sandboxed HTTPS iframe embeds.
 - Forms: optional static contact form markup for Netlify Forms, Formspree, or a custom endpoint.
@@ -47,6 +47,11 @@ node scripts/forge-publish.mjs \
   --out /path/to/site \
   --title "Projects" \
   --site-url https://example.com \
+  --author "Example Team" \
+  --language en \
+  --robots index \
+  --favicon Media/favicon.svg \
+  --custom-footer "Published with Forge." \
   --analytics-provider plausible \
   --analytics-domain example.com \
   --allow-iframes \
@@ -74,7 +79,7 @@ The output folder contains:
 - `tags/*.html` for tag index pages when tag navigation is enabled.
 - `assets/**` copied from non-Markdown files in the vault.
 - `_forge/styles.css`, `_forge/site.js`, and `_forge/manifest.json` for generated site assets, theme toggles, reading progress, and metadata.
-- `rss.xml`, `sitemap.xml`, and `robots.txt` when SEO/RSS integrations are enabled. RSS and sitemap require a public site URL.
+- `feed.xml`, `rss.xml`, `sitemap.xml`, and `robots.txt` when SEO/RSS integrations are enabled. Feeds and sitemap require a public site URL.
 - `.nojekyll` so GitHub Pages serves `_forge` assets.
 - `.forge-publish.json` as the ownership marker used by `--clean`.
 
@@ -95,6 +100,15 @@ The output folder contains:
   ````
 
 - Missing wikilinks are shown as unresolved and listed on `index.html`.
+
+## SEO Output
+
+Generated pages include standard `<title>` tags, meta descriptions, canonical URLs when a base URL is set, Open Graph tags, Twitter card tags, favicon links, article published/modified dates when available, and JSON-LD for generated note/article pages with public URLs.
+
+The robots setting controls both page metadata and `robots.txt`:
+
+- `index` emits `index,follow` and allows crawling.
+- `noindex` emits `noindex,nofollow` and disallows crawling in `robots.txt`.
 
 ## Public Hosting
 

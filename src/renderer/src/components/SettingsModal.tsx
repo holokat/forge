@@ -1167,12 +1167,87 @@ export default function SettingsModal(): React.JSX.Element {
                                 <span>Social image</span>
                                 <input
                                   className="settings-text-input"
-                                  placeholder="https://example.com/og.png"
+                                  placeholder="https://example.com/og.png or Media/og.png"
                                   value={selectedPublishSite.integrations.seoRss.socialImage}
                                   onChange={(event) =>
                                     updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
                                       ...integrations,
                                       seoRss: { ...integrations.seoRss, socialImage: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="publish-field">
+                                <span>Author name</span>
+                                <input
+                                  className="settings-text-input"
+                                  placeholder="Optional"
+                                  value={selectedPublishSite.integrations.seoRss.authorName}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      seoRss: { ...integrations.seoRss, authorName: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="publish-field">
+                                <span>Language</span>
+                                <input
+                                  className="settings-text-input"
+                                  placeholder="en"
+                                  value={selectedPublishSite.integrations.seoRss.language}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      seoRss: { ...integrations.seoRss, language: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="publish-field">
+                                <span>Robots</span>
+                                <select
+                                  className="settings-text-input"
+                                  value={selectedPublishSite.integrations.seoRss.robotsMode}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      seoRss: {
+                                        ...integrations.seoRss,
+                                        robotsMode: event.target.value === 'noindex' ? 'noindex' : 'index'
+                                      }
+                                    }))
+                                  }
+                                >
+                                  <option value="index">Index</option>
+                                  <option value="noindex">Noindex</option>
+                                </select>
+                              </label>
+                              <label className="publish-field">
+                                <span>Favicon</span>
+                                <input
+                                  className="settings-text-input"
+                                  placeholder="favicon.ico or https://..."
+                                  value={selectedPublishSite.integrations.seoRss.favicon}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      seoRss: { ...integrations.seoRss, favicon: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="publish-field">
+                                <span>Custom footer</span>
+                                <textarea
+                                  className="settings-textarea compact"
+                                  placeholder="Plain text footer shown on every generated page."
+                                  value={selectedPublishSite.integrations.seoRss.customFooter}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      seoRss: { ...integrations.seoRss, customFooter: event.target.value }
                                     }))
                                   }
                                 />
@@ -1287,6 +1362,12 @@ export default function SettingsModal(): React.JSX.Element {
                                   }
                                 />
                               </label>
+                              <div className="publish-warning">
+                                <AlertCircle size={14} />
+                                <span>
+                                  Custom analytics snippets are injected into every generated page. Only use code from providers you trust.
+                                </span>
+                              </div>
                             </div>
 
                             <div className="publish-integration-card">

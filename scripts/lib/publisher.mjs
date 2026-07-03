@@ -20,6 +20,11 @@ const DEFAULT_INTEGRATIONS = {
     enabled: true,
     siteUrl: '',
     socialImage: '',
+    authorName: '',
+    language: 'en',
+    robotsMode: 'index',
+    favicon: '',
+    customFooter: '',
     rss: true,
     sitemap: true,
     robots: true
@@ -129,6 +134,11 @@ function enumValue(value, allowed, fallback) {
   return allowed.includes(value) ? value : fallback
 }
 
+function normalizeLanguage(value) {
+  const language = stringValue(value)
+  return /^[a-z]{2,3}(?:-[a-z0-9]{2,8})?$/i.test(language) ? language : DEFAULT_INTEGRATIONS.seoRss.language
+}
+
 function normalizePublicUrl(value) {
   const raw = stringValue(value).replace(/\/+$/, '')
   if (!raw) return ''
@@ -155,6 +165,11 @@ function normalizeIntegrations(value = {}) {
       enabled: booleanValue(seoRss.enabled, DEFAULT_INTEGRATIONS.seoRss.enabled),
       siteUrl: normalizePublicUrl(seoRss.siteUrl),
       socialImage: stringValue(seoRss.socialImage),
+      authorName: stringValue(seoRss.authorName),
+      language: normalizeLanguage(seoRss.language),
+      robotsMode: enumValue(seoRss.robotsMode, ['index', 'noindex'], DEFAULT_INTEGRATIONS.seoRss.robotsMode),
+      favicon: stringValue(seoRss.favicon),
+      customFooter: stringValue(seoRss.customFooter),
       rss: booleanValue(seoRss.rss, DEFAULT_INTEGRATIONS.seoRss.rss),
       sitemap: booleanValue(seoRss.sitemap, DEFAULT_INTEGRATIONS.seoRss.sitemap),
       robots: booleanValue(seoRss.robots, DEFAULT_INTEGRATIONS.seoRss.robots)
@@ -259,8 +274,21 @@ function publicAssetUrl(site, value) {
   if (!raw) return ''
   const absolute = normalizePublicUrl(raw)
   if (absolute) return absolute
+  const localAsset = site.assetPaths?.find((file) => file.toLowerCase() === raw.replace(/^\/+/, '').toLowerCase())
+  if (localAsset && sitePublicBaseUrl(site)) return publicUrl(site, assetOutputPath(localAsset))
   if (!sitePublicBaseUrl(site)) return ''
   return publicUrl(site, raw.replace(/^\/+/, ''))
+}
+
+function faviconHref(site, currentOutputPath) {
+  const raw = stringValue(site.integrations.seoRss.favicon)
+  if (!raw) return ''
+  const absolute = normalizePublicUrl(raw)
+  if (absolute) return absolute
+  const normalized = raw.replace(/^\/+/, '')
+  const localAsset = site.assetPaths?.find((file) => file.toLowerCase() === normalized.toLowerCase())
+  if (localAsset) return relativeHref(currentOutputPath, assetOutputPath(localAsset))
+  return raw
 }
 
 function pageTitle(title, site) {
@@ -643,19 +671,56 @@ function renderAnalyticsSnippet(site) {
   return ''
 }
 
-function renderHeadTags({ title, site, description = '', currentOutputPath, kind = 'website' }) {
+function jsonLdScript(data) {
+  return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`
+}
+
+function dateIso(value) {
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString()
+}
+
+function articleStructuredData({ title, site, description, currentOutputPath, article, socialImage }) {
+  if (!article) return ''
+  const url = publicUrl(site, currentOutputPath)
+  if (!url) return ''
+  const authorName = site.integrations.seoRss.authorName
+  const published = dateIso(dateForNote(article))
+  const modified = dateIso(article.modified)
+  return jsonLdScript({
+    '@context': 'https://schema.org',
+    '@type': BLOG_THEMES.has(site.theme) ? 'BlogPosting' : 'Article',
+    headline: title,
+    description,
+    url,
+    datePublished: published || undefined,
+    dateModified: modified || published || undefined,
+    image: socialImage || undefined,
+    author: authorName ? { '@type': 'Person', name: authorName } : undefined,
+    publisher: { '@type': 'Organization', name: site.title },
+    inLanguage: site.integrations.seoRss.language
+  })
+}
+
+function renderHeadTags({ title, site, description = '', currentOutputPath, kind = 'website', article = null }) {
   const renderedTitle = pageTitle(title, site)
   const seo = site.integrations.seoRss
   const desc = String(description || site.description || '').trim()
   const canonical = seo.enabled ? publicUrl(site, currentOutputPath) : ''
   const socialImage = seo.enabled ? publicAssetUrl(site, seo.socialImage) : ''
-  const rssHref = seo.enabled && seo.rss ? relativeHref(currentOutputPath, 'rss.xml') : ''
+  const rssHref = seo.enabled && seo.rss ? relativeHref(currentOutputPath, 'feed.xml') : ''
   const analytics = renderAnalyticsSnippet(site)
+  const favicon = seo.enabled ? faviconHref(site, currentOutputPath) : ''
+  const published = article ? dateIso(dateForNote(article)) : ''
+  const modified = article ? dateIso(article.modified) : ''
+  const authorName = seo.authorName
   const tags = [
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
     `<meta name="generator" content="${GENERATOR}">`,
+    seo.enabled ? `<meta name="robots" content="${seo.robotsMode === 'noindex' ? 'noindex,nofollow' : 'index,follow'}">` : '',
     desc ? `<meta name="description" content="${escapeAttribute(desc)}">` : '',
+    seo.enabled && authorName ? `<meta name="author" content="${escapeAttribute(authorName)}">` : '',
     seo.enabled ? `<meta property="og:title" content="${escapeAttribute(renderedTitle)}">` : '',
     seo.enabled && desc ? `<meta property="og:description" content="${escapeAttribute(desc)}">` : '',
     seo.enabled ? `<meta property="og:type" content="${kind === 'article' ? 'article' : 'website'}">` : '',
@@ -663,15 +728,32 @@ function renderHeadTags({ title, site, description = '', currentOutputPath, kind
     canonical ? `<link rel="canonical" href="${escapeAttribute(canonical)}">` : '',
     canonical ? `<meta property="og:url" content="${escapeAttribute(canonical)}">` : '',
     socialImage ? `<meta property="og:image" content="${escapeAttribute(socialImage)}">` : '',
-    socialImage ? '<meta name="twitter:card" content="summary_large_image">' : '',
+    seo.enabled ? `<meta name="twitter:title" content="${escapeAttribute(renderedTitle)}">` : '',
+    seo.enabled && desc ? `<meta name="twitter:description" content="${escapeAttribute(desc)}">` : '',
+    seo.enabled ? (socialImage ? '<meta name="twitter:card" content="summary_large_image">' : '<meta name="twitter:card" content="summary">') : '',
+    socialImage ? `<meta name="twitter:image" content="${escapeAttribute(socialImage)}">` : '',
+    kind === 'article' && published ? `<meta property="article:published_time" content="${escapeAttribute(published)}">` : '',
+    kind === 'article' && modified ? `<meta property="article:modified_time" content="${escapeAttribute(modified)}">` : '',
+    kind === 'article' && authorName ? `<meta property="article:author" content="${escapeAttribute(authorName)}">` : '',
+    favicon ? `<link rel="icon" href="${escapeAttribute(favicon)}">` : '',
     rssHref ? `<link rel="alternate" type="application/rss+xml" title="${escapeAttribute(site.title)} RSS" href="${rssHref}">` : '',
     `<title>${escapeHtml(renderedTitle)}</title>`,
     `<link rel="stylesheet" href="${relativeHref(currentOutputPath, '_forge/styles.css')}">`,
     `<script src="${relativeHref(currentOutputPath, '_forge/site.js')}" defer></script>`,
+    seo.enabled && kind === 'article'
+      ? articleStructuredData({ title, site, description: desc, currentOutputPath, article, socialImage })
+      : '',
     analytics
   ].filter(Boolean)
 
   return tags.join('\n  ')
+}
+
+function renderCustomFooter(site) {
+  const footer = stringValue(site.integrations.seoRss.customFooter)
+  if (!footer) return ''
+  const body = escapeHtml(footer).replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br>')
+  return `<footer class="custom-site-footer"><p>${body}</p></footer>`
 }
 
 function parseEmbedBlock(body) {
@@ -938,7 +1020,7 @@ function renderMarkdown(note, site) {
   return marked.parse(note.body, { async: false })
 }
 
-function pageShell({ title, site, description = '', currentOutputPath, body, navNotes, tagIndex }) {
+function pageShell({ title, site, description = '', currentOutputPath, body, navNotes, tagIndex, article = null }) {
   const homeHref = relativeHref(currentOutputPath, 'index.html')
   const noteItems = navNotes
     .map((note) => `<li>${renderNoteLink(note, currentOutputPath, 'sidebar-link')}</li>`)
@@ -954,9 +1036,9 @@ function pageShell({ title, site, description = '', currentOutputPath, body, nav
     : ''
 
   return `<!doctype html>
-<html lang="en">
+<html lang="${escapeAttribute(site.integrations.seoRss.language)}">
 <head>
-  ${renderHeadTags({ title, site, description, currentOutputPath })}
+  ${renderHeadTags({ title, site, description, currentOutputPath, kind: article ? 'article' : 'website', article })}
 </head>
 <body class="site-theme-${escapeAttribute(site.theme)}">
   <a class="skip-link" href="#content">Skip to content</a>
@@ -975,6 +1057,7 @@ function pageShell({ title, site, description = '', currentOutputPath, body, nav
     </aside>
     <main id="content" class="site-main">
 ${body}
+      ${renderCustomFooter(site)}
     </main>
   </div>
 </body>
@@ -1058,11 +1141,11 @@ function blogHeader(site, currentOutputPath, variant = '') {
   </header>`
 }
 
-function blogShell({ title, site, description = '', currentOutputPath, body, headerVariant = '' }) {
+function blogShell({ title, site, description = '', currentOutputPath, body, headerVariant = '', article = null }) {
   return `<!doctype html>
-<html lang="en">
+<html lang="${escapeAttribute(site.integrations.seoRss.language)}">
 <head>
-  ${renderHeadTags({ title, site, description, currentOutputPath, kind: title === site.title ? 'website' : 'article' })}
+  ${renderHeadTags({ title, site, description, currentOutputPath, kind: article ? 'article' : 'website', article })}
 </head>
 <body class="site-theme-${escapeAttribute(site.theme)}">
   <a class="skip-link" href="#content">Skip to content</a>
@@ -1070,6 +1153,7 @@ function blogShell({ title, site, description = '', currentOutputPath, body, hea
   ${blogHeader(site, currentOutputPath, headerVariant)}
   <main id="content">
 ${body}
+    ${renderCustomFooter(site)}
   </main>
 </body>
 </html>
@@ -1386,6 +1470,7 @@ function renderBlogNotePage(site, note) {
       site,
       description: noteExcerpt(note),
       currentOutputPath: note.outputPath,
+      article: note,
       headerVariant: 'terminal',
       body: `    <section class="terminal-post blog-reveal">
       <aside class="terminal-rail">
@@ -1415,6 +1500,7 @@ function renderBlogNotePage(site, note) {
       site,
       description: noteExcerpt(note),
       currentOutputPath: note.outputPath,
+      article: note,
       headerVariant: 'swiss',
       body: `    <section class="swiss-post blog-reveal">
       <a class="blog-back" href="${backHref}">← Index</a>
@@ -1438,6 +1524,7 @@ function renderBlogNotePage(site, note) {
       site,
       description: noteExcerpt(note),
       currentOutputPath: note.outputPath,
+      article: note,
       headerVariant: 'soft',
       body: `    <section class="soft-post blog-reveal">
       <a class="blog-back" href="${backHref}">← Writing</a>
@@ -1461,6 +1548,7 @@ function renderBlogNotePage(site, note) {
       site,
       description: noteExcerpt(note),
       currentOutputPath: note.outputPath,
+      article: note,
       headerVariant: 'field',
       body: `    <section class="field-post blog-reveal">
       <aside class="field-post-rail">
@@ -1488,6 +1576,7 @@ function renderBlogNotePage(site, note) {
     site,
     description: noteExcerpt(note),
     currentOutputPath: note.outputPath,
+    article: note,
     body: `    <section class="quiet-post blog-reveal">
       <article class="blog-article">
         <a class="blog-back" href="${backHref}">← All writing</a>
@@ -1532,6 +1621,7 @@ function renderNotePage(site, note) {
     site,
     description: `${note.title} from ${site.title}`,
     currentOutputPath: note.outputPath,
+    article: note,
     navNotes: site.notes,
     tagIndex: site.tagIndex,
     body: `      <article class="note-article">
@@ -1653,7 +1743,8 @@ ${pages
 
 function renderRobots(site) {
   const sitemapUrl = publicUrl(site, 'sitemap.xml')
-  return ['User-agent: *', 'Allow: /', sitemapUrl ? `Sitemap: ${sitemapUrl}` : ''].filter(Boolean).join('\n') + '\n'
+  const access = site.integrations.seoRss.robotsMode === 'noindex' ? 'Disallow: /' : 'Allow: /'
+  return ['User-agent: *', access, sitemapUrl ? `Sitemap: ${sitemapUrl}` : ''].filter(Boolean).join('\n') + '\n'
 }
 
 function publicIntegrationManifest(site) {
@@ -1661,6 +1752,11 @@ function publicIntegrationManifest(site) {
     seoRss: {
       enabled: site.integrations.seoRss.enabled,
       siteUrl: site.integrations.seoRss.siteUrl,
+      authorName: site.integrations.seoRss.authorName,
+      language: site.integrations.seoRss.language,
+      robotsMode: site.integrations.seoRss.robotsMode,
+      favicon: site.integrations.seoRss.favicon,
+      customFooter: Boolean(site.integrations.seoRss.customFooter),
       rss: site.integrations.seoRss.rss,
       sitemap: site.integrations.seoRss.sitemap,
       robots: site.integrations.seoRss.robots
@@ -1766,7 +1862,9 @@ export async function publishVault({
   await writeText(resolvedOutput, 'index.html', renderIndexPage(site), written)
 
   if (site.integrations.seoRss.enabled && site.integrations.seoRss.rss && sitePublicBaseUrl(site)) {
-    await writeText(resolvedOutput, 'rss.xml', renderRssFeed(site), written)
+    const feed = renderRssFeed(site)
+    await writeText(resolvedOutput, 'feed.xml', feed, written)
+    await writeText(resolvedOutput, 'rss.xml', feed, written)
   }
 
   if (site.integrations.seoRss.enabled && site.integrations.seoRss.sitemap && sitePublicBaseUrl(site)) {

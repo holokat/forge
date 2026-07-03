@@ -265,6 +265,15 @@ function normalizeFormProvider(value: unknown): PublishFormProvider {
   return providers.includes(value as PublishFormProvider) ? (value as PublishFormProvider) : 'none'
 }
 
+function normalizeRobotsMode(value: unknown): 'index' | 'noindex' {
+  return value === 'noindex' ? 'noindex' : 'index'
+}
+
+function normalizeLanguage(value: unknown): string {
+  const language = stringValue(value).trim()
+  return /^[a-z]{2,3}(?:-[a-z0-9]{2,8})?$/i.test(language) ? language : DEFAULT_PUBLISH_SITE_INTEGRATIONS.seoRss.language
+}
+
 function normalizePublishSiteIntegrations(value: unknown): PublishSiteIntegrations {
   const raw = value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Partial<PublishSiteIntegrations>)
@@ -295,6 +304,11 @@ function normalizePublishSiteIntegrations(value: unknown): PublishSiteIntegratio
       enabled: booleanValue(seoRss.enabled, DEFAULT_PUBLISH_SITE_INTEGRATIONS.seoRss.enabled),
       siteUrl: stringValue(seoRss.siteUrl),
       socialImage: stringValue(seoRss.socialImage),
+      authorName: stringValue(seoRss.authorName),
+      language: normalizeLanguage(seoRss.language),
+      robotsMode: normalizeRobotsMode(seoRss.robotsMode),
+      favicon: stringValue(seoRss.favicon),
+      customFooter: stringValue(seoRss.customFooter),
       rss: booleanValue(seoRss.rss, DEFAULT_PUBLISH_SITE_INTEGRATIONS.seoRss.rss),
       sitemap: booleanValue(seoRss.sitemap, DEFAULT_PUBLISH_SITE_INTEGRATIONS.seoRss.sitemap),
       robots: booleanValue(seoRss.robots, DEFAULT_PUBLISH_SITE_INTEGRATIONS.seoRss.robots)

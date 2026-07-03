@@ -59,6 +59,11 @@ export interface PublishSeoRssConfig {
   enabled: boolean
   siteUrl: string
   socialImage: string
+  authorName: string
+  language: string
+  robotsMode: 'index' | 'noindex'
+  favicon: string
+  customFooter: string
   rss: boolean
   sitemap: boolean
   robots: boolean
@@ -130,6 +135,11 @@ export const DEFAULT_PUBLISH_SITE_INTEGRATIONS: PublishSiteIntegrations = {
     enabled: true,
     siteUrl: '',
     socialImage: '',
+    authorName: '',
+    language: 'en',
+    robotsMode: 'index',
+    favicon: '',
+    customFooter: '',
     rss: true,
     sitemap: true,
     robots: true

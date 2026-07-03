@@ -631,6 +631,26 @@ body.site-theme-terminal-ledger .blog-prose .media-gallery img {
   display: none;
 }
 
+.custom-site-footer {
+  max-width: 980px;
+  margin: 48px 0 0;
+  padding: 18px 0 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.custom-site-footer p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+html[data-theme='dark'] .custom-site-footer,
+body.site-theme-terminal-ledger .custom-site-footer {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
 .internal-link {
   color: var(--accent);
   font-weight: 620;
