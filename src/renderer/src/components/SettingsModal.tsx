@@ -12,6 +12,7 @@ import {
   ClipboardList,
   Code2,
   Download,
+  Folder,
   FileAudio,
   FileCode2,
   FileSearch,
@@ -29,6 +30,7 @@ import {
   Newspaper,
   Palette,
   PenLine,
+  Plus,
   Plug,
   Quote,
   RefreshCw,
@@ -39,6 +41,7 @@ import {
   Smartphone,
   Sun,
   Terminal,
+  Trash2,
   UserRound,
   Users,
   Vault as VaultIcon,
@@ -47,7 +50,14 @@ import {
 } from 'lucide-react'
 import QRCode from 'qrcode'
 import { useEffect, useMemo, useState } from 'react'
-import type { AgentAccessInfo, MobilePairingInfo, ThemeMode, UpdateStatus } from '../../../shared/types'
+import type {
+  AgentAccessInfo,
+  MobilePairingInfo,
+  PublishSiteConfig,
+  PublishSiteTheme,
+  ThemeMode,
+  UpdateStatus
+} from '../../../shared/types'
 import { STARTER_TEMPLATE_CATALOG, useStore, type StarterTemplateKind } from '../store'
 import ExtensionMarketplace from './ExtensionMarketplace'
 
@@ -55,6 +65,12 @@ const THEMES: { mode: ThemeMode; label: string; icon: React.ReactNode }[] = [
   { mode: 'light', label: 'Light', icon: <Sun size={15} /> },
   { mode: 'dark', label: 'Dark', icon: <Moon size={15} /> },
   { mode: 'system', label: 'System', icon: <Monitor size={15} /> }
+]
+
+const PUBLISH_THEMES: { id: PublishSiteTheme; label: string; detail: string }[] = [
+  { id: 'minimal', label: 'Minimal', detail: 'Quiet, clean notes site' },
+  { id: 'editorial', label: 'Editorial', detail: 'Sharper typography for essays' },
+  { id: 'reference', label: 'Reference', detail: 'Dense docs-style browsing' }
 ]
 
 const STARTER_TEMPLATE_ICONS: Record<StarterTemplateKind, React.ReactNode> = {
@@ -266,6 +282,50 @@ function claudeDesktopConfig(info: AgentAccessInfo, vault: string): string {
 
 function defaultPublishDir(vault: string): string {
   return `${vault.replace(/\/+$/, '')}/.forge/publish`
+}
+
+function slugifySiteName(value: string): string {
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'site'
+  )
+}
+
+function defaultPublishSiteDir(vault: string, name: string): string {
+  return `${vault.replace(/\/+$/, '')}/.forge/sites/${slugifySiteName(name)}`
+}
+
+function createPublishSite(vault: string, name: string, scope: PublishSiteConfig['scope'] = { kind: 'vault' }): PublishSiteConfig {
+  const now = new Date().toISOString()
+  return {
+    id: `site-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    name,
+    description: scope.kind === 'folder' ? `Published notes from ${scope.folder}.` : 'Published notes from this Forge vault.',
+    theme: 'minimal',
+    scope,
+    outputDir: defaultPublishSiteDir(vault, name),
+    options: {
+      clean: true,
+      showTags: true,
+      showBacklinks: true
+    },
+    createdAt: now,
+    updatedAt: now
+  }
+}
+
+function siteScopeLabel(site: PublishSiteConfig): string {
+  return site.scope.kind === 'folder' ? site.scope.folder : 'All folders'
+}
+
+function revealRelForOutput(vault: string, outputDir: string): string | null {
+  const cleanVault = vault.replace(/\/+$/, '')
+  const cleanOutput = outputDir.replace(/\/+$/, '')
+  if (cleanOutput === cleanVault || !cleanOutput.startsWith(`${cleanVault}/`)) return null
+  return `${cleanOutput.slice(cleanVault.length + 1)}/index.html`
 }
 
 function publicPublishNotes(publishDir: string): string {
@@ -547,18 +607,23 @@ export default function SettingsModal(): React.JSX.Element {
   const setLineWidth = useStore((s) => s.setLineWidth)
   const templatesFolder = useStore((s) => s.templatesFolder)
   const dailyNotesFolder = useStore((s) => s.dailyNotesFolder)
+  const folders = useStore((s) => s.folders)
+  const publishSites = useStore((s) => s.publishSites)
   const setTemplatesFolder = useStore((s) => s.setTemplatesFolder)
   const setDailyNotesFolder = useStore((s) => s.setDailyNotesFolder)
+  const setPublishSites = useStore((s) => s.setPublishSites)
   const createStarterTemplate = useStore((s) => s.createStarterTemplate)
   const setModal = useStore((s) => s.setModal)
   const openVaultDialog = useStore((s) => s.openVaultDialog)
   const [activeTab, setActiveTab] = useState<SettingsTabId>('appearance')
+  const [selectedPublishSiteId, setSelectedPublishSiteId] = useState<string | null>(null)
   const [agentAccess, setAgentAccess] = useState<AgentAccessInfo | null>(null)
   const [publishState, setPublishState] = useState<{
+    siteId: string | null
     status: 'idle' | 'publishing' | 'done' | 'failed'
     message: string
     outDir: string
-  }>({ status: 'idle', message: '', outDir: '' })
+  }>({ siteId: null, status: 'idle', message: '', outDir: '' })
 
   useEffect(() => {
     let cancelled = false
@@ -683,9 +748,9 @@ export default function SettingsModal(): React.JSX.Element {
           ...agentAccess.mcp.args
         ])
       : ''
-  const publishDir = vault ? defaultPublishDir(vault) : ''
   const activeSettingsTab = settingsTabs.find((tab) => tab.id === activeTab) ?? settingsTabs[0]
   const starterTemplates = STARTER_TEMPLATE_CATALOG
+  const selectedPublishSite = publishSites.find((site) => site.id === selectedPublishSiteId) ?? publishSites[0] ?? null
   const groupedTabs = settingsTabs.reduce<Record<SettingsNavGroup, SettingsNavItem[]>>(
     (groups, tab) => {
       groups[tab.group].push(tab)
@@ -694,19 +759,79 @@ export default function SettingsModal(): React.JSX.Element {
     { Workspace: [], Connections: [], System: [] }
   )
 
-  const publishStaticSite = async (): Promise<void> => {
-    if (!vault || !publishDir) return
-    setPublishState({ status: 'publishing', message: 'Publishing site...', outDir: publishDir })
+  useEffect(() => {
+    if (!vault || publishSites.length > 0) return
+    const firstSite = createPublishSite(vault, 'Full vault')
+    setPublishSites([firstSite])
+    setSelectedPublishSiteId(firstSite.id)
+  }, [publishSites.length, setPublishSites, vault])
+
+  useEffect(() => {
+    if (publishSites.length === 0) {
+      setSelectedPublishSiteId(null)
+      return
+    }
+    if (!selectedPublishSiteId || !publishSites.some((site) => site.id === selectedPublishSiteId)) {
+      setSelectedPublishSiteId(publishSites[0].id)
+    }
+  }, [publishSites, selectedPublishSiteId])
+
+  const updatePublishSite = (siteId: string, updater: (site: PublishSiteConfig) => PublishSiteConfig): void => {
+    setPublishSites(publishSites.map((site) => (site.id === siteId ? { ...updater(site), updatedAt: new Date().toISOString() } : site)))
+  }
+
+  const addPublishSite = (): void => {
+    if (!vault) return
+    const index = publishSites.length + 1
+    const site = createPublishSite(vault, `New site ${index}`)
+    setPublishSites([...publishSites, site])
+    setSelectedPublishSiteId(site.id)
+  }
+
+  const addTopLevelFolderSites = (): void => {
+    if (!vault) return
+    const existingFolderSites = new Set(
+      publishSites
+        .filter((site) => site.scope.kind === 'folder')
+        .map((site) => (site.scope.kind === 'folder' ? site.scope.folder : ''))
+    )
+    const folderSites = folders
+      .filter((folder) => !folder.includes('/'))
+      .filter((folder) => !existingFolderSites.has(folder))
+      .map((folder) => createPublishSite(vault, folder, { kind: 'folder', folder }))
+    if (folderSites.length === 0) return
+    setPublishSites([...publishSites, ...folderSites])
+    setSelectedPublishSiteId(folderSites[0].id)
+  }
+
+  const deletePublishSite = (siteId: string): void => {
+    const next = publishSites.filter((site) => site.id !== siteId)
+    setPublishSites(next)
+    setSelectedPublishSiteId(next[0]?.id ?? null)
+  }
+
+  const publishStaticSite = async (site: PublishSiteConfig): Promise<void> => {
+    if (!vault || !site.outputDir) return
+    setPublishState({ siteId: site.id, status: 'publishing', message: 'Publishing site...', outDir: site.outputDir })
     try {
-      const result = await window.forge.publishVault(vault, publishDir)
+      const result = await window.forge.publishVault(vault, site.outputDir, {
+        title: site.name,
+        description: site.description,
+        theme: site.theme,
+        scopePath: site.scope.kind === 'folder' ? site.scope.folder : '',
+        clean: site.options.clean,
+        showTags: site.options.showTags,
+        showBacklinks: site.options.showBacklinks
+      })
       setPublishState({
+        siteId: site.id,
         status: 'done',
         message: `Published ${result.notes} notes and ${result.files} files.`,
         outDir: result.outDir
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      setPublishState({ status: 'failed', message, outDir: publishDir })
+      setPublishState({ siteId: site.id, status: 'failed', message, outDir: site.outputDir })
     }
   }
 
@@ -896,62 +1021,237 @@ export default function SettingsModal(): React.JSX.Element {
 
               {activeTab === 'publishing' && vault && (
                 <section className="settings-section">
-                  <div className="settings-callout static-publish-card">
+                  <div className="publish-sites-header">
                     <div>
-                      <div className="settings-row-label">Static site export</div>
+                      <div className="settings-row-label">Sites</div>
                       <div className="settings-row-desc">
-                        Generate local HTML from Markdown, wikilinks, tags, backlinks, and media assets.
+                        Publish any folder, space, or the whole vault as separate static websites.
                       </div>
                     </div>
-                    <div className="settings-code-row">
-                      <code>{publishDir}</code>
-                      <CopyButton value={publishDir} label="Copy path" />
-                    </div>
-                    <div className="static-publish-actions">
-                      <button className="btn" disabled={publishState.status === 'publishing'} onClick={() => publishStaticSite()}>
-                        {publishState.status === 'publishing' ? <RefreshCw size={14} /> : <Code2 size={14} />}
-                        {publishState.status === 'publishing' ? 'Generating' : 'Generate site'}
+                    <div className="publish-sites-actions">
+                      <button className="btn btn-compact" disabled={folders.length === 0} onClick={addTopLevelFolderSites}>
+                        <Folder size={14} />
+                        Sites from folders
                       </button>
-                      <button
-                        className="btn btn-compact"
-                        disabled={publishState.status !== 'done'}
-                        onClick={() => window.forge.reveal(vault, '.forge/publish/index.html')}
-                      >
-                        Reveal output
+                      <button className="btn btn-compact" onClick={addPublishSite}>
+                        <Plus size={14} />
+                        New site
                       </button>
                     </div>
-                    {publishState.message && (
-                      <div className={`static-publish-status ${publishState.status}`}>
-                        {publishState.status === 'done' ? (
-                          <Check size={14} />
-                        ) : publishState.status === 'failed' ? (
-                          <AlertCircle size={14} />
-                        ) : (
-                          <RefreshCw size={14} />
+                  </div>
+
+                  <div className="publish-sites-layout">
+                    <div className="publish-site-list" aria-label="Publish sites">
+                      {publishSites.map((site) => (
+                        <button
+                          key={site.id}
+                          className={`publish-site-card${site.id === selectedPublishSite?.id ? ' active' : ''}`}
+                          onClick={() => setSelectedPublishSiteId(site.id)}
+                        >
+                          <span className="publish-site-card-icon">
+                            {site.scope.kind === 'folder' ? <Folder size={15} /> : <Globe2 size={15} />}
+                          </span>
+                          <span className="publish-site-card-copy">
+                            <strong>{site.name}</strong>
+                            <span>{siteScopeLabel(site)}</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {selectedPublishSite && (
+                      <div className="settings-callout publish-site-editor">
+                        <div className="publish-site-editor-header">
+                          <div>
+                            <div className="settings-row-label">{selectedPublishSite.name}</div>
+                            <div className="settings-row-desc">{siteScopeLabel(selectedPublishSite)} · {selectedPublishSite.theme}</div>
+                          </div>
+                          {publishSites.length > 1 && (
+                            <button className="icon-btn" title="Delete site" onClick={() => deletePublishSite(selectedPublishSite.id)}>
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="publish-site-form-grid">
+                          <label className="publish-field">
+                            <span>Site name</span>
+                            <input
+                              className="settings-text-input"
+                              value={selectedPublishSite.name}
+                              onChange={(event) =>
+                                updatePublishSite(selectedPublishSite.id, (site) => ({
+                                  ...site,
+                                  name: event.target.value,
+                                  outputDir:
+                                    site.outputDir === defaultPublishSiteDir(vault, site.name)
+                                      ? defaultPublishSiteDir(vault, event.target.value)
+                                      : site.outputDir
+                                }))
+                              }
+                            />
+                          </label>
+                          <label className="publish-field">
+                            <span>Source</span>
+                            <select
+                              className="settings-text-input"
+                              value={selectedPublishSite.scope.kind}
+                              onChange={(event) =>
+                                updatePublishSite(selectedPublishSite.id, (site) => ({
+                                  ...site,
+                                  scope:
+                                    event.target.value === 'folder'
+                                      ? { kind: 'folder', folder: folders[0] ?? '' }
+                                      : { kind: 'vault' }
+                                }))
+                              }
+                            >
+                              <option value="vault">All folders</option>
+                              <option value="folder">Single folder</option>
+                            </select>
+                          </label>
+                          {selectedPublishSite.scope.kind === 'folder' && (
+                            <label className="publish-field publish-field-wide">
+                              <span>Folder</span>
+                              <select
+                                className="settings-text-input"
+                                value={selectedPublishSite.scope.folder}
+                                onChange={(event) =>
+                                  updatePublishSite(selectedPublishSite.id, (site) => ({
+                                    ...site,
+                                    scope: { kind: 'folder', folder: event.target.value }
+                                  }))
+                                }
+                              >
+                                {folders.map((folder) => (
+                                  <option key={folder} value={folder}>
+                                    {folder}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          )}
+                          <label className="publish-field publish-field-wide">
+                            <span>Description</span>
+                            <textarea
+                              className="settings-textarea"
+                              value={selectedPublishSite.description}
+                              onChange={(event) =>
+                                updatePublishSite(selectedPublishSite.id, (site) => ({ ...site, description: event.target.value }))
+                              }
+                            />
+                          </label>
+                        </div>
+
+                        <div className="publish-subsection">
+                          <div className="settings-row-label">Theme</div>
+                          <div className="publish-theme-grid">
+                            {PUBLISH_THEMES.map((themeOption) => (
+                              <button
+                                key={themeOption.id}
+                                className={`publish-theme-card${selectedPublishSite.theme === themeOption.id ? ' active' : ''}`}
+                                onClick={() =>
+                                  updatePublishSite(selectedPublishSite.id, (site) => ({ ...site, theme: themeOption.id }))
+                                }
+                              >
+                                <strong>{themeOption.label}</strong>
+                                <span>{themeOption.detail}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="publish-subsection">
+                          <div className="settings-row-label">Per-site settings</div>
+                          <div className="publish-options-grid">
+                            {[
+                              ['clean', 'Clean before publishing', 'Remove stale generated files first.'],
+                              ['showTags', 'Tag navigation', 'Generate tag pages and tag navigation.'],
+                              ['showBacklinks', 'Backlink sections', 'Show backlinks on note pages.']
+                            ].map(([key, label, detail]) => (
+                              <label key={key} className="publish-option">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(selectedPublishSite.options[key as keyof typeof selectedPublishSite.options])}
+                                  onChange={(event) =>
+                                    updatePublishSite(selectedPublishSite.id, (site) => ({
+                                      ...site,
+                                      options: { ...site.options, [key]: event.target.checked }
+                                    }))
+                                  }
+                                />
+                                <span>
+                                  <strong>{label}</strong>
+                                  <small>{detail}</small>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="settings-code-row">
+                          <code>{selectedPublishSite.outputDir}</code>
+                          <CopyButton value={selectedPublishSite.outputDir} label="Copy path" />
+                        </div>
+
+                        <div className="static-publish-actions">
+                          <button
+                            className="btn"
+                            disabled={publishState.status === 'publishing'}
+                            onClick={() => publishStaticSite(selectedPublishSite)}
+                          >
+                            {publishState.status === 'publishing' && publishState.siteId === selectedPublishSite.id ? (
+                              <RefreshCw size={14} />
+                            ) : (
+                              <Code2 size={14} />
+                            )}
+                            {publishState.status === 'publishing' && publishState.siteId === selectedPublishSite.id ? 'Generating' : 'Generate site'}
+                          </button>
+                          <button
+                            className="btn btn-compact"
+                            disabled={publishState.status !== 'done' || publishState.siteId !== selectedPublishSite.id || !revealRelForOutput(vault, selectedPublishSite.outputDir)}
+                            onClick={() => {
+                              const rel = revealRelForOutput(vault, selectedPublishSite.outputDir)
+                              if (rel) window.forge.reveal(vault, rel)
+                            }}
+                          >
+                            Reveal output
+                          </button>
+                          <CopyButton value={publicPublishNotes(selectedPublishSite.outputDir)} label="Copy deploy notes" />
+                        </div>
+
+                        {publishState.message && publishState.siteId === selectedPublishSite.id && (
+                          <div className={`static-publish-status ${publishState.status}`}>
+                            {publishState.status === 'done' ? (
+                              <Check size={14} />
+                            ) : publishState.status === 'failed' ? (
+                              <AlertCircle size={14} />
+                            ) : (
+                              <RefreshCw size={14} />
+                            )}
+                            <span>{publishState.message}</span>
+                          </div>
                         )}
-                        <span>{publishState.message}</span>
                       </div>
                     )}
                   </div>
+
                   <div className="settings-callout public-publish-card">
                     <div>
-                      <div className="settings-row-label">Public hosting</div>
+                      <div className="settings-row-label">Good ideas to borrow from Feather</div>
                       <div className="settings-row-desc">
-                        Forge does not need a hosted backend. Deploy the generated folder to any static host when you want a public URL.
+                        Feather is strongest at SEO and growth defaults. Forge can keep those ideas local and open source.
                       </div>
                     </div>
                     <div className="public-publish-options">
                       <div className="public-publish-option">
-                        <strong>Open source default</strong>
-                        <span>Commit or upload the output folder to GitHub Pages. Forge writes .nojekyll for _forge assets.</span>
+                        <strong>SEO defaults</strong>
+                        <span>Sitemaps, canonical URLs, Open Graph, schema, per-page title and description overrides.</span>
                       </div>
                       <div className="public-publish-option">
-                        <strong>Provider neutral</strong>
-                        <span>Cloudflare Pages, Netlify, Vercel, S3/R2, and IPFS can serve the same static files.</span>
+                        <strong>Growth surfaces</strong>
+                        <span>RSS, search, related posts, authors, analytics hooks, email capture snippets, and newsletter export.</span>
                       </div>
-                    </div>
-                    <div className="static-publish-actions">
-                      <CopyButton value={publicPublishNotes(publishDir)} label="Copy deploy notes" />
                     </div>
                   </div>
                 </section>

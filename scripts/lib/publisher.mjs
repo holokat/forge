@@ -23,6 +23,28 @@ function expandHome(value) {
   return value
 }
 
+function normalizeScopePath(value) {
+  if (!value) return ''
+  const normalized = String(value)
+    .replaceAll('\\', '/')
+    .replace(/^\/+|\/+$/g, '')
+    .split('/')
+    .map((part) => part.trim())
+    .filter(Boolean)
+  if (normalized.some((part) => part === '.' || part === '..')) {
+    throw new Error('Publish scope must stay inside the vault.')
+  }
+  return normalized.join('/')
+}
+
+function isPathInScope(rel, scopePath) {
+  return !scopePath || rel === scopePath || rel.startsWith(`${scopePath}/`)
+}
+
+function normalizeTheme(value) {
+  return ['minimal', 'editorial', 'reference'].includes(value) ? value : 'minimal'
+}
+
 function isMarkdown(rel) {
   return /\.md$/i.test(rel)
 }
@@ -574,16 +596,21 @@ function renderMarkdown(note, site) {
   return marked.parse(note.body, { async: false })
 }
 
-function pageShell({ title, siteTitle, description = '', currentOutputPath, body, navNotes, tagIndex }) {
+function pageShell({ title, site, description = '', currentOutputPath, body, navNotes, tagIndex }) {
   const stylesheetHref = relativeHref(currentOutputPath, '_forge/styles.css')
   const homeHref = relativeHref(currentOutputPath, 'index.html')
   const noteItems = navNotes
     .map((note) => `<li>${renderNoteLink(note, currentOutputPath, 'sidebar-link')}</li>`)
     .join('')
-  const tagItems = tagIndex
-    .slice(0, 24)
-    .map((entry) => `<li><a href="${relativeHref(currentOutputPath, entry.outputPath)}">#${escapeHtml(entry.tag)} <span>${entry.notes.length}</span></a></li>`)
-    .join('')
+  const tagNav = site.showTags
+    ? `<nav class="sidebar-section" aria-label="Tags">
+        <h2>Tags</h2>
+        <ul>${tagIndex
+          .slice(0, 24)
+          .map((entry) => `<li><a href="${relativeHref(currentOutputPath, entry.outputPath)}">#${escapeHtml(entry.tag)} <span>${entry.notes.length}</span></a></li>`)
+          .join('')}</ul>
+      </nav>`
+    : ''
 
   return `<!doctype html>
 <html lang="en">
@@ -592,25 +619,23 @@ function pageShell({ title, siteTitle, description = '', currentOutputPath, body
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="${GENERATOR}">
   ${description ? `<meta name="description" content="${escapeAttribute(description)}">` : ''}
-  <title>${escapeHtml(title)} - ${escapeHtml(siteTitle)}</title>
+  <title>${escapeHtml(title)} - ${escapeHtml(site.title)}</title>
   <link rel="stylesheet" href="${stylesheetHref}">
 </head>
-<body>
+<body class="site-theme-${escapeAttribute(site.theme)}">
   <a class="skip-link" href="#content">Skip to content</a>
   <div class="site-shell">
     <aside class="site-sidebar" aria-label="Site navigation">
       <div class="site-brand">
-        <a href="${homeHref}">${escapeHtml(siteTitle)}</a>
-        <span>Forge publish</span>
+        <a href="${homeHref}">${escapeHtml(site.title)}</a>
+        <span>${escapeHtml(site.scopePath ? site.scopePath : 'Forge publish')}</span>
+        ${site.description ? `<p>${escapeHtml(site.description)}</p>` : ''}
       </div>
       <nav class="sidebar-section" aria-label="Notes">
         <h2>Notes</h2>
         <ul>${noteItems}</ul>
       </nav>
-      <nav class="sidebar-section" aria-label="Tags">
-        <h2>Tags</h2>
-        <ul>${tagItems}</ul>
-      </nav>
+      ${tagNav}
     </aside>
     <main id="content" class="site-main">
 ${body}
@@ -638,7 +663,7 @@ function renderIndexPage(site) {
         <p class="note-path">${escapeHtml(note.path)}</p>
         <h2>${renderNoteLink(note, outputPath)}</h2>
         <p>${note.words} words</p>
-        <div class="tag-row">${note.tags.map((tag) => renderTagChip(tag, outputPath, site.tagIndex)).join('')}</div>
+        ${site.showTags ? `<div class="tag-row">${note.tags.map((tag) => renderTagChip(tag, outputPath, site.tagIndex)).join('')}</div>` : ''}
       </article>`
     )
     .join('')
@@ -656,25 +681,25 @@ function renderIndexPage(site) {
 
   return pageShell({
     title: 'Index',
-    siteTitle: site.title,
-    description: `${site.notes.length} published Forge notes`,
+    site,
+    description: site.description || `${site.notes.length} published Forge notes`,
     currentOutputPath: outputPath,
     navNotes: site.notes,
     tagIndex: site.tagIndex,
     body: `      <header class="page-header">
-        <p class="eyebrow">Static vault</p>
+        <p class="eyebrow">${escapeHtml(site.scopePath ? 'Folder site' : 'Static vault')}</p>
         <h1>${escapeHtml(site.title)}</h1>
-        <p>${escapeHtml(site.notes.length)} notes rendered from Markdown with local links, backlinks, tags, and assets.</p>
+        <p>${escapeHtml(site.description || `${site.notes.length} notes rendered from Markdown with local links, backlinks, tags, and assets.`)}</p>
       </header>
       ${renderStats(site.stats)}
       <section class="content-section">
         <h2>All notes</h2>
         <div class="note-grid">${noteCards || '<p class="empty-state">No Markdown notes found.</p>'}</div>
       </section>
-      <section class="content-section">
+      ${site.showTags ? `<section class="content-section">
         <h2>Tags</h2>
         <div class="tag-cloud">${tagCloud || '<p class="empty-state">No tags found.</p>'}</div>
-      </section>
+      </section>` : ''}
       ${broken}`
   })
 }
@@ -693,7 +718,7 @@ function renderTagPage(site, tagPage) {
 
   return pageShell({
     title: `#${tagPage.tag}`,
-    siteTitle: site.title,
+    site,
     currentOutputPath: outputPath,
     navNotes: site.notes,
     tagIndex: site.tagIndex,
@@ -712,13 +737,27 @@ function renderTagPage(site, tagPage) {
 function renderNotePage(site, note) {
   const html = renderMarkdown(note, site)
   const notesByPath = site.notesByPath
-  const tagRow = note.tags.length
+  const tagRow = site.showTags && note.tags.length
     ? `<div class="tag-row">${note.tags.map((tag) => renderTagChip(tag, note.outputPath, site.tagIndex)).join('')}</div>`
-    : '<p class="empty-state">No tags.</p>'
+    : site.showTags
+      ? '<p class="empty-state">No tags.</p>'
+      : ''
+  const relationSections = [
+    `<div>
+          <h2>Links</h2>
+          ${renderLinkList(note.links, notesByPath, note.outputPath, 'No outgoing note links.')}
+        </div>`,
+    site.showBacklinks
+      ? `<div>
+          <h2>Backlinks</h2>
+          ${renderLinkList(note.backlinks, notesByPath, note.outputPath, 'No backlinks yet.')}
+        </div>`
+      : ''
+  ].filter(Boolean).join('\n')
 
   return pageShell({
     title: note.title,
-    siteTitle: site.title,
+    site,
     description: `${note.title} from ${site.title}`,
     currentOutputPath: note.outputPath,
     navNotes: site.notes,
@@ -735,14 +774,7 @@ ${html}
         </div>
       </article>
       <section class="content-section relation-grid" aria-label="Note relationships">
-        <div>
-          <h2>Links</h2>
-          ${renderLinkList(note.links, notesByPath, note.outputPath, 'No outgoing note links.')}
-        </div>
-        <div>
-          <h2>Backlinks</h2>
-          ${renderLinkList(note.backlinks, notesByPath, note.outputPath, 'No backlinks yet.')}
-        </div>
+        ${relationSections}
       </section>`
   })
 }
@@ -781,7 +813,31 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(180deg, #fbfbfa 0%, #f4f6f7 100%);
+  background: linear-gradient(180deg, var(--bg) 0%, var(--panel-soft) 100%);
+}
+
+body.site-theme-editorial {
+  --bg: #f8f8f6;
+  --panel-soft: #eeeeec;
+  --text: #171717;
+  --muted: #646464;
+  --accent: #262626;
+  --accent-strong: #000000;
+  --link: #202020;
+  --tag-bg: #eeeeec;
+  --tag-text: #282828;
+}
+
+body.site-theme-reference {
+  --bg: #f7f8fb;
+  --panel-soft: #eef0f5;
+  --text: #1e2229;
+  --muted: #626976;
+  --accent: #303742;
+  --accent-strong: #11151b;
+  --link: #252b35;
+  --tag-bg: #e9ecf2;
+  --tag-text: #252b35;
 }
 
 a {
@@ -861,6 +917,14 @@ a:active {
 .note-path,
 .empty-state {
   color: var(--muted);
+}
+
+.site-brand p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-wrap: pretty;
 }
 
 .sidebar-section {
@@ -1341,20 +1405,27 @@ export async function publishVault({
   vault,
   output,
   title = '',
-  clean = false
+  description = '',
+  theme = 'minimal',
+  scopePath = '',
+  clean = false,
+  showTags = true,
+  showBacklinks = true
 }) {
   if (!vault) throw new Error('Missing vault path.')
   if (!output) throw new Error('Missing output path.')
 
   const resolvedVault = path.resolve(expandHome(vault))
   const resolvedOutput = path.resolve(expandHome(output))
+  const normalizedScopePath = normalizeScopePath(scopePath)
   if (outputIsUnsafe(resolvedVault, resolvedOutput)) {
     throw new Error('Output must be a dedicated directory, not the vault root or filesystem root.')
   }
 
   const scan = await scanVault(resolvedVault, { excludeAbs: resolvedOutput })
-  const markdownFiles = scan.files.filter((file) => file.markdown)
-  const assetFiles = scan.files.filter((file) => !file.markdown)
+  const scopedFiles = normalizedScopePath ? scan.files.filter((file) => isPathInScope(file.path, normalizedScopePath)) : scan.files
+  const markdownFiles = scopedFiles.filter((file) => file.markdown)
+  const assetFiles = scopedFiles.filter((file) => !file.markdown)
   const notes = []
 
   for (const file of markdownFiles) {
@@ -1377,6 +1448,11 @@ export async function publishVault({
   const notesByPath = new Map(notes.map((note) => [note.path, note]))
   const site = {
     title: title || path.basename(resolvedVault) || 'Forge Vault',
+    description: String(description ?? '').trim(),
+    theme: normalizeTheme(theme),
+    scopePath: normalizedScopePath,
+    showTags: showTags !== false,
+    showBacklinks: showBacklinks !== false,
     vault: resolvedVault,
     output: resolvedOutput,
     notes,
@@ -1403,7 +1479,7 @@ export async function publishVault({
   await writeText(resolvedOutput, '_forge/styles.css', styles(), written)
   await writeText(resolvedOutput, 'index.html', renderIndexPage(site), written)
 
-  for (const tagPage of tagIndex) {
+  for (const tagPage of site.showTags ? tagIndex : []) {
     await writeText(resolvedOutput, tagPage.outputPath, renderTagPage(site, tagPage), written)
   }
 
@@ -1422,6 +1498,13 @@ export async function publishVault({
       {
         generator: GENERATOR,
         title: site.title,
+        description: site.description,
+        theme: site.theme,
+        scopePath: site.scopePath,
+        options: {
+          showTags: site.showTags,
+          showBacklinks: site.showBacklinks
+        },
         totals: site.stats,
         notes: notes.map((note) => ({
           path: note.path,

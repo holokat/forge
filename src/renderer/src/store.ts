@@ -1,6 +1,14 @@
 import { create } from 'zustand'
 import type { ReactNode } from 'react'
-import { DEFAULT_SETTINGS, type ExtensionSettings, type Settings, type ThemeMode, type VaultFileStat } from '../../shared/types'
+import {
+  DEFAULT_SETTINGS,
+  type ExtensionSettings,
+  type PublishSiteConfig,
+  type PublishSiteTheme,
+  type Settings,
+  type ThemeMode,
+  type VaultFileStat
+} from '../../shared/types'
 import {
   createDefaultExtensionSettings,
   enabledExtensionIds,
@@ -153,6 +161,8 @@ export interface ForgeState {
   bookmarkSettings: Record<string, string[]>
   pinnedFolders: string[]
   pinnedFolderSettings: Record<string, string[]>
+  publishSites: PublishSiteConfig[]
+  publishSiteSettings: Record<string, PublishSiteConfig[]>
   enabledExtensions: string[]
   extensionSettings: ExtensionSettings
   recentVaults: string[]
@@ -204,6 +214,7 @@ export interface ForgeState {
   toggleBookmark(path: string): void
   removeBookmark(path: string): void
   togglePinnedFolder(path: string): void
+  setPublishSites(sites: PublishSiteConfig[]): void
   setExtensionInstalled(extensionId: string, installed: boolean): void
   setExtensionEnabled(extensionId: string, enabled: boolean): void
   setLeftOpen(open: boolean): void
@@ -239,6 +250,7 @@ async function persistSettings(state: ForgeState): Promise<void> {
     dailyNotesFolder: state.dailyNotesFolder,
     bookmarks: bookmarkSettingsForState(state),
     pinnedFolders: pinnedFolderSettingsForState(state),
+    publishSites: publishSiteSettingsForState(state),
     enabledExtensions: enabledExtensionIds(state.extensionSettings),
     extensionSettings: state.extensionSettings
   }
@@ -293,6 +305,77 @@ function pinnedFolderSettingsForState(state: ForgeState): Record<string, string[
 function pinnedFoldersForVault(settings: Record<string, string[]>, vault: string, folders: string[]): string[] {
   const existing = new Set(folders)
   return normalizeBookmarkList(settings[vault]).filter((path) => existing.has(path))
+}
+
+function normalizePublishSiteTheme(value: unknown): PublishSiteTheme {
+  return value === 'editorial' || value === 'reference' ? value : 'minimal'
+}
+
+function normalizePublishSiteConfig(value: unknown, folders: string[] = []): PublishSiteConfig | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const raw = value as Partial<PublishSiteConfig>
+  const id = typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : ''
+  const name = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim() : ''
+  const outputDir = typeof raw.outputDir === 'string' && raw.outputDir.trim() ? raw.outputDir.trim() : ''
+  if (!id || !name || !outputDir) return null
+
+  const description = typeof raw.description === 'string' ? raw.description : ''
+  const folder = raw.scope?.kind === 'folder' ? normalizeFolderPath(raw.scope.folder) : ''
+  const existingFolders = new Set(folders)
+  const scope = folder && (!folders.length || existingFolders.has(folder)) ? { kind: 'folder' as const, folder } : { kind: 'vault' as const }
+  const options =
+    raw.options && typeof raw.options === 'object' && !Array.isArray(raw.options)
+      ? (raw.options as Partial<PublishSiteConfig['options']>)
+      : {}
+  const createdAt = typeof raw.createdAt === 'string' && raw.createdAt ? raw.createdAt : new Date().toISOString()
+  const updatedAt = typeof raw.updatedAt === 'string' && raw.updatedAt ? raw.updatedAt : createdAt
+
+  return {
+    id,
+    name,
+    description,
+    theme: normalizePublishSiteTheme(raw.theme),
+    scope,
+    outputDir,
+    options: {
+      clean: options.clean !== false,
+      showTags: options.showTags !== false,
+      showBacklinks: options.showBacklinks !== false
+    },
+    createdAt,
+    updatedAt
+  }
+}
+
+function normalizePublishSites(value: unknown, folders: string[] = []): PublishSiteConfig[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  const sites: PublishSiteConfig[] = []
+  for (const item of value) {
+    const site = normalizePublishSiteConfig(item, folders)
+    if (!site || seen.has(site.id)) continue
+    seen.add(site.id)
+    sites.push(site)
+  }
+  return sites
+}
+
+function normalizePublishSiteSettings(value: unknown): Record<string, PublishSiteConfig[]> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const settings: Record<string, PublishSiteConfig[]> = {}
+  for (const [vault, sites] of Object.entries(value)) {
+    if (typeof vault === 'string' && vault.trim()) settings[vault] = normalizePublishSites(sites)
+  }
+  return settings
+}
+
+function publishSiteSettingsForState(state: ForgeState): Record<string, PublishSiteConfig[]> {
+  if (!state.vault) return state.publishSiteSettings
+  return { ...state.publishSiteSettings, [state.vault]: state.publishSites }
+}
+
+function publishSitesForVault(settings: Record<string, PublishSiteConfig[]>, vault: string, folders: string[]): PublishSiteConfig[] {
+  return normalizePublishSites(settings[vault], folders)
 }
 
 function normalizeFolderPath(value: string): string {
@@ -2389,6 +2472,8 @@ export const useStore = create<ForgeState>((set, get) => ({
   bookmarkSettings: DEFAULT_SETTINGS.bookmarks,
   pinnedFolders: [],
   pinnedFolderSettings: DEFAULT_SETTINGS.pinnedFolders,
+  publishSites: [],
+  publishSiteSettings: DEFAULT_SETTINGS.publishSites,
   enabledExtensions: DEFAULT_SETTINGS.enabledExtensions,
   extensionSettings: createDefaultExtensionSettings(),
   recentVaults: [],
@@ -2406,6 +2491,7 @@ export const useStore = create<ForgeState>((set, get) => ({
     const extensionSettings = normalizeExtensionSettings(settings.extensionSettings, settings.enabledExtensions)
     const bookmarkSettings = normalizeBookmarkSettings(settings.bookmarks)
     const pinnedFolderSettings = normalizePinnedFolderSettings(settings.pinnedFolders)
+    const publishSiteSettings = normalizePublishSiteSettings(settings.publishSites)
     set({
       theme: settings.theme,
       fontSize: settings.fontSize,
@@ -2414,6 +2500,7 @@ export const useStore = create<ForgeState>((set, get) => ({
       dailyNotesFolder: settings.dailyNotesFolder,
       bookmarkSettings,
       pinnedFolderSettings,
+      publishSiteSettings,
       extensionSettings,
       enabledExtensions: enabledExtensionIds(extensionSettings),
       recentVaults: settings.recentVaults,
@@ -2454,6 +2541,7 @@ export const useStore = create<ForgeState>((set, get) => ({
     const tab: Tab = { id: newTabId(), kind: firstNote ? 'note' : 'empty', path: firstNote, mode: 'edit' }
     const bookmarks = bookmarksForVault(get().bookmarkSettings, vault, files)
     const pinnedFolders = pinnedFoldersForVault(get().pinnedFolderSettings, vault, data.folders)
+    const publishSites = publishSitesForVault(get().publishSiteSettings, vault, data.folders)
 
     set({
       vault,
@@ -2466,6 +2554,8 @@ export const useStore = create<ForgeState>((set, get) => ({
       bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
       pinnedFolders,
       pinnedFolderSettings: { ...get().pinnedFolderSettings, [vault]: pinnedFolders },
+      publishSites,
+      publishSiteSettings: { ...get().publishSiteSettings, [vault]: publishSites },
       tabs: [tab],
       activeTabId: tab.id,
       recentVaults: recents,
@@ -2491,6 +2581,7 @@ export const useStore = create<ForgeState>((set, get) => ({
       index: {},
       bookmarks: [],
       pinnedFolders: [],
+      publishSites: [],
       tabs: [],
       activeTabId: null,
       modal: null
@@ -2518,6 +2609,7 @@ export const useStore = create<ForgeState>((set, get) => ({
     )
     const bookmarks = bookmarksForVault(get().bookmarkSettings, vault, data.files)
     const pinnedFolders = pinnedFoldersForVault(get().pinnedFolderSettings, vault, data.folders)
+    const publishSites = publishSitesForVault(get().publishSiteSettings, vault, data.folders)
     set({
       files: data.files,
       folders: data.folders,
@@ -2527,6 +2619,8 @@ export const useStore = create<ForgeState>((set, get) => ({
       bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
       pinnedFolders,
       pinnedFolderSettings: { ...get().pinnedFolderSettings, [vault]: pinnedFolders },
+      publishSites,
+      publishSiteSettings: { ...get().publishSiteSettings, [vault]: publishSites },
       tabs,
       contentVersion: get().contentVersion + 1
     })
@@ -2811,6 +2905,11 @@ export const useStore = create<ForgeState>((set, get) => ({
 
     const bookmarks = normalizeBookmarkList(get().bookmarks.map(mapPath))
     const pinnedFolders = normalizeBookmarkList(get().pinnedFolders.map(mapPath))
+    const publishSites = get().publishSites.map((site) => ({
+      ...site,
+      scope: site.scope.kind === 'folder' ? { kind: 'folder' as const, folder: mapPath(site.scope.folder) } : site.scope,
+      updatedAt: site.scope.kind === 'folder' && site.scope.folder === oldPath ? new Date().toISOString() : site.updatedAt
+    }))
     set({
       files: get().files.map(mapPath).sort(),
       folders: get().folders.map(mapPath).sort(),
@@ -2820,6 +2919,8 @@ export const useStore = create<ForgeState>((set, get) => ({
       bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
       pinnedFolders,
       pinnedFolderSettings: { ...get().pinnedFolderSettings, [vault]: pinnedFolders },
+      publishSites,
+      publishSiteSettings: { ...get().publishSiteSettings, [vault]: publishSites },
       tabs: get().tabs.map((t) => (t.path ? { ...t, path: mapPath(t.path) } : t)),
       contentVersion: get().contentVersion + 1
     })
@@ -2862,6 +2963,12 @@ export const useStore = create<ForgeState>((set, get) => ({
     for (const [key, value] of Object.entries(get().fileStats)) if (!gone(key)) fileStats[key] = value
     const bookmarks = get().bookmarks.filter((bookmark) => !gone(bookmark))
     const pinnedFolders = get().pinnedFolders.filter((folder) => !gone(folder))
+    const now = new Date().toISOString()
+    const publishSites = get().publishSites.map((site) =>
+      site.scope.kind === 'folder' && gone(site.scope.folder)
+        ? { ...site, scope: { kind: 'vault' as const }, updatedAt: now }
+        : site
+    )
     set({
       files: get().files.filter((f) => !gone(f)),
       folders: get().folders.filter((f) => !gone(f)),
@@ -2871,6 +2978,8 @@ export const useStore = create<ForgeState>((set, get) => ({
       bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
       pinnedFolders,
       pinnedFolderSettings: { ...get().pinnedFolderSettings, [vault]: pinnedFolders },
+      publishSites,
+      publishSiteSettings: { ...get().publishSiteSettings, [vault]: publishSites },
       tabs: get().tabs.map((t) =>
         t.path && gone(t.path) ? { ...t, kind: 'empty' as TabKind, path: null } : t
       ),
@@ -2930,6 +3039,17 @@ export const useStore = create<ForgeState>((set, get) => ({
     set({
       pinnedFolders: normalized,
       pinnedFolderSettings: { ...get().pinnedFolderSettings, [vault]: normalized }
+    })
+    persistSettings(get())
+  },
+
+  setPublishSites(sites) {
+    const { vault, folders } = get()
+    if (!vault) return
+    const normalized = normalizePublishSites(sites, folders)
+    set({
+      publishSites: normalized,
+      publishSiteSettings: { ...get().publishSiteSettings, [vault]: normalized }
     })
     persistSettings(get())
   },

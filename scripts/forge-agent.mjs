@@ -44,7 +44,7 @@ Commands:
   move <from> <to>                      Move or rename a file or folder
   search <query> [--limit <n>] [--json] Search Markdown filenames and contents
   analyze [--stale-days <n>] [--json]   Summarize notes, tags, links, backlinks, gaps, stale notes, and repair queues
-  publish --out <folder> [--title <s>] [--clean] [--json]
+  publish --out <folder> [--title <s>] [--description <s>] [--scope <folder>] [--theme <minimal|editorial|reference>] [--clean] [--no-tags] [--no-backlinks] [--json]
                                         Export the vault to static HTML
   batch [file|-] [--json]               Run JSON operations in one transaction-like sequence
   built-in-templates [--json] [--content]
@@ -866,12 +866,20 @@ async function analyzeCommand(vault, { staleDays = DEFAULT_STALE_NOTE_DAYS } = {
   }
 }
 
-async function publishCommand(vault, { output = '', title = '', clean = false } = {}) {
+async function publishCommand(
+  vault,
+  { output = '', title = '', description = '', scopePath = '', theme = 'minimal', clean = false, showTags = true, showBacklinks = true } = {}
+) {
   const result = await publishVault({
     vault,
     output,
     title,
-    clean: Boolean(clean)
+    description,
+    scopePath,
+    theme,
+    clean: Boolean(clean),
+    showTags,
+    showBacklinks
   })
 
   return {
@@ -1076,7 +1084,12 @@ async function runOperation(vault, op) {
       return publishCommand(vault, {
         output: op.output ?? op.outDir ?? op.out,
         title: op.title,
-        clean: Boolean(op.clean)
+        description: op.description,
+        scopePath: op.scopePath ?? op.scope,
+        theme: op.theme,
+        clean: Boolean(op.clean),
+        showTags: op.showTags ?? !op.noTags,
+        showBacklinks: op.showBacklinks ?? !op.noBacklinks
       })
     default:
       throw new Error(`Unknown batch action: ${action}`)
@@ -1276,7 +1289,12 @@ async function main() {
         printResult(await publishCommand(vault, {
           output: options.out || options.output || options.outDir,
           title: options.title,
-          clean: Boolean(options.clean)
+          description: options.description,
+          scopePath: options.scopePath || options.scope,
+          theme: options.theme,
+          clean: Boolean(options.clean),
+          showTags: options.tags === false || options['no-tags'] || options.noTags ? false : true,
+          showBacklinks: options.backlinks === false || options['no-backlinks'] || options.noBacklinks ? false : true
         }), {
           json,
           text: (result) => [

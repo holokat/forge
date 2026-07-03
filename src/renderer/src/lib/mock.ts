@@ -181,7 +181,7 @@ export function installMockApi(): void {
     }),
     setMobileVault: async () => {},
     importAttachments: async () => [],
-    publishVault: async (_vault, outDir) => ({ outDir, files: 0, notes: 0 }),
+    publishVault: async (_vault, outDir, _options) => ({ outDir, files: 0, notes: 0 }),
     getUpdateStatus: async () => ({
       state: 'disabled',
       currentVersion: '0.1.1',

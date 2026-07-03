@@ -92,7 +92,7 @@ Verified locally:
 ## Wave 9: Publishing Workflows
 
 - [ ] Add a publish preflight workspace or report covering missing slugs/descriptions, broken links, unresolved assets, draft pages, and checklist state.
-- [ ] Add saved publish profiles for site title, output folder, clean behavior, include/exclude rules, and deploy notes.
+- [x] Add saved publish profiles for site title, output folder, clean behavior, folder/all-vault scope, theme, tag/backlink options, and deploy notes.
 - [ ] Add publish workflow contribution values only after validator support exists for preflight rules and profile references.
 - [ ] Add agent-facing publish preflight and release handoff templates that map cleanly to CLI/MCP publish commands.
 

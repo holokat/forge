@@ -26,8 +26,43 @@ export interface Settings {
   dailyNotesFolder: string
   bookmarks: Record<string, string[]>
   pinnedFolders: Record<string, string[]>
+  publishSites: Record<string, PublishSiteConfig[]>
   enabledExtensions: string[]
   extensionSettings: ExtensionSettings
+}
+
+export type PublishSiteTheme = 'minimal' | 'editorial' | 'reference'
+
+export type PublishSiteScope =
+  | { kind: 'vault' }
+  | { kind: 'folder'; folder: string }
+
+export interface PublishSiteOptions {
+  clean: boolean
+  showTags: boolean
+  showBacklinks: boolean
+}
+
+export interface PublishSiteConfig {
+  id: string
+  name: string
+  description: string
+  theme: PublishSiteTheme
+  scope: PublishSiteScope
+  outputDir: string
+  options: PublishSiteOptions
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PublishVaultOptions {
+  title?: string
+  description?: string
+  theme?: PublishSiteTheme
+  scopePath?: string
+  clean?: boolean
+  showTags?: boolean
+  showBacklinks?: boolean
 }
 
 export interface ExtensionInstallPreference {
@@ -116,6 +151,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dailyNotesFolder: 'Daily',
   bookmarks: {},
   pinnedFolders: {},
+  publishSites: {},
   enabledExtensions: [],
   extensionSettings: {
     schemaVersion: 1,
@@ -143,7 +179,7 @@ export interface ForgeAPI {
   setMobileVault(vault: string | null): Promise<void>
   droppedFilePaths(files: unknown[]): string[]
   importAttachments(vault: string, noteRel: string, sourcePaths: string[]): Promise<ImportedAttachment[]>
-  publishVault(vault: string, outDir: string): Promise<{ outDir: string; files: number; notes: number }>
+  publishVault(vault: string, outDir: string, options?: PublishVaultOptions): Promise<{ outDir: string; files: number; notes: number }>
   getUpdateStatus(): Promise<UpdateStatus>
   checkForUpdates(): Promise<UpdateStatus>
   installUpdate(): Promise<void>

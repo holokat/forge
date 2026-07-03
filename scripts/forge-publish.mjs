@@ -19,7 +19,12 @@ Usage:
 Options:
   --out, -o <folder>      Required output folder for generated static files
   --title <title>         Site title; defaults to the vault folder name
+  --description <text>    Site description used in generated metadata
+  --scope <folder>        Publish only one vault folder
+  --theme <name>          minimal, editorial, or reference
   --clean                 Remove a previous Forge publish output before writing
+  --no-tags               Omit tag navigation and tag pages
+  --no-backlinks          Omit backlink sections from note pages
   --json                  Print a machine-readable summary
   --help, -h              Show this help
 
@@ -33,7 +38,12 @@ function parseArgv(argv) {
     vault: process.env.FORGE_VAULT ?? '',
     output: '',
     title: '',
+    description: '',
+    scopePath: '',
+    theme: 'minimal',
     clean: false,
+    showTags: true,
+    showBacklinks: true,
     json: false,
     help: false
   }
@@ -52,8 +62,24 @@ function parseArgv(argv) {
       options.title = argv[++i] ?? ''
     } else if (arg.startsWith('--title=')) {
       options.title = arg.slice('--title='.length)
+    } else if (arg === '--description') {
+      options.description = argv[++i] ?? ''
+    } else if (arg.startsWith('--description=')) {
+      options.description = arg.slice('--description='.length)
+    } else if (arg === '--scope') {
+      options.scopePath = argv[++i] ?? ''
+    } else if (arg.startsWith('--scope=')) {
+      options.scopePath = arg.slice('--scope='.length)
+    } else if (arg === '--theme') {
+      options.theme = argv[++i] ?? ''
+    } else if (arg.startsWith('--theme=')) {
+      options.theme = arg.slice('--theme='.length)
     } else if (arg === '--clean') {
       options.clean = true
+    } else if (arg === '--no-tags') {
+      options.showTags = false
+    } else if (arg === '--no-backlinks') {
+      options.showBacklinks = false
     } else if (arg === '--json') {
       options.json = true
     } else if (arg === '--help' || arg === '-h') {
@@ -113,7 +139,12 @@ async function main() {
       vault,
       output: options.output,
       title: options.title,
-      clean: options.clean
+      description: options.description,
+      scopePath: options.scopePath,
+      theme: options.theme,
+      clean: options.clean,
+      showTags: options.showTags,
+      showBacklinks: options.showBacklinks
     })
     printSummary(result, options.json)
   } catch (error) {

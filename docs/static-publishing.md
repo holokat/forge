@@ -1,6 +1,6 @@
 # Forge Static Publishing
 
-Forge can export a vault to static HTML without using the desktop renderer UI. The publisher scans Markdown notes, renders clean HTML pages, rewrites local note links, adds backlinks and tag pages, and copies local non-Markdown assets into the output folder.
+Forge can export a vault or a single vault folder to static HTML without using the desktop renderer UI. The publisher scans Markdown notes, renders clean HTML pages, rewrites local note links, adds backlinks and tag pages when enabled, and copies local non-Markdown assets into the output folder.
 
 ## Usage
 
@@ -16,6 +16,21 @@ Or call the script directly:
 node scripts/forge-publish.mjs --vault /path/to/vault --out /path/to/site --title "My Notes"
 ```
 
+Publish a single folder as its own website:
+
+```bash
+node scripts/forge-publish.mjs \
+  --vault /path/to/vault \
+  --out /path/to/site \
+  --scope Projects \
+  --title "Projects" \
+  --description "Project notes and status updates" \
+  --theme reference \
+  --clean
+```
+
+The desktop app can save multiple publishing profiles per vault. Each profile stores a site name, description, theme, scope, output folder, clean behavior, tag navigation, backlink sections, and deploy notes.
+
 If `--vault` is omitted, the command follows the normal Forge vault resolution order:
 
 1. `FORGE_VAULT`
@@ -27,7 +42,7 @@ The output folder contains:
 
 - `index.html` with all notes, tags, counts, and broken wikilinks.
 - `notes/**/*.html` for rendered Markdown notes.
-- `tags/*.html` for tag index pages.
+- `tags/*.html` for tag index pages when tag navigation is enabled.
 - `assets/**` copied from non-Markdown files in the vault.
 - `_forge/styles.css` and `_forge/manifest.json` for generated site assets and metadata.
 - `.nojekyll` so GitHub Pages serves `_forge` assets.
@@ -46,6 +61,10 @@ The output folder contains:
 Forge publishing is static and host-neutral. The generated folder can be served by GitHub Pages, Cloudflare Pages, Netlify, Vercel, S3/R2, IPFS, or any plain web server. Forge does not require a Forge account, hosted API, or project-owned server to make published notes public.
 
 For GitHub Pages, keep the generated `.nojekyll` file in the deployed output so files under `_forge/` are served.
+
+## Roadmap Ideas
+
+Good publishing defaults to borrow from dedicated tools include custom domain/subfolder notes, canonical URLs, Open Graph metadata, JSON-LD schema, RSS, local search, related posts, author pages, analytics hooks, email capture snippets, and newsletter export. Forge should keep these host-neutral and optional.
 
 ## Safety
 

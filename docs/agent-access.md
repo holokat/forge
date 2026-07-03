@@ -45,6 +45,7 @@ printf '\n## Next\n- Define scope\n' | forge --vault /path/to/vault append Proje
 forge --vault /path/to/vault search "Define scope" --json
 forge --vault /path/to/vault analyze --json
 forge --vault /path/to/vault publish --out /path/to/site --clean --json
+forge --vault /path/to/vault publish --out /path/to/projects-site --scope Projects --title "Projects" --theme reference --clean --json
 forge-publish --vault /path/to/vault --out /path/to/site --clean
 ```
 

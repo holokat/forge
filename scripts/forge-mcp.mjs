@@ -252,7 +252,12 @@ const tools = [
         vault: { type: 'string', description: 'Optional explicit vault path.' },
         outDir: { type: 'string', description: 'Output folder for generated static files.' },
         title: { type: 'string', description: 'Optional site title.' },
-        clean: { type: 'boolean', description: 'Clean previous Forge publisher output before writing.' }
+        description: { type: 'string', description: 'Optional site description used in generated metadata.' },
+        scopePath: { type: 'string', description: 'Optional vault-relative folder to publish as the site.' },
+        theme: { type: 'string', enum: ['minimal', 'editorial', 'reference'], description: 'Generated site theme.' },
+        clean: { type: 'boolean', description: 'Clean previous Forge publisher output before writing.' },
+        showTags: { type: 'boolean', description: 'Generate tag navigation and tag pages. Defaults to true.' },
+        showBacklinks: { type: 'boolean', description: 'Show backlinks on note pages. Defaults to true.' }
       }
     }
   },
@@ -361,7 +366,12 @@ async function callTool(name, args = {}) {
         vault,
         output: input.outDir,
         title: input.title,
-        clean: Boolean(input.clean)
+        description: input.description,
+        scopePath: input.scopePath,
+        theme: input.theme,
+        clean: Boolean(input.clean),
+        showTags: input.showTags,
+        showBacklinks: input.showBacklinks
       })
       return {
         ok: true,

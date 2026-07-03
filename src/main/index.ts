@@ -25,6 +25,7 @@ import {
   type AgentAccessInfo,
   type ImportedAttachment,
   type ImportedAttachmentKind,
+  type PublishVaultOptions,
   type ReleaseNotesInfo,
   type Settings,
   type ThemeMode,
@@ -82,7 +83,11 @@ function getAgentAccessInfo(): AgentAccessInfo {
   }
 }
 
-async function publishVaultForDesktop(vault: string, outDir: string): Promise<{ outDir: string; files: number; notes: number }> {
+async function publishVaultForDesktop(
+  vault: string,
+  outDir: string,
+  options: PublishVaultOptions = {}
+): Promise<{ outDir: string; files: number; notes: number }> {
   const publisherPath = app.isPackaged
     ? path.join(process.resourcesPath, 'scripts', 'lib', 'publisher.mjs')
     : path.join(app.getAppPath(), 'scripts', 'lib', 'publisher.mjs')
@@ -92,7 +97,12 @@ async function publishVaultForDesktop(vault: string, outDir: string): Promise<{ 
       vault: string
       output: string
       title?: string
+      description?: string
+      theme?: string
+      scopePath?: string
       clean?: boolean
+      showTags?: boolean
+      showBacklinks?: boolean
     }): Promise<{
       output: string
       totals: { notes: number }
@@ -104,8 +114,13 @@ async function publishVaultForDesktop(vault: string, outDir: string): Promise<{ 
   const result = await publisher.publishVault({
     vault,
     output: outDir,
-    title: path.basename(vault),
-    clean: true
+    title: options.title || path.basename(vault),
+    description: options.description,
+    theme: options.theme,
+    scopePath: options.scopePath,
+    clean: options.clean ?? true,
+    showTags: options.showTags,
+    showBacklinks: options.showBacklinks
   })
 
   return {
@@ -549,7 +564,9 @@ function registerIpc(): void {
   ipcMain.handle('settings:write', (_e, s: Settings) => writeSettings(s))
   ipcMain.handle('agent:getAccessInfo', () => getAgentAccessInfo())
   ipcMain.handle('clipboard:writeText', (_e, text: string) => clipboard.writeText(text))
-  ipcMain.handle('vault:publish', (_e, vault: string, outDir: string) => publishVaultForDesktop(vault, outDir))
+  ipcMain.handle('vault:publish', (_e, vault: string, outDir: string, options?: PublishVaultOptions) =>
+    publishVaultForDesktop(vault, outDir, options)
+  )
   ipcMain.handle('updates:getStatus', () => updateStatus)
   ipcMain.handle('updates:check', () => checkForUpdates())
   ipcMain.handle('updates:install', () => installDownloadedUpdate())
