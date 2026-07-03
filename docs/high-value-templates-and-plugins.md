@@ -25,7 +25,7 @@ Verified locally:
 - [x] Bookmarks: pin notes for fast workspace navigation.
 - [x] Template gallery UI: start a note from template directly from empty states and file creation.
 - [x] Slash command or command palette template insertion inside an existing note.
-- [x] Canvas/light board for linking notes visually.
+- [x] Graph view for linking notes visually; Board/Kanban view removed by product decision.
 
 ## Wave 3: Extension Platform
 
@@ -108,4 +108,4 @@ Verified locally:
 - Workflow examples such as `query-dashboard`, `saved-query-scaffold`, `publish-prep`, `static-publishing-workflow`, and `agent-handoff-workflow` are valid declarative scaffolds over supported metadata, widgets, transforms, and views. They are not dedicated workflow engines yet.
 - A built-in `vault-health` view now includes stale-note detection, duplicate-title checks, create-missing-note repair actions, and CLI/MCP parity. Broader repair automation and saved health reports are still roadmap work.
 - Bookmarks currently persist note paths only. Saved searches and saved query dashboards are still roadmap work.
-- The validator currently accepts `graph-insights`, `outline-board`, `tasks`, and `vault-health` view contribution values. Do not encode new values such as saved-query result views, publish pipeline commands, or agent workflow launchers until validation and runtime routing support them.
+- The validator currently accepts `graph-insights`, `tasks`, and `vault-health` view contribution values. Do not encode new values such as saved-query result views, board/kanban views, publish pipeline commands, or agent workflow launchers until validation and runtime routing support them.

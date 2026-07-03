@@ -66,9 +66,6 @@ function useShortcuts(): void {
       } else if (key === 'g' && e.shiftKey && store.vault) {
         e.preventDefault()
         store.openGraph()
-      } else if (key === 'b' && e.shiftKey && store.vault) {
-        e.preventDefault()
-        store.openBoard()
       } else if (key === ',') {
         e.preventDefault()
         store.setModal('settings')

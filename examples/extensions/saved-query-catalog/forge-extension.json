@@ -3,7 +3,7 @@
   "id": "example.saved-query-catalog",
   "name": "saved-query-catalog",
   "displayName": "Saved Query Catalog Example",
-  "description": "Example declarative extension that scaffolds a saved-query catalog as Markdown notes using supported metadata, widgets, transforms, and the outline-board view.",
+  "description": "Example declarative extension that scaffolds a saved-query catalog as Markdown notes using supported metadata, widgets, and transforms.",
   "version": "0.1.0",
   "publisher": "Example",
   "license": "MIT",
@@ -23,8 +23,7 @@
   "extensionPoints": [
     { "id": "forge.note.metadata", "label": "Note metadata" },
     { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
-    { "id": "forge.markdown.transforms", "label": "Markdown transforms" },
-    { "id": "forge.views", "label": "Views" }
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" }
   ],
   "permissions": [
     {
@@ -84,14 +83,6 @@
       "label": "Tasks",
       "description": "Declares Forge's supported task widget for follow-up work linked to saved query definitions.",
       "widget": "tasks"
-    },
-    {
-      "id": "example.saved-query-catalog.outline-board",
-      "kind": "view",
-      "extensionPoint": "forge.views",
-      "label": "Outline board",
-      "description": "Declares Forge's supported outline-board view as a safe catalog and dashboard scaffold.",
-      "view": "outline-board"
     },
     {
       "id": "example.saved-query-catalog.template",

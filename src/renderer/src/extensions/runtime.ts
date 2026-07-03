@@ -231,9 +231,6 @@ function routeByContributionValue(
   if (contribution.view === 'graph-insights') {
     return { surface: 'workspace-view', implementation: 'store.openGraph', status: 'wired' }
   }
-  if (contribution.view === 'outline-board') {
-    return { surface: 'workspace-view', implementation: 'store.openBoard', status: 'wired' }
-  }
   if (contribution.view === 'tasks') {
     return { surface: 'workspace-view', implementation: 'store.openTasks', status: 'wired' }
   }

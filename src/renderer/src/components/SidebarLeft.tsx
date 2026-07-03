@@ -5,7 +5,6 @@ import {
   FileText,
   FolderPlus,
   Files,
-  LayoutDashboard,
   Search,
   Settings,
   ShieldCheck,
@@ -74,7 +73,6 @@ export default function SidebarLeft(): React.JSX.Element {
   const createNote = useStore((s) => s.createNote)
   const createFolder = useStore((s) => s.createFolder)
   const openGraph = useStore((s) => s.openGraph)
-  const openBoard = useStore((s) => s.openBoard)
   const openTasks = useStore((s) => s.openTasks)
   const openVaultHealth = useStore((s) => s.openVaultHealth)
   const setModal = useStore((s) => s.setModal)
@@ -143,9 +141,6 @@ export default function SidebarLeft(): React.JSX.Element {
         <div className="sidebar-footer-actions">
           <button className="icon-btn" title="Graph view (⌘⇧G)" onClick={() => openGraph()}>
             <Waypoints size={15} />
-          </button>
-          <button className="icon-btn" title="Board (⌘⇧B)" onClick={() => openBoard()}>
-            <LayoutDashboard size={15} />
           </button>
           <button className="icon-btn" title="Tasks" onClick={() => openTasks()}>
             <SquareCheckBig size={15} />

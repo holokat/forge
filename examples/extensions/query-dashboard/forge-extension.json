@@ -21,8 +21,7 @@
     "allowedHosts": []
   },
   "extensionPoints": [
-    { "id": "forge.note.metadata", "label": "Note metadata" },
-    { "id": "forge.views", "label": "Views" }
+    { "id": "forge.note.metadata", "label": "Note metadata" }
   ],
   "permissions": [
     {
@@ -49,14 +48,6 @@
         "completedTasks",
         "publishStatus"
       ]
-    },
-    {
-      "id": "example.query-dashboard.outline-board",
-      "kind": "view",
-      "extensionPoint": "forge.views",
-      "label": "Outline board",
-      "description": "Declares Forge's supported outline-board view as a safe board-style dashboard scaffold.",
-      "view": "outline-board"
     }
   ]
 }

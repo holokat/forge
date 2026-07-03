@@ -11,7 +11,7 @@ import {
 import { baseName, isMarkdown, noteDisplayTitle, parseNote, resolveLink, wordCount, type NoteMeta } from './lib/parse'
 import { formatTemplateDateParts, renderTemplate } from './lib/templates'
 
-export type TabKind = 'note' | 'graph' | 'board' | 'tasks' | 'vaultHealth' | 'empty'
+export type TabKind = 'note' | 'graph' | 'tasks' | 'vaultHealth' | 'empty'
 export type ViewMode = 'edit' | 'read'
 export const STARTER_TEMPLATE_KINDS = [
   'daily',
@@ -177,7 +177,6 @@ export interface ForgeState {
   openFile(path: string, opts?: { newTab?: boolean; line?: number }): void
   consumePendingEditorNavigation(path: string): number | null
   openGraph(): void
-  openBoard(): void
   openTasks(): void
   openVaultHealth(): void
   newTab(): void
@@ -728,7 +727,7 @@ const STARTER_TEMPLATES: Record<StarterTemplateKind, { file: string; content: st
       '## Backlog Candidates',
       '- ',
       '',
-      '## Execution Board',
+      '## Execution Plan',
       '### Now',
       '- ',
       '',
@@ -2146,7 +2145,7 @@ const STARTER_TEMPLATES: Record<StarterTemplateKind, { file: string; content: st
       '| --- | --- | --- | --- | --- | --- |',
       '|  |  |  |  |  |  |',
       '',
-      '## Production Board',
+      '## Production Plan',
       '### Not Started',
       '- ',
       '',
@@ -2660,17 +2659,6 @@ export const useStore = create<ForgeState>((set, get) => ({
     set({ tabs: [...tabs, tab], activeTabId: tab.id })
   },
 
-  openBoard() {
-    const { tabs } = get()
-    const existing = tabs.find((t) => t.kind === 'board')
-    if (existing) {
-      set({ activeTabId: existing.id })
-      return
-    }
-    const tab: Tab = { id: newTabId(), kind: 'board', path: null, mode: 'edit' }
-    set({ tabs: [...tabs, tab], activeTabId: tab.id })
-  },
-
   openTasks() {
     const { tabs } = get()
     const existing = tabs.find((t) => t.kind === 'tasks')
@@ -3096,7 +3084,6 @@ export function activeTab(state: ForgeState): Tab | null {
 
 export function tabTitle(tab: Tab): string {
   if (tab.kind === 'graph') return 'Graph'
-  if (tab.kind === 'board') return 'Board'
   if (tab.kind === 'tasks') return 'Tasks'
   if (tab.kind === 'vaultHealth') return 'Vault Health'
   if (tab.kind === 'empty' || !tab.path) return 'New tab'

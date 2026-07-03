@@ -23,8 +23,7 @@
   "extensionPoints": [
     { "id": "forge.note.metadata", "label": "Note metadata" },
     { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
-    { "id": "forge.markdown.transforms", "label": "Markdown transforms" },
-    { "id": "forge.views", "label": "Views" }
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" }
   ],
   "permissions": [
     {
@@ -71,14 +70,6 @@
       "label": "Properties",
       "description": "Declares Forge's supported frontmatter widget for saved-query status, owner, and filter fields.",
       "widget": "frontmatter"
-    },
-    {
-      "id": "example.saved-query-scaffold.outline-board",
-      "kind": "view",
-      "extensionPoint": "forge.views",
-      "label": "Outline board",
-      "description": "Declares Forge's supported outline-board view as a safe dashboard scaffold while custom query views remain planned.",
-      "view": "outline-board"
     },
     {
       "id": "example.saved-query-scaffold.template",

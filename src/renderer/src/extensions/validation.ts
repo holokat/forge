@@ -78,7 +78,7 @@ const SIDEBAR_WIDGETS = new Set([
   'link-health',
   'publish-checklist'
 ])
-const VIEWS = new Set(['graph-insights', 'outline-board', 'tasks', 'vault-health'])
+const VIEWS = new Set(['graph-insights', 'tasks', 'vault-health'])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)

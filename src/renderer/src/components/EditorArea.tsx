@@ -2,7 +2,6 @@ import {
   BookOpen,
   FilePlus2,
   FileText,
-  LayoutDashboard,
   LayoutTemplate,
   PanelLeft,
   PanelRight,
@@ -16,7 +15,6 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import Editor from './Editor'
-import CanvasBoard from './CanvasBoard'
 import { ForgeHexagonMark } from './ForgeLogo'
 import GraphView from './GraphView'
 import Reading from './Reading'
@@ -57,8 +55,6 @@ function TabBar(): React.JSX.Element {
           >
             {tab.kind === 'graph' ? (
               <Waypoints size={13} className="tab-icon" />
-            ) : tab.kind === 'board' ? (
-              <LayoutDashboard size={13} className="tab-icon" />
             ) : tab.kind === 'tasks' ? (
               <SquareCheckBig size={13} className="tab-icon" />
             ) : tab.kind === 'vaultHealth' ? (
@@ -138,7 +134,6 @@ function EmptyTab(): React.JSX.Element {
   const createNote = useStore((s) => s.createNote)
   const setModal = useStore((s) => s.setModal)
   const openGraph = useStore((s) => s.openGraph)
-  const openBoard = useStore((s) => s.openBoard)
   const openTasks = useStore((s) => s.openTasks)
   const openVaultHealth = useStore((s) => s.openVaultHealth)
 
@@ -168,11 +163,6 @@ function EmptyTab(): React.JSX.Element {
           Open graph view
           <kbd>⌘⇧G</kbd>
         </button>
-        <button className="empty-tab-action" onClick={() => openBoard()}>
-          <LayoutDashboard size={15} />
-          Open board
-          <kbd>⌘⇧B</kbd>
-        </button>
         <button className="empty-tab-action" onClick={() => openTasks()}>
           <SquareCheckBig size={15} />
           Open tasks
@@ -199,7 +189,6 @@ function StatusBar(): React.JSX.Element | null {
 
 function TabContent({ tab }: { tab: Tab }): React.JSX.Element {
   if (tab.kind === 'graph') return <GraphView />
-  if (tab.kind === 'board') return <CanvasBoard />
   if (tab.kind === 'tasks') return <TasksView />
   if (tab.kind === 'vaultHealth') return <VaultHealthView />
   if (tab.kind === 'empty' || !tab.path) return <EmptyTab />
