@@ -93,6 +93,17 @@ function getAgentAccessInfo(): AgentAccessInfo {
   }
 }
 
+function normalizeAbsolutePath(targetPath: string): string {
+  if (!targetPath || !path.isAbsolute(targetPath)) {
+    throw new Error('Expected an absolute file path.')
+  }
+  const normalized = path.normalize(targetPath)
+  if (!fsSync.existsSync(normalized)) {
+    throw new Error(`File does not exist: ${normalized}`)
+  }
+  return normalized
+}
+
 async function publishVaultForDesktop(
   vault: string,
   outDir: string,
@@ -1123,6 +1134,15 @@ function registerIpc(): void {
 
   ipcMain.handle('file:reveal', async (_e, vault: string, rel: string) => {
     shell.showItemInFolder(safeJoin(vault, rel))
+  })
+
+  ipcMain.handle('file:revealPath', async (_e, targetPath: string) => {
+    shell.showItemInFolder(normalizeAbsolutePath(targetPath))
+  })
+
+  ipcMain.handle('file:openPath', async (_e, targetPath: string) => {
+    const error = await shell.openPath(normalizeAbsolutePath(targetPath))
+    if (error) throw new Error(error)
   })
 
   ipcMain.handle('settings:read', () => readSettings())

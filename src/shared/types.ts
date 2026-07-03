@@ -354,6 +354,8 @@ export interface ForgeAPI {
   runAITextTask(request: AITextTaskRequest): Promise<AITextTaskResult>
   openAIProviderLogin(provider: AILoginProvider): Promise<void>
   copyText(text: string): Promise<void>
+  revealPath(path: string): Promise<void>
+  openPath(path: string): Promise<void>
   getMobilePairingInfo(): Promise<MobilePairingInfo>
   resetMobilePairingToken(): Promise<MobilePairingInfo>
   setMobileVault(vault: string | null): Promise<void>

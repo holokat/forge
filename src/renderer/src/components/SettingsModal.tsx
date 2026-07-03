@@ -44,8 +44,15 @@ import type {
   ThemeMode,
   UpdateStatus
 } from '../../../shared/types'
-import { DEFAULT_PUBLISH_SITE_INTEGRATIONS } from '../../../shared/types'
 import { activeTab as selectActiveTab, noteContents, STARTER_TEMPLATE_CATALOG, useStore } from '../store'
+import {
+  createPublishSite,
+  createDefaultPublishSiteIntegrations,
+  defaultPublishSiteDir,
+  outputIndexPath,
+  publishVaultOptionsForSite,
+  siteScopeLabel
+} from '../lib/publishing'
 import ExtensionMarketplace from './ExtensionMarketplace'
 import {
   createSettingsTabs,
@@ -198,48 +205,6 @@ function claudeDesktopConfig(info: AgentAccessInfo, vault: string): string {
   )
 }
 
-function defaultPublishDir(vault: string): string {
-  return `${vault.replace(/\/+$/, '')}/.forge/publish`
-}
-
-function slugifySiteName(value: string): string {
-  return (
-    value
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'site'
-  )
-}
-
-function defaultPublishSiteDir(vault: string, name: string): string {
-  return `${vault.replace(/\/+$/, '')}/.forge/sites/${slugifySiteName(name)}`
-}
-
-function createPublishSite(vault: string, name: string, scope: PublishSiteConfig['scope'] = { kind: 'vault' }): PublishSiteConfig {
-  const now = new Date().toISOString()
-  return {
-    id: `site-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-    name,
-    description: scope.kind === 'folder' ? `Published notes from ${scope.folder}.` : 'Published notes from this Forge vault.',
-    theme: 'minimal',
-    scope,
-    outputDir: defaultPublishSiteDir(vault, name),
-    options: {
-      clean: true,
-      showTags: true,
-      showBacklinks: true
-    },
-    integrations: structuredClone(DEFAULT_PUBLISH_SITE_INTEGRATIONS),
-    createdAt: now,
-    updatedAt: now
-  }
-}
-
-function siteScopeLabel(site: PublishSiteConfig): string {
-  return site.scope.kind === 'folder' ? site.scope.folder : 'All folders'
-}
-
 function publishThemeLabel(theme: PublishSiteConfig['theme']): string {
   return PUBLISH_THEMES.find((option) => option.id === theme)?.label ?? theme
 }
@@ -285,13 +250,6 @@ function dateStamp(value: string | null): string {
 
 function openExternalUrl(url: string): void {
   window.open(url, '_blank', 'noopener,noreferrer')
-}
-
-function revealRelForOutput(vault: string, outputDir: string): string | null {
-  const cleanVault = vault.replace(/\/+$/, '')
-  const cleanOutput = outputDir.replace(/\/+$/, '')
-  if (cleanOutput === cleanVault || !cleanOutput.startsWith(`${cleanVault}/`)) return null
-  return `${cleanOutput.slice(cleanVault.length + 1)}/index.html`
 }
 
 function publicPublishNotes(publishDir: string): string {
@@ -835,7 +793,7 @@ export default function SettingsModal(): React.JSX.Element {
   ): void => {
     updatePublishSite(siteId, (site) => ({
       ...site,
-      integrations: updater(site.integrations ?? structuredClone(DEFAULT_PUBLISH_SITE_INTEGRATIONS))
+      integrations: updater(site.integrations ?? createDefaultPublishSiteIntegrations())
     }))
   }
 
@@ -873,16 +831,7 @@ export default function SettingsModal(): React.JSX.Element {
     if (!vault || !site.outputDir) return
     setPublishState({ siteId: site.id, status: 'publishing', message: 'Publishing site...', outDir: site.outputDir })
     try {
-      const result = await window.forge.publishVault(vault, site.outputDir, {
-        title: site.name,
-        description: site.description,
-        theme: site.theme,
-        scopePath: site.scope.kind === 'folder' ? site.scope.folder : '',
-        clean: site.options.clean,
-        showTags: site.options.showTags,
-        showBacklinks: site.options.showBacklinks,
-        integrations: site.integrations
-      })
+      const result = await window.forge.publishVault(vault, site.outputDir, publishVaultOptionsForSite(site))
       setPublishState({
         siteId: site.id,
         status: 'done',
@@ -892,6 +841,23 @@ export default function SettingsModal(): React.JSX.Element {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       setPublishState({ siteId: site.id, status: 'failed', message, outDir: site.outputDir })
+    }
+  }
+
+  const openPublishedOutput = async (site: PublishSiteConfig, mode: 'preview' | 'reveal'): Promise<void> => {
+    const outDir = publishState.siteId === site.id && publishState.outDir ? publishState.outDir : site.outputDir
+    const indexPath = outputIndexPath(outDir)
+    try {
+      if (mode === 'preview') await window.forge.openPath(indexPath)
+      else await window.forge.revealPath(indexPath)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setPublishState({
+        siteId: site.id,
+        status: 'failed',
+        message: `Could not ${mode === 'preview' ? 'open preview' : 'reveal output'}: ${message}`,
+        outDir
+      })
     }
   }
 
@@ -1790,12 +1756,18 @@ export default function SettingsModal(): React.JSX.Element {
                           </button>
                           <button
                             className="btn btn-compact"
-                            disabled={publishState.status !== 'done' || publishState.siteId !== selectedPublishSite.id || !revealRelForOutput(vault, selectedPublishSite.outputDir)}
-                            onClick={() => {
-                              const rel = revealRelForOutput(vault, selectedPublishSite.outputDir)
-                              if (rel) window.forge.reveal(vault, rel)
-                            }}
+                            disabled={publishState.status !== 'done' || publishState.siteId !== selectedPublishSite.id}
+                            onClick={() => openPublishedOutput(selectedPublishSite, 'preview')}
                           >
+                            <Globe2 size={14} />
+                            Preview site
+                          </button>
+                          <button
+                            className="btn btn-compact"
+                            disabled={publishState.status !== 'done' || publishState.siteId !== selectedPublishSite.id}
+                            onClick={() => openPublishedOutput(selectedPublishSite, 'reveal')}
+                          >
+                            <FolderOpen size={14} />
                             Reveal output
                           </button>
                           <CopyButton value={publicPublishNotes(selectedPublishSite.outputDir)} label="Copy deploy notes" />

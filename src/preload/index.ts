@@ -19,6 +19,8 @@ const api: ForgeAPI = {
   runAITextTask: (request) => ipcRenderer.invoke('ai:runTextTask', request),
   openAIProviderLogin: (provider) => ipcRenderer.invoke('ai:openProviderLogin', provider),
   copyText: (text) => ipcRenderer.invoke('clipboard:writeText', text),
+  revealPath: (targetPath) => ipcRenderer.invoke('file:revealPath', targetPath),
+  openPath: (targetPath) => ipcRenderer.invoke('file:openPath', targetPath),
   droppedFilePaths: (files) =>
     files
       .map((file) => {

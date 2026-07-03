@@ -2,6 +2,7 @@ import {
   BookOpen,
   FilePlus2,
   FileText,
+  Globe2,
   Images,
   LayoutTemplate,
   PanelLeft,
@@ -19,6 +20,7 @@ import GraphView from './GraphView'
 import MediaVault from './MediaVault'
 import Reading from './Reading'
 import { baseName, isMarkdown } from '../lib/parse'
+import { outputIndexPath, publishSiteForPath } from '../lib/publishing'
 import { activeTab, tabTitle, useStore, type Tab } from '../store'
 
 function TabBar(): React.JSX.Element {
@@ -34,6 +36,8 @@ function TabBar(): React.JSX.Element {
   const openMediaVault = useStore((s) => s.openMediaVault)
   const setTabMode = useStore((s) => s.setTabMode)
   const active = useStore(activeTab)
+  const publishSites = useStore((s) => s.publishSites)
+  const activePublishSite = active?.kind === 'note' && active.path ? publishSiteForPath(active.path, publishSites) : null
 
   return (
     <div className={`tabbar${leftOpen ? '' : ' with-traffic-lights'}`}>
@@ -87,6 +91,20 @@ function TabBar(): React.JSX.Element {
           onClick={() => setTabMode(active.id, active.mode === 'edit' ? 'read' : 'edit')}
         >
           {active.mode === 'edit' ? <BookOpen size={15} /> : <Pencil size={15} />}
+        </button>
+      )}
+      {activePublishSite && (
+        <button
+          className="icon-btn tabbar-btn"
+          title={`Preview published site: ${activePublishSite.name}`}
+          onClick={() =>
+            window.forge.openPath(outputIndexPath(activePublishSite.outputDir)).catch((error) => {
+              const message = error instanceof Error ? error.message : String(error)
+              window.alert(`Could not open "${activePublishSite.name}". Generate the site first.\n\n${message}`)
+            })
+          }
+        >
+          <Globe2 size={15} />
         </button>
       )}
       <button className="icon-btn tabbar-btn" title="Toggle right panel" onClick={() => setRightOpen(!rightOpen)}>

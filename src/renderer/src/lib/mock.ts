@@ -303,6 +303,10 @@ export function installMockApi(): void {
     importMedia: async () => [],
     importMediaFiles: async (_vault, items) => mockImportFiles(items, mockMediaFolder),
     publishVault: async (_vault, outDir, _options) => ({ outDir, files: 0, notes: 0 }),
+    revealPath: async () => {},
+    openPath: async (targetPath) => {
+      window.open(targetPath.startsWith('file://') ? targetPath : `file://${targetPath}`, '_blank', 'noopener,noreferrer')
+    },
     getUpdateStatus: async () => ({
       state: 'disabled',
       currentVersion: '0.1.1',

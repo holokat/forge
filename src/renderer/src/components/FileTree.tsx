@@ -6,6 +6,7 @@ import {
   FileText,
   FolderOpen,
   FolderPlus,
+  Globe2,
   Image,
   Pencil,
   Pin,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { baseName, isAudio, isMarkdown } from '../lib/parse'
+import { createPublishSite, outputIndexPath, publishVaultOptionsForSite } from '../lib/publishing'
 import { buildTree, type TreeNode } from '../lib/tree'
 import { activeTab, useStore } from '../store'
 
@@ -116,6 +118,19 @@ function TreeItem({
   const isOpen = expanded.has(node.path)
   const isPinned = node.isFolder && pinnedFolders.includes(node.path)
 
+  const publishFolderAsWebsite = async (): Promise<void> => {
+    const store = useStore.getState()
+    const vault = store.vault
+    if (!vault) return
+    const existingSite = store.publishSites.find(
+      (site) => site.scope.kind === 'folder' && site.scope.folder === node.path
+    )
+    const site = existingSite ?? createPublishSite(vault, node.name, { kind: 'folder', folder: node.path })
+    if (!existingSite) store.setPublishSites([...store.publishSites, site])
+    const result = await window.forge.publishVault(vault, site.outputDir, publishVaultOptionsForSite(site))
+    await window.forge.openPath(outputIndexPath(result.outDir))
+  }
+
   const onContextMenu = (e: React.MouseEvent): void => {
     e.preventDefault()
     e.stopPropagation()
@@ -130,6 +145,16 @@ function TreeItem({
             action: () => store.togglePinnedFolder(node.path)
           },
           { label: 'Rename…', icon: <Pencil size={14} />, action: () => setRenaming(node.path) },
+          {
+            label: 'Publish as website',
+            icon: <Globe2 size={14} />,
+            action: () => {
+              publishFolderAsWebsite().catch((error) => {
+                const message = error instanceof Error ? error.message : String(error)
+                window.alert(`Could not publish "${node.name}": ${message}`)
+              })
+            }
+          },
           { label: 'Reveal in Finder', icon: <FolderOpen size={14} />, action: () => window.forge.reveal(store.vault!, node.path) },
           {
             label: 'Delete',
