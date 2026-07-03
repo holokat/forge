@@ -1,4 +1,4 @@
-import { FilePlus2, FolderPlus, Files, Search, Settings, Waypoints } from 'lucide-react'
+import { FilePlus2, FolderPlus, Files, Search, Settings, Vault, Waypoints } from 'lucide-react'
 import FileTree from './FileTree'
 import SearchPane from './SearchPane'
 import { useStore } from '../store'
@@ -46,7 +46,8 @@ export default function SidebarLeft(): React.JSX.Element {
 
       <div className="sidebar-footer">
         <span className="sidebar-vault-name" title={vaultName}>
-          {vaultName}
+          <Vault size={14} strokeWidth={2.1} aria-hidden="true" />
+          <span className="sidebar-vault-name-text">{vaultName}</span>
         </span>
         <div className="sidebar-footer-actions">
           <button className="icon-btn" title="Graph view (⌘⇧G)" onClick={() => openGraph()}>

@@ -451,9 +451,22 @@ kbd {
 }
 
 .sidebar-vault-name {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
+}
+
+.sidebar-vault-name svg {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.sidebar-vault-name-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
