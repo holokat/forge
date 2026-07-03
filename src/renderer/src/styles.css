@@ -2812,7 +2812,7 @@ button.tag:hover {
 .template-starter {
   min-height: 70px;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-columns: 38px minmax(0, 1fr);
   align-items: start;
   gap: 10px;
   padding: 11px;
@@ -2837,16 +2837,22 @@ button.tag:hover {
 }
 
 .template-starter-icon {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
-  color: var(--text-muted);
+  border-radius: 9px;
+  color: var(--text-normal);
   background: var(--bg-hover);
   transition-property: background-color, color, transform;
   transition-duration: 140ms;
   transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.template-starter-icon svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.1;
 }
 
 .template-starter:hover .template-starter-icon {
