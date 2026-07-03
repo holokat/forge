@@ -489,6 +489,51 @@ export const LOCAL_EXTENSION_MANIFESTS: readonly ExtensionManifest[] = [
   },
   {
     manifestVersion: 1,
+    id: 'forge.vault-health',
+    name: 'vault-health',
+    displayName: 'Vault Health',
+    description: 'Adds a local vault-wide health view for broken links, orphan notes, duplicate titles, task load, and inbox cleanup.',
+    version: '0.1.0',
+    publisher: 'Forge',
+    license: 'MIT',
+    repository: 'https://github.com/forge-notes/forge',
+    categories: ['navigation', 'organization', 'visualization'],
+    keywords: ['vault health', 'quality', 'broken links', 'orphans', 'cleanup'],
+    source: { kind: 'built-in', label: 'Bundled with Forge' },
+    runtime: declarativeRuntime,
+    extensionPoints: [
+      { id: 'forge.note.metadata', label: 'Note metadata' },
+      { id: 'forge.views', label: 'Views' }
+    ],
+    permissions: [
+      {
+        kind: 'vault:metadata',
+        reason: 'Uses local note metadata, wikilinks, tags, tasks, and file paths already indexed by Forge.'
+      }
+    ],
+    contributes: [
+      {
+        id: 'forge.vault-health.metadata',
+        kind: 'metadata-provider',
+        extensionPoint: 'forge.note.metadata',
+        label: 'Vault health metadata',
+        description: 'Reports vault-wide cleanup signals derived from local Markdown notes.',
+        fields: ['brokenLinks', 'orphanNotes', 'untaggedNotes', 'emptyNotes', 'duplicateTitles', 'openTasks', 'inboxNotes']
+      },
+      {
+        id: 'forge.vault-health.view',
+        kind: 'view',
+        extensionPoint: 'forge.views',
+        label: 'Vault health',
+        description: 'Opens the local vault-wide health dashboard.',
+        view: 'vault-health'
+      }
+    ],
+    defaultInstalled: true,
+    defaultEnabled: true
+  },
+  {
+    manifestVersion: 1,
     id: 'forge.publish-checklist',
     name: 'publish-checklist',
     displayName: 'Publish Checklist',

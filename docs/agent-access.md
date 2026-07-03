@@ -158,6 +158,8 @@ forge --vault /path/to/vault seed-templates --folder "Team Templates" --overwrit
 
 `seed-templates` writes Markdown files from the bundled starter catalog into the configured templates folder, or the folder passed with `--folder`. Omit `--kinds` to seed the full starter pack. Existing template files are skipped unless `--overwrite` is passed, so agents can safely run the command before `create-from-template`.
 
+For agent-facing work, start with `agentTask` for execution briefs and `agentReview` for QA/review notes. Prefer a domain starter such as incident postmortem, RFC, API spec, launch plan, content calendar, publish page, changelog, or transcript cleanup when the requested work fits that shape.
+
 Supported placeholders:
 
 - `{{title}}`
@@ -216,3 +218,11 @@ forge validate-extension /path/to/extensions-folder --recursive --json
 ```
 
 From a source checkout, the same checks are available through `npm run agent -- validate-extension ...` and `npm run extensions:validate -- ...`.
+
+Current local examples live in `examples/extensions/` and can be validated as a batch:
+
+```bash
+npm run agent -- validate-extension examples/extensions --recursive --json
+```
+
+Workflow-style examples such as vault-reporting, query-dashboard, saved-query-scaffold, publish-prep, static-publishing-workflow, meeting-content-workflow, task-review, and agent-handoff-workflow are scaffolds over supported metadata, widgets, transforms, and views. `vault-health` is a current supported view contribution. Saved searches, executable queries, stale-note repair automation, publish profiles, and agent workflow launchers are roadmap items rather than current extension contribution values.

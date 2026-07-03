@@ -1,0 +1,100 @@
+{
+  "manifestVersion": 1,
+  "id": "example.saved-query-scaffold",
+  "name": "saved-query-scaffold",
+  "displayName": "Saved Query Scaffold Example",
+  "description": "Example declarative extension that exposes metadata and safe note transforms for saved-query notes without adding a custom query runtime.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["navigation", "organization", "visualization"],
+  "keywords": ["query", "saved search", "dashboard", "metadata"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" },
+    { "id": "forge.views", "label": "Views" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:metadata",
+      "reason": "Reads metadata already derived from local Markdown notes for saved-query review and grouping."
+    },
+    {
+      "kind": "vault:write",
+      "reason": "Writes bounded Markdown scaffolding into the current saved-query note when requested."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.saved-query-scaffold.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Saved query metadata",
+      "description": "Declares supported fields that help agents scaffold saved searches, dashboards, and review queues as Markdown notes.",
+      "fields": [
+        "frontmatterProperties",
+        "aliases",
+        "title",
+        "tags",
+        "tagCount",
+        "wordCount",
+        "estimatedReadingMinutes",
+        "openTasks",
+        "completedTasks",
+        "publishStatus"
+      ]
+    },
+    {
+      "id": "example.saved-query-scaffold.tags",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Tags",
+      "description": "Declares Forge's supported tag sidebar widget for query criteria and grouping tags.",
+      "widget": "tags"
+    },
+    {
+      "id": "example.saved-query-scaffold.properties",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Properties",
+      "description": "Declares Forge's supported frontmatter widget for saved-query status, owner, and filter fields.",
+      "widget": "frontmatter"
+    },
+    {
+      "id": "example.saved-query-scaffold.outline-board",
+      "kind": "view",
+      "extensionPoint": "forge.views",
+      "label": "Outline board",
+      "description": "Declares Forge's supported outline-board view as a safe dashboard scaffold while custom query views remain planned.",
+      "view": "outline-board"
+    },
+    {
+      "id": "example.saved-query-scaffold.template",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Append saved-query scaffold",
+      "description": "Declares the validator-supported append-template transform for adding a Markdown query brief scaffold.",
+      "transform": "append-template"
+    },
+    {
+      "id": "example.saved-query-scaffold.normalize",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Normalize query note headings",
+      "description": "Declares the supported heading cleanup transform for saved-query notes.",
+      "transform": "normalize-headings"
+    }
+  ]
+}

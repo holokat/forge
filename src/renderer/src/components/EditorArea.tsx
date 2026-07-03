@@ -9,6 +9,7 @@ import {
   Pencil,
   Plus,
   Search,
+  ShieldCheck,
   SquareCheckBig,
   Waypoints,
   X
@@ -20,6 +21,7 @@ import { ForgeHexagonMark } from './ForgeLogo'
 import GraphView from './GraphView'
 import Reading from './Reading'
 import TasksView from './TasksView'
+import VaultHealthView from './VaultHealthView'
 import { baseName, isMarkdown } from '../lib/parse'
 import { activeTab, tabTitle, useStore, type Tab } from '../store'
 
@@ -59,6 +61,8 @@ function TabBar(): React.JSX.Element {
               <LayoutDashboard size={13} className="tab-icon" />
             ) : tab.kind === 'tasks' ? (
               <SquareCheckBig size={13} className="tab-icon" />
+            ) : tab.kind === 'vaultHealth' ? (
+              <ShieldCheck size={13} className="tab-icon" />
             ) : (
               <FileText size={13} className="tab-icon" />
             )}
@@ -136,6 +140,7 @@ function EmptyTab(): React.JSX.Element {
   const openGraph = useStore((s) => s.openGraph)
   const openBoard = useStore((s) => s.openBoard)
   const openTasks = useStore((s) => s.openTasks)
+  const openVaultHealth = useStore((s) => s.openVaultHealth)
 
   return (
     <div className="empty-tab">
@@ -172,6 +177,10 @@ function EmptyTab(): React.JSX.Element {
           <SquareCheckBig size={15} />
           Open tasks
         </button>
+        <button className="empty-tab-action" onClick={() => openVaultHealth()}>
+          <ShieldCheck size={15} />
+          Open vault health
+        </button>
       </div>
     </div>
   )
@@ -192,6 +201,7 @@ function TabContent({ tab }: { tab: Tab }): React.JSX.Element {
   if (tab.kind === 'graph') return <GraphView />
   if (tab.kind === 'board') return <CanvasBoard />
   if (tab.kind === 'tasks') return <TasksView />
+  if (tab.kind === 'vaultHealth') return <VaultHealthView />
   if (tab.kind === 'empty' || !tab.path) return <EmptyTab />
   if (!isMarkdown(tab.path)) {
     return (

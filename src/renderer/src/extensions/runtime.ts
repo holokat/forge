@@ -172,6 +172,16 @@ const BUILT_IN_RUNTIME_ROUTES: Record<
     implementation: 'store.openTasks',
     status: 'wired'
   },
+  'forge.vault-health.metadata': {
+    surface: 'workspace-view',
+    implementation: 'VaultHealthView.localMetrics',
+    status: 'wired'
+  },
+  'forge.vault-health.view': {
+    surface: 'workspace-view',
+    implementation: 'store.openVaultHealth',
+    status: 'wired'
+  },
   'forge.outline-toc.metadata': {
     surface: 'right-sidebar',
     implementation: 'parseNote.headings',
@@ -214,12 +224,33 @@ const BUILT_IN_RUNTIME_ROUTES: Record<
   }
 }
 
-function routeForContribution(manifest: ExtensionManifest, contribution: ExtensionContribution): ExtensionRuntimeRoute {
-  const route = BUILT_IN_RUNTIME_ROUTES[contribution.id] ?? {
-    surface: 'extension-api' as const,
-    implementation: 'declarative contribution',
-    status: 'declared' as const
+function routeByContributionValue(
+  contribution: ExtensionContribution
+): Pick<ExtensionRuntimeRoute, 'surface' | 'implementation' | 'status'> | null {
+  if (contribution.kind !== 'view') return null
+  if (contribution.view === 'graph-insights') {
+    return { surface: 'workspace-view', implementation: 'store.openGraph', status: 'wired' }
   }
+  if (contribution.view === 'outline-board') {
+    return { surface: 'workspace-view', implementation: 'store.openBoard', status: 'wired' }
+  }
+  if (contribution.view === 'tasks') {
+    return { surface: 'workspace-view', implementation: 'store.openTasks', status: 'wired' }
+  }
+  if (contribution.view === 'vault-health') {
+    return { surface: 'workspace-view', implementation: 'store.openVaultHealth', status: 'wired' }
+  }
+  return null
+}
+
+function routeForContribution(manifest: ExtensionManifest, contribution: ExtensionContribution): ExtensionRuntimeRoute {
+  const route =
+    BUILT_IN_RUNTIME_ROUTES[contribution.id] ??
+    routeByContributionValue(contribution) ?? {
+      surface: 'extension-api' as const,
+      implementation: 'declarative contribution',
+      status: 'declared' as const
+    }
 
   return {
     id: `${manifest.id}:${contribution.id}`,

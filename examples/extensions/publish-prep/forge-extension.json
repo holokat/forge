@@ -1,0 +1,109 @@
+{
+  "manifestVersion": 1,
+  "id": "example.publish-prep",
+  "name": "publish-prep",
+  "displayName": "Publish Prep Example",
+  "description": "Example declarative extension that combines publish readiness metadata, frontmatter review, outlines, and safe Markdown transforms for static-site preparation.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["editing", "organization", "publishing"],
+  "keywords": ["publish", "static site", "frontmatter", "outline", "checklist"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:read",
+      "reason": "Reads publish frontmatter, headings, links, and checklist items already parsed from local Markdown notes."
+    },
+    {
+      "kind": "vault:write",
+      "reason": "Writes bounded heading cleanup, table-of-contents, and callout transforms into the current note when requested."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.publish-prep.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Publish prep metadata",
+      "description": "Declares fields useful for local static-site preflight review and agent publish-readiness notes.",
+      "fields": [
+        "publishStatus",
+        "publishSlug",
+        "publishChecklistItems",
+        "publishReady",
+        "frontmatterProperties",
+        "aliases",
+        "title",
+        "headings",
+        "headingCount",
+        "tableOfContents",
+        "unresolvedLinks",
+        "brokenLinkCount"
+      ]
+    },
+    {
+      "id": "example.publish-prep.checklist",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Publish checklist",
+      "description": "Declares Forge's supported publish checklist sidebar widget.",
+      "widget": "publish-checklist"
+    },
+    {
+      "id": "example.publish-prep.properties",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Properties",
+      "description": "Declares Forge's supported frontmatter widget for publish status, slug, aliases, and review metadata.",
+      "widget": "frontmatter"
+    },
+    {
+      "id": "example.publish-prep.outline",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Outline",
+      "description": "Declares Forge's supported outline widget for checking publish-page structure.",
+      "widget": "outline"
+    },
+    {
+      "id": "example.publish-prep.normalize",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Normalize heading spacing",
+      "description": "Declares the supported heading cleanup transform for publish prep.",
+      "transform": "normalize-headings"
+    },
+    {
+      "id": "example.publish-prep.toc",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Insert generated table of contents",
+      "description": "Declares the supported table-of-contents insertion transform for longer publish pages.",
+      "transform": "insert-table-of-contents"
+    },
+    {
+      "id": "example.publish-prep.callout",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Wrap publish note as callout",
+      "description": "Declares the supported callout transform for warnings, notes, and review caveats.",
+      "transform": "callout"
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "manifestVersion": 1,
+  "id": "example.meeting-content-workflow",
+  "name": "meeting-content-workflow",
+  "displayName": "Meeting and Content Workflow Example",
+  "description": "Example declarative extension that combines meeting-note metadata, task follow-ups, outlines, callouts, and template scaffolding for content workflows.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["capture", "editing", "organization"],
+  "keywords": ["meeting", "content", "workflow", "template", "tasks"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:read",
+      "reason": "Reads local meeting notes, headings, tasks, tags, and frontmatter fields already available to Forge."
+    },
+    {
+      "kind": "vault:write",
+      "reason": "Writes bounded checklist, callout, heading cleanup, and template scaffold transforms into the current note when requested."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.meeting-content-workflow.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Meeting and content metadata",
+      "description": "Declares fields useful for meeting summaries, editorial briefs, action items, and agent follow-up notes.",
+      "fields": [
+        "frontmatterProperties",
+        "aliases",
+        "title",
+        "tags",
+        "headings",
+        "headingCount",
+        "tableOfContents",
+        "tasks",
+        "openTasks",
+        "completedTasks",
+        "wordCount",
+        "estimatedReadingMinutes"
+      ]
+    },
+    {
+      "id": "example.meeting-content-workflow.properties",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Properties",
+      "description": "Declares Forge's supported frontmatter widget for meeting status, owner, audience, and content type fields.",
+      "widget": "frontmatter"
+    },
+    {
+      "id": "example.meeting-content-workflow.outline",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Outline",
+      "description": "Declares Forge's supported outline widget for navigating meeting notes and content briefs.",
+      "widget": "outline"
+    },
+    {
+      "id": "example.meeting-content-workflow.tasks",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Task summary",
+      "description": "Declares Forge's supported task summary widget for action items and editorial follow-ups.",
+      "widget": "tasks"
+    },
+    {
+      "id": "example.meeting-content-workflow.template",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Append workflow scaffold",
+      "description": "Declares the validator-supported append-template transform for meeting summaries and content briefs.",
+      "transform": "append-template"
+    },
+    {
+      "id": "example.meeting-content-workflow.checklist",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Convert action items to checklist",
+      "description": "Declares the supported checklist transform for converting meeting follow-ups into tasks.",
+      "transform": "lines-to-checklist"
+    },
+    {
+      "id": "example.meeting-content-workflow.callout",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Wrap decision as callout",
+      "description": "Declares the supported callout transform for decisions, risks, and open questions.",
+      "transform": "callout"
+    },
+    {
+      "id": "example.meeting-content-workflow.normalize",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Normalize workflow headings",
+      "description": "Declares the supported heading cleanup transform for meeting and content notes.",
+      "transform": "normalize-headings"
+    }
+  ]
+}

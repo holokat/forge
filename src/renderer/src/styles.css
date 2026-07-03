@@ -4572,3 +4572,441 @@ button.tag:hover {
     justify-self: start;
   }
 }
+
+/* ============================================================
+   Vault health view
+   ============================================================ */
+
+.vault-health-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 94%, var(--text-normal) 6%), var(--bg) 280px),
+    var(--bg);
+}
+
+.vault-health-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px 28px 16px;
+}
+
+.vault-health-hero-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vault-health-hero-title > svg {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  color: var(--text-normal);
+  background: var(--bg-panel);
+  border-radius: 14px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 10px 26px rgba(0, 0, 0, 0.08);
+}
+
+.vault-health-hero h1,
+.vault-health-section-head h2 {
+  text-wrap: balance;
+}
+
+.vault-health-hero h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.1;
+  font-weight: 760;
+  letter-spacing: 0;
+}
+
+.vault-health-hero p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.vault-health-stats {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vault-health-stats span {
+  min-width: 76px;
+  min-height: 44px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 7px 12px;
+  color: var(--text-muted);
+  background: var(--bg-panel);
+  border-radius: 12px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.48) inset,
+    0 8px 22px rgba(0, 0, 0, 0.07);
+  font-size: 11px;
+}
+
+.vault-health-stats strong {
+  color: var(--text-normal);
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+}
+
+.vault-health-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 28px 14px;
+}
+
+.vault-health-search {
+  min-width: 220px;
+  max-width: 420px;
+  min-height: 40px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: var(--text-faint);
+  background: var(--bg-panel);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.055),
+    0 7px 18px rgba(0, 0, 0, 0.05);
+}
+
+.vault-health-search input {
+  min-width: 0;
+  width: 100%;
+  height: 38px;
+  color: var(--text-normal);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font: inherit;
+}
+
+.vault-health-filter {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-panel);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.055),
+    0 7px 18px rgba(0, 0, 0, 0.05);
+}
+
+.vault-health-filter button {
+  min-width: 58px;
+  min-height: 32px;
+  padding: 0 10px;
+  color: var(--text-muted);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 680;
+  text-transform: capitalize;
+  transition-property: background-color, color, transform;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.vault-health-filter button:hover {
+  color: var(--text-normal);
+  background: var(--bg-hover);
+}
+
+.vault-health-filter button:active {
+  transform: scale(0.96);
+}
+
+.vault-health-filter button.active {
+  color: var(--text-normal);
+  background: color-mix(in srgb, var(--bg) 76%, var(--text-normal) 8%);
+}
+
+.vault-health-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 28px 28px;
+}
+
+.vault-health-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.vault-health-section,
+.vault-health-results {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 12px;
+  background: color-mix(in srgb, var(--bg-panel) 88%, transparent);
+  border-radius: 18px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.055),
+    0 12px 34px rgba(0, 0, 0, 0.06);
+}
+
+.vault-health-results {
+  margin-top: 12px;
+}
+
+.vault-health-section-head {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vault-health-section-head h2 {
+  margin: 0;
+  color: var(--text-normal);
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 760;
+}
+
+.vault-health-section-head span {
+  min-width: 28px;
+  padding: 3px 7px;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--bg) 82%, var(--text-normal) 5%);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.vault-health-list {
+  display: grid;
+  gap: 8px;
+}
+
+.vault-health-row,
+.vault-health-task-card,
+.vault-health-section-empty,
+.vault-health-empty {
+  background: var(--bg-panel);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.055),
+    0 7px 18px rgba(0, 0, 0, 0.05);
+}
+
+.vault-health-row {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) minmax(100px, 0.22fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  color: inherit;
+  text-align: left;
+  transition-property: transform, box-shadow, background-color;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.vault-health-row:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.07),
+    0 12px 28px rgba(0, 0, 0, 0.08);
+}
+
+.vault-health-row:active {
+  transform: scale(0.96);
+}
+
+.vault-health-row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.vault-health-row.is-broken .vault-health-row-icon,
+.vault-health-row.is-duplicate .vault-health-row-icon {
+  color: var(--text-normal);
+}
+
+.vault-health-row-main {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.vault-health-row-main strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-normal);
+  font-size: 13px;
+  font-weight: 720;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-health-row-main span,
+.vault-health-folder,
+.vault-health-task-card span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: 11.5px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-health-folder {
+  justify-self: end;
+  max-width: 100%;
+  padding: 4px 7px;
+  background: color-mix(in srgb, var(--bg) 82%, var(--text-normal) 5%);
+  border-radius: 8px;
+}
+
+.vault-health-task-card {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 10px;
+  padding: 10px 12px;
+}
+
+.vault-health-task-card > svg {
+  grid-row: 1 / span 2;
+  color: var(--text-muted);
+}
+
+.vault-health-task-card strong {
+  color: var(--text-normal);
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+}
+
+.vault-health-section-empty,
+.vault-health-empty {
+  min-height: 58px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 12px;
+  color: var(--text-faint);
+  font-size: 12px;
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.vault-health-empty {
+  min-height: 180px;
+  align-content: center;
+}
+
+.vault-health-empty strong {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+[data-theme='dark'] .vault-health-hero-title > svg,
+[data-theme='dark'] .vault-health-stats span,
+[data-theme='dark'] .vault-health-search,
+[data-theme='dark'] .vault-health-filter,
+[data-theme='dark'] .vault-health-section,
+[data-theme='dark'] .vault-health-results,
+[data-theme='dark'] .vault-health-row,
+[data-theme='dark'] .vault-health-task-card,
+[data-theme='dark'] .vault-health-section-empty,
+[data-theme='dark'] .vault-health-empty {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.055),
+    0 9px 22px rgba(0, 0, 0, 0.22);
+}
+
+[data-theme='dark'] .vault-health-row:hover {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 14px 30px rgba(0, 0, 0, 0.28);
+}
+
+@media (max-width: 1060px) {
+  .vault-health-hero,
+  .vault-health-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .vault-health-stats,
+  .vault-health-search,
+  .vault-health-filter {
+    width: 100%;
+  }
+
+  .vault-health-stats {
+    flex-wrap: wrap;
+  }
+
+  .vault-health-stats span {
+    flex: 1 1 92px;
+  }
+
+  .vault-health-filter {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 760px) {
+  .vault-health-hero,
+  .vault-health-toolbar {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .vault-health-scroll {
+    padding: 0 18px 20px;
+  }
+
+  .vault-health-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .vault-health-row {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+
+  .vault-health-folder {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

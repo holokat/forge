@@ -2,6 +2,12 @@
 
 This checklist tracks the first practical wave of Obsidian-like Forge features that help both people and local agents work inside a Markdown vault.
 
+Verified locally:
+
+- `built-in-templates` currently exposes 38 starter templates.
+- `built-in-extensions` currently exposes 13 bundled manifests across 5 extension points, with 31 contributions.
+- `examples/extensions` currently contains 19 valid local-folder example manifests.
+
 ## Wave 1: Ship Now
 
 - [x] Define the high-value template/plugin implementation plan.
@@ -16,7 +22,7 @@ This checklist tracks the first practical wave of Obsidian-like Forge features t
 ## Wave 2: Next Best Features
 
 - [x] Backlinks panel improvements: linked mentions, unlinked mentions, and quick link insertion.
-- [x] Bookmarks: pin notes and searches for fast workspace navigation.
+- [x] Bookmarks: pin notes for fast workspace navigation.
 - [x] Template gallery UI: start a note from template directly from empty states and file creation.
 - [x] Slash command or command palette template insertion inside an existing note.
 - [x] Canvas/light board for linking notes visually.
@@ -43,7 +49,7 @@ This checklist tracks the first practical wave of Obsidian-like Forge features t
 - [x] Mirror the new starter templates in the agent-facing catalog so CLI and MCP users can inspect their fields.
 - [x] Add callout library/snippets and agent review/QA starter templates.
 
-## Wave 4: Declarative Extension Examples
+## Wave 5: Declarative Extension Examples
 
 - [x] Add a local task checklist example with task metadata, the tasks sidebar widget, and the `lines-to-checklist` transform.
 - [x] Add a table-of-contents insertion example using current heading metadata and the supported `insert-table-of-contents` transform.
@@ -55,15 +61,51 @@ This checklist tracks the first practical wave of Obsidian-like Forge features t
 - [x] Add a first-class generated table-of-contents insertion transform instead of relying on generic template insertion.
 - [x] Add callout style presets and reusable callout templates on top of the first-class callout transform.
 - [x] Add image, video, PDF, and mixed-media gallery widget contribution values for local attachments.
+- [x] Add valid workflow scaffolds for meeting/content work, publish prep, saved-query notes, task review, and vault reporting.
 
-## Wave 5: Vault Intelligence
+## Wave 6: Vault Intelligence Baseline
 
 - [x] Add a vault-wide Tasks workspace view for open, done, and all Markdown checklist items.
 - [x] Make task navigation line-aware so task clicks open the source note at the matching line.
 - [x] Harden task parsing to skip fenced code blocks and support ordered checklist syntax.
 - [x] Expose the Tasks workspace as a safe declarative `forge.views` contribution.
+- [x] Add a first-class vault-health workspace view and `forge.views` contribution for broken links, duplicate titles, orphan notes, untagged/empty notes, tasks, and inbox counts.
 - [x] Add local extension examples for vault health, metadata dashboards, static publishing workflows, and agent handoff workflows.
 - [x] Add incident postmortem, technical RFC, API spec, launch plan, customer profile, content calendar, learning plan, and decision review starter templates.
+- [x] Ship static publishing through the CLI, MCP, `forge-publish`, and the Settings generate-site workflow.
+
+## Wave 7: Vault Health and Repair
+
+- [ ] Add stale-note detection and explicit repair queues to the vault-health workspace.
+- [ ] Add one-click repair actions for common safe fixes: create missing notes, insert wikilinks for unlinked mentions, open broken-link sources, and move orphan notes into review.
+- [ ] Extend `analyze --json` and `forge_analyze` with stale-note and duplicate-title signals so agents can run the same health checks without the UI.
+- [x] Add a vault health audit starter template for agents to summarize findings, proposed repairs, and skipped risky changes.
+
+## Wave 8: Saved Searches and Queries
+
+- [ ] Add saved searches for note search queries, including tag/property filters and bookmark-style navigation.
 - [ ] Add saved task filters and recurring task rules.
-- [ ] Add a dedicated vault-health workspace view with stale-note, duplicate-title, orphan, and broken-link repair queues.
-- [ ] Add a declarative query/dashboard view once the extension validator supports query contribution values.
+- [ ] Add a bounded query model for tags, frontmatter, links, tasks, headings, publish fields, and file paths.
+- [ ] Add saved dashboard/table views for common queues: open tasks, draft publish pages, broken links, stale notes, and review-needed notes.
+- [ ] Add a declarative query/dashboard view only after the extension validator supports non-executable query contribution values.
+
+## Wave 9: Publishing Workflows
+
+- [ ] Add a publish preflight workspace or report covering missing slugs/descriptions, broken links, unresolved assets, draft pages, and checklist state.
+- [ ] Add saved publish profiles for site title, output folder, clean behavior, include/exclude rules, and deploy notes.
+- [ ] Add publish workflow contribution values only after validator support exists for preflight rules and profile references.
+- [ ] Add agent-facing publish preflight and release handoff templates that map cleanly to CLI/MCP publish commands.
+
+## Wave 10: Agent-Facing Templates
+
+- [x] Add Vault Health Report, Task Review, Saved Query, Content Refresh Brief, Extension Spec, and Publish Runbook starter templates.
+- [ ] Add implementation plan, verification report, refactor plan, vault maintenance, saved query catalog, and publish preflight starter templates.
+- [ ] Give each agent template explicit fields for objective, owned files, allowed commands, verification, risks, and final handoff notes.
+- [ ] Mirror every new starter template in the UI starter gallery, `built-in-templates --json --content`, `seed-templates`, and MCP/CLI docs.
+
+## Open Notes
+
+- Workflow examples such as `query-dashboard`, `saved-query-scaffold`, `publish-prep`, `static-publishing-workflow`, and `agent-handoff-workflow` are valid declarative scaffolds over supported metadata, widgets, transforms, and views. They are not dedicated workflow engines yet.
+- A built-in `vault-health` view now exists, but stale-note detection, repair automation, saved health reports, and CLI/MCP parity are still roadmap work.
+- Bookmarks currently persist note paths only. Saved searches and saved query dashboards are still roadmap work.
+- The validator currently accepts `graph-insights`, `outline-board`, `tasks`, and `vault-health` view contribution values. Do not encode new values such as saved-query result views, publish pipeline commands, or agent workflow launchers until validation and runtime routing support them.

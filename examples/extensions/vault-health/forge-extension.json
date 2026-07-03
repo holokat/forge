@@ -3,7 +3,7 @@
   "id": "example.vault-health",
   "name": "vault-health",
   "displayName": "Vault Health Example",
-  "description": "Example declarative extension that combines local link, task, tag, and publish metadata with Forge's supported graph insights view.",
+  "description": "Example declarative extension that combines local link, task, tag, and publish metadata with Forge's supported vault-health view.",
   "version": "0.1.0",
   "publisher": "Example",
   "license": "MIT",
@@ -48,12 +48,12 @@
       ]
     },
     {
-      "id": "example.vault-health.graph",
+      "id": "example.vault-health.view",
       "kind": "view",
       "extensionPoint": "forge.views",
-      "label": "Vault graph health",
-      "description": "Declares the supported graph insights view as a safe visual scaffold for vault health.",
-      "view": "graph-insights"
+      "label": "Vault health",
+      "description": "Declares Forge's supported vault-health workspace view for local cleanup checks.",
+      "view": "vault-health"
     }
   ]
 }

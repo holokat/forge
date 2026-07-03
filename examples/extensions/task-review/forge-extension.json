@@ -1,0 +1,97 @@
+{
+  "manifestVersion": 1,
+  "id": "example.task-review",
+  "name": "task-review",
+  "displayName": "Task Review Example",
+  "description": "Example declarative extension that combines task metadata, the supported vault-wide tasks view, and safe Markdown transforms for reviewing agent task work.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["editing", "organization"],
+  "keywords": ["tasks", "review", "qa", "agent"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" },
+    { "id": "forge.markdown.transforms", "label": "Markdown transforms" },
+    { "id": "forge.views", "label": "Views" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:read",
+      "reason": "Reads local Markdown task items, tags, and frontmatter fields already available to Forge."
+    },
+    {
+      "kind": "vault:write",
+      "reason": "Writes bounded checklist and line-order transforms into the current review note when requested."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.task-review.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Task review metadata",
+      "description": "Declares task, tag, and frontmatter fields useful for reviewing agent work and open follow-ups.",
+      "fields": [
+        "tasks",
+        "openTasks",
+        "completedTasks",
+        "taskCompletionPercent",
+        "tags",
+        "frontmatterProperties",
+        "publishStatus"
+      ]
+    },
+    {
+      "id": "example.task-review.sidebar",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Task summary",
+      "description": "Declares Forge's supported task summary sidebar widget for review notes.",
+      "widget": "tasks"
+    },
+    {
+      "id": "example.task-review.properties",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Properties",
+      "description": "Declares Forge's supported frontmatter sidebar widget for review state, owner, and status fields.",
+      "widget": "frontmatter"
+    },
+    {
+      "id": "example.task-review.view",
+      "kind": "view",
+      "extensionPoint": "forge.views",
+      "label": "Tasks view",
+      "description": "Declares Forge's supported vault-wide tasks view as the review queue surface.",
+      "view": "tasks"
+    },
+    {
+      "id": "example.task-review.checklist",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Convert findings to checklist",
+      "description": "Declares the supported checklist transform for turning review findings into follow-up tasks.",
+      "transform": "lines-to-checklist"
+    },
+    {
+      "id": "example.task-review.sort",
+      "kind": "markdown-transform",
+      "extensionPoint": "forge.markdown.transforms",
+      "label": "Sort review lines",
+      "description": "Declares the supported line sorting transform for grouping review notes before handoff.",
+      "transform": "sort-lines"
+    }
+  ]
+}

@@ -59,6 +59,7 @@ Forge ships practical built-in manifests that describe local features without ex
 | Tag Index | metadata provider, sidebar widget | Active-note tags, tag search filters, and publish tag pages |
 | Outline and Table of Contents | metadata provider, sidebar widget | Parsed headings and clickable right-sidebar outline |
 | Task Summary | metadata provider, sidebar widget, view | Open/completed task counts, active-note task navigation, and a vault-wide Tasks workspace view |
+| Vault Health | metadata provider, view | Broken links, duplicate titles, orphan notes, untagged/empty notes, inbox counts, and open task load in a vault-wide workspace view |
 | Publish Checklist | metadata provider, sidebar widget | Publish-page checklist metadata and static publishing readiness checks |
 | Frontmatter Inspector | metadata provider, sidebar widget | Parsed properties, aliases, and title metadata |
 | Media Gallery | sidebar widget | Linked local image, video, audio, PDF, and common file attachments |
@@ -137,7 +138,7 @@ npm run extensions:validate -- examples/extensions --recursive
 npm run extensions:validate -- /path/to/forge-extension.json --json
 ```
 
-Current examples cover daily-note commands, reading stats, link health, tag/outline metadata, publish checklists, frontmatter inspection, task panels/checklists, generated table-of-contents insertion, callout formatting, media attachments, vault health scaffolds, metadata dashboard scaffolds, static publishing workflows, and agent handoff workflows.
+Current examples cover daily-note commands, reading stats, link health, tag/outline metadata, publish checklists, frontmatter inspection, task panels/checklists, generated table-of-contents insertion, callout formatting, media attachments, vault health scaffolds, metadata dashboard scaffolds, static publishing workflows, agent handoff workflows, task review queues, saved-query scaffolds, vault reporting, publish prep, and meeting/content workflows.
 
 ## Example Coverage
 
@@ -155,12 +156,17 @@ The manifests in `examples/extensions/` are local-folder examples for contributo
 | `table-of-contents-insertion` | Heading metadata plus the supported `insert-table-of-contents` Markdown transform | Editable TOC formatting presets |
 | `media-attachments` | Attachment metadata fields plus the supported `media-gallery` sidebar widget | Attachment actions such as reveal, copy link, and batch organization |
 | `callout-formatting` | Supported `callout` Markdown transform | Callout style presets and reusable callout templates |
-| `vault-health` | Link, backlink, tag, heading, task, and publish metadata plus the supported `graph-insights` view | Dedicated vault-health view/sidebar, orphan/stale-note metrics, duplicate-note checks, and bulk repair actions |
+| `vault-health` | Link, backlink, tag, heading, task, and publish metadata plus the supported `vault-health` view | Stale-note metrics, saved health reports, sidebar widgets, and bulk repair actions |
+| `vault-reporting` | Link, backlink, tag, task, and publish metadata; `link-health`, `backlinks`, and `tasks` sidebar widgets; supported `vault-health` view | Dedicated report generation, scheduled health snapshots, stale-note metrics, and bulk repair actions |
 | `query-dashboard` | Frontmatter, tag, reading, task, and publish metadata plus the supported `outline-board` view | Declarative query language, saved dashboard filters, table/card dashboard views, and computed rollups |
+| `saved-query-scaffold` | Frontmatter, tag, reading, task, and publish metadata; `tags` and `frontmatter` sidebar widgets; supported `outline-board` view; validator-supported `append-template` and `normalize-headings` transforms | Executable saved-query language, query result views, table/card dashboard views, and computed rollups |
 | `static-publishing-workflow` | Publish, frontmatter, and heading metadata; `publish-checklist` sidebar widget; supported `insert-table-of-contents` transform | Publish pipeline commands, preflight rule packs, per-site deployment hooks, and custom readiness checks |
+| `publish-prep` | Publish, frontmatter, heading, and link metadata; `publish-checklist`, `frontmatter`, and `outline` sidebar widgets; supported heading, TOC, and callout transforms | Publish pipeline commands, per-site deployment hooks, custom readiness checks, and batch preflight fixes |
+| `task-review` | Task, tag, frontmatter, and publish metadata; `tasks` and `frontmatter` sidebar widgets; supported `tasks` view; supported checklist and sort transforms | Review-state metadata schemas, saved review filters, assignment rules, and automated review summaries |
 | `agent-handoff-workflow` | Frontmatter, tag, and task metadata; `tasks` and `frontmatter` sidebar widgets; supported `tasks` view; supported `lines-to-checklist` and `normalize-headings` transforms | Agent runbook contribution point, MCP/CLI workflow launchers, review-state metadata, and automated handoff summaries |
+| `meeting-content-workflow` | Frontmatter, tag, heading, reading, and task metadata; `frontmatter`, `outline`, and `tasks` sidebar widgets; validator-supported `append-template`; supported checklist, callout, and heading transforms | Meeting/content template contribution point, editorial calendar views, transcript ingestion, and automated action-item extraction |
 
-The planned coverage column is intentionally prose. Do not encode values such as `vault-health`, `query-dashboard`, publishing pipeline commands, or agent workflow launchers in manifests until the validator adds those contribution values.
+The planned coverage column is intentionally prose. Do not encode values such as `query-dashboard`, `saved-query`, `publish-prep`, `meeting-workflow`, publishing pipeline commands, or agent workflow launchers in manifests until the validator adds those contribution values. The `append-template` transform is accepted by the manifest validator and useful for scaffold examples, but it is not currently listed as a wired bundled Markdown Tools runtime route.
 
 Validation checks:
 
