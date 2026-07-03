@@ -3,6 +3,7 @@ import QRCode from 'qrcode'
 import { useEffect, useMemo, useState } from 'react'
 import type { AgentAccessInfo, MobilePairingInfo, ThemeMode } from '../../../shared/types'
 import { useStore } from '../store'
+import ExtensionMarketplace from './ExtensionMarketplace'
 
 const THEMES: { mode: ThemeMode; label: string; icon: React.ReactNode }[] = [
   { mode: 'light', label: 'Light', icon: <Sun size={15} /> },
@@ -149,6 +150,10 @@ function claudeDesktopConfig(info: AgentAccessInfo, vault: string): string {
     null,
     2
   )
+}
+
+function defaultPublishDir(vault: string): string {
+  return `${vault.replace(/\/+$/, '')}/.forge/publish`
 }
 
 async function createPairingQr(pairingUrl: string | undefined): Promise<string> {
@@ -319,9 +324,18 @@ export default function SettingsModal(): React.JSX.Element {
   const setTheme = useStore((s) => s.setTheme)
   const setFontSize = useStore((s) => s.setFontSize)
   const setLineWidth = useStore((s) => s.setLineWidth)
+  const templatesFolder = useStore((s) => s.templatesFolder)
+  const dailyNotesFolder = useStore((s) => s.dailyNotesFolder)
+  const setTemplatesFolder = useStore((s) => s.setTemplatesFolder)
+  const setDailyNotesFolder = useStore((s) => s.setDailyNotesFolder)
   const setModal = useStore((s) => s.setModal)
   const openVaultDialog = useStore((s) => s.openVaultDialog)
   const [agentAccess, setAgentAccess] = useState<AgentAccessInfo | null>(null)
+  const [publishState, setPublishState] = useState<{
+    status: 'idle' | 'publishing' | 'done' | 'failed'
+    message: string
+    outDir: string
+  }>({ status: 'idle', message: '', outDir: '' })
 
   useEffect(() => {
     let cancelled = false
@@ -373,6 +387,23 @@ export default function SettingsModal(): React.JSX.Element {
           ...agentAccess.mcp.args
         ])
       : ''
+  const publishDir = vault ? defaultPublishDir(vault) : ''
+
+  const publishStaticSite = async (): Promise<void> => {
+    if (!vault || !publishDir) return
+    setPublishState({ status: 'publishing', message: 'Publishing site...', outDir: publishDir })
+    try {
+      const result = await window.forge.publishVault(vault, publishDir)
+      setPublishState({
+        status: 'done',
+        message: `Published ${result.notes} notes and ${result.files} files.`,
+        outDir: result.outDir
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setPublishState({ status: 'failed', message, outDir: publishDir })
+    }
+  }
 
   return (
     <div className="modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && setModal(null)}>
@@ -441,6 +472,36 @@ export default function SettingsModal(): React.JSX.Element {
             </div>
           </section>
 
+          <section>
+            <h3>Notes</h3>
+            <div className="settings-row">
+              <div>
+                <div className="settings-row-label">Daily notes folder</div>
+                <div className="settings-row-desc">Where Forge creates date-based notes</div>
+              </div>
+              <div className="settings-row-control">
+                <input
+                  className="settings-text-input"
+                  value={dailyNotesFolder}
+                  onChange={(event) => setDailyNotesFolder(event.target.value)}
+                />
+              </div>
+            </div>
+            <div className="settings-row">
+              <div>
+                <div className="settings-row-label">Templates folder</div>
+                <div className="settings-row-desc">Use Templates/Daily.md for daily note content</div>
+              </div>
+              <div className="settings-row-control">
+                <input
+                  className="settings-text-input"
+                  value={templatesFolder}
+                  onChange={(event) => setTemplatesFolder(event.target.value)}
+                />
+              </div>
+            </div>
+          </section>
+
           {vault && (
             <section>
               <h3>Vault</h3>
@@ -460,6 +521,43 @@ export default function SettingsModal(): React.JSX.Element {
                     Switch vault…
                   </button>
                 </div>
+              </div>
+            </section>
+          )}
+
+          {vault && (
+            <section>
+              <h3>Publishing</h3>
+              <div className="settings-callout static-publish-card">
+                <div>
+                  <div className="settings-row-label">Static site export</div>
+                  <div className="settings-row-desc">
+                    Generate local HTML from Markdown, wikilinks, tags, backlinks, and vault assets.
+                  </div>
+                </div>
+                <div className="settings-code-row">
+                  <code>{publishDir}</code>
+                  <CopyButton value={publishDir} label="Copy path" />
+                </div>
+                <div className="static-publish-actions">
+                  <button className="btn" disabled={publishState.status === 'publishing'} onClick={() => publishStaticSite()}>
+                    {publishState.status === 'publishing' ? <RefreshCw size={14} /> : <Code2 size={14} />}
+                    {publishState.status === 'publishing' ? 'Publishing' : 'Publish site'}
+                  </button>
+                  <button
+                    className="btn btn-compact"
+                    disabled={publishState.status !== 'done'}
+                    onClick={() => window.forge.reveal(vault, '.forge/publish/index.html')}
+                  >
+                    Reveal output
+                  </button>
+                </div>
+                {publishState.message && (
+                  <div className={`static-publish-status ${publishState.status}`}>
+                    {publishState.status === 'done' ? <Check size={14} /> : publishState.status === 'failed' ? <AlertCircle size={14} /> : <RefreshCw size={14} />}
+                    <span>{publishState.message}</span>
+                  </div>
+                )}
               </div>
             </section>
           )}
@@ -536,6 +634,11 @@ export default function SettingsModal(): React.JSX.Element {
               </div>
             </section>
           )}
+
+          <section>
+            <h3>Extensions</h3>
+            <ExtensionMarketplace />
+          </section>
         </div>
       </div>
     </div>

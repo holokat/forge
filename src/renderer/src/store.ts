@@ -1,7 +1,14 @@
 import { create } from 'zustand'
 import type { ReactNode } from 'react'
-import { DEFAULT_SETTINGS, type Settings, type ThemeMode } from '../../shared/types'
-import { baseName, isMarkdown, parseNote, resolveLink, wordCount, type NoteMeta } from './lib/parse'
+import { DEFAULT_SETTINGS, type ExtensionSettings, type Settings, type ThemeMode } from '../../shared/types'
+import {
+  createDefaultExtensionSettings,
+  enabledExtensionIds,
+  normalizeExtensionSettings,
+  withExtensionEnabled,
+  withExtensionInstalled
+} from './extensions/preferences'
+import { baseName, isMarkdown, noteDisplayTitle, parseNote, resolveLink, wordCount, type NoteMeta } from './lib/parse'
 
 export type TabKind = 'note' | 'graph' | 'empty'
 export type ViewMode = 'edit' | 'read'
@@ -48,6 +55,10 @@ export interface ForgeState {
   theme: ThemeMode
   fontSize: number
   lineWidth: number
+  templatesFolder: string
+  dailyNotesFolder: string
+  enabledExtensions: string[]
+  extensionSettings: ExtensionSettings
   recentVaults: string[]
   leftOpen: boolean
   rightOpen: boolean
@@ -75,6 +86,7 @@ export interface ForgeState {
   updateContent(path: string, content: string): void
   createNote(folder?: string): Promise<void>
   createNoteNamed(name: string): Promise<string | null>
+  createDailyNote(): Promise<string | null>
   createFolder(parent: string, name: string): Promise<void>
   renamePath(oldPath: string, newPath: string): Promise<void>
   /** Move a file or folder into `targetFolder` ('' = vault root). */
@@ -84,6 +96,10 @@ export interface ForgeState {
   setTheme(theme: ThemeMode): void
   setFontSize(size: number): void
   setLineWidth(width: number): void
+  setTemplatesFolder(folder: string): void
+  setDailyNotesFolder(folder: string): void
+  setExtensionInstalled(extensionId: string, installed: boolean): void
+  setExtensionEnabled(extensionId: string, enabled: boolean): void
   setLeftOpen(open: boolean): void
   setRightOpen(open: boolean): void
   setLeftPane(pane: 'files' | 'search'): void
@@ -105,7 +121,11 @@ async function persistSettings(state: ForgeState): Promise<void> {
     lastVault: state.vault,
     recentVaults: state.recentVaults,
     fontSize: state.fontSize,
-    lineWidth: state.lineWidth
+    lineWidth: state.lineWidth,
+    templatesFolder: state.templatesFolder,
+    dailyNotesFolder: state.dailyNotesFolder,
+    enabledExtensions: enabledExtensionIds(state.extensionSettings),
+    extensionSettings: state.extensionSettings
   }
   await window.forge.writeSettings(settings)
 }
@@ -122,6 +142,10 @@ export const useStore = create<ForgeState>((set, get) => ({
   theme: DEFAULT_SETTINGS.theme,
   fontSize: DEFAULT_SETTINGS.fontSize,
   lineWidth: DEFAULT_SETTINGS.lineWidth,
+  templatesFolder: DEFAULT_SETTINGS.templatesFolder,
+  dailyNotesFolder: DEFAULT_SETTINGS.dailyNotesFolder,
+  enabledExtensions: DEFAULT_SETTINGS.enabledExtensions,
+  extensionSettings: createDefaultExtensionSettings(),
   recentVaults: [],
   leftOpen: true,
   rightOpen: true,
@@ -133,10 +157,15 @@ export const useStore = create<ForgeState>((set, get) => ({
 
   async boot() {
     const settings = await window.forge.readSettings()
+    const extensionSettings = normalizeExtensionSettings(settings.extensionSettings, settings.enabledExtensions)
     set({
       theme: settings.theme,
       fontSize: settings.fontSize,
       lineWidth: settings.lineWidth,
+      templatesFolder: settings.templatesFolder,
+      dailyNotesFolder: settings.dailyNotesFolder,
+      extensionSettings,
+      enabledExtensions: enabledExtensionIds(extensionSettings),
       recentVaults: settings.recentVaults,
       booted: true
     })
@@ -340,6 +369,57 @@ export const useStore = create<ForgeState>((set, get) => ({
     return created
   },
 
+  async createDailyNote() {
+    const { vault, dailyNotesFolder, templatesFolder } = get()
+    if (!vault) return null
+    const date = new Date()
+    const yyyy = date.getFullYear()
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    const dd = String(date.getDate()).padStart(2, '0')
+    const isoDate = `${yyyy}-${mm}-${dd}`
+    const rel = `${dailyNotesFolder || 'Daily'}/${isoDate}.md`
+    const existing = get().files.find((file) => file.toLowerCase() === rel.toLowerCase())
+    if (existing) {
+      get().openFile(existing)
+      return existing
+    }
+
+    const templatePath = `${templatesFolder || 'Templates'}/Daily.md`
+    let template = ''
+    try {
+      template = await window.forge.readFile(vault, templatePath)
+    } catch {
+      template = [
+        '---',
+        `date: ${isoDate}`,
+        'tags: [daily]',
+        '---',
+        '',
+        `# ${isoDate}`,
+        '',
+        '## Notes',
+        '',
+        '## Tasks',
+        ''
+      ].join('\n')
+    }
+    const content = template
+      .replaceAll('{{date}}', isoDate)
+      .replaceAll('{{title}}', isoDate)
+      .replaceAll('{{vault}}', get().vaultName)
+
+    const created = await window.forge.createFile(vault, rel, content)
+    noteContents.set(created, content)
+    set({
+      files: [...get().files, created].sort(),
+      folders: [...new Set([...get().folders, dailyNotesFolder || 'Daily'])].sort(),
+      index: { ...get().index, [created]: parseNote(content) },
+      contentVersion: get().contentVersion + 1
+    })
+    get().openFile(created)
+    return created
+  },
+
   async createFolder(parent, name) {
     const { vault } = get()
     if (!vault || !name.trim()) return
@@ -432,6 +512,25 @@ export const useStore = create<ForgeState>((set, get) => ({
     set({ lineWidth })
     persistSettings(get())
   },
+  setTemplatesFolder(templatesFolder) {
+    set({ templatesFolder: templatesFolder.trim() || DEFAULT_SETTINGS.templatesFolder })
+    persistSettings(get())
+  },
+  setDailyNotesFolder(dailyNotesFolder) {
+    set({ dailyNotesFolder: dailyNotesFolder.trim() || DEFAULT_SETTINGS.dailyNotesFolder })
+    persistSettings(get())
+  },
+  setExtensionInstalled(extensionId, installed) {
+    const extensionSettings = withExtensionInstalled(get().extensionSettings, extensionId, installed)
+    set({ extensionSettings, enabledExtensions: enabledExtensionIds(extensionSettings) })
+    persistSettings(get())
+  },
+  setExtensionEnabled(extensionId, enabled) {
+    const baseSettings = enabled ? withExtensionInstalled(get().extensionSettings, extensionId, true) : get().extensionSettings
+    const extensionSettings = withExtensionEnabled(baseSettings, extensionId, enabled)
+    set({ extensionSettings, enabledExtensions: enabledExtensionIds(extensionSettings) })
+    persistSettings(get())
+  },
 
   setLeftOpen(leftOpen) {
     set({ leftOpen })
@@ -456,6 +555,28 @@ export function backlinksFor(path: string, files: string[], index: Record<string
   for (const [source, meta] of Object.entries(index)) {
     if (source === path) continue
     if (meta.links.some((l) => resolveLink(l, files) === path)) result.push(source)
+  }
+  return result.sort()
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+export function unlinkedMentionsFor(path: string, files: string[], index: Record<string, NoteMeta>): string[] {
+  const meta = index[path]
+  const names = [noteDisplayTitle(path, meta), baseName(path), ...(meta?.aliases ?? [])]
+    .map((name) => name.trim())
+    .filter((name, index, all) => name.length >= 3 && all.findIndex((other) => other.toLowerCase() === name.toLowerCase()) === index)
+  if (names.length === 0) return []
+
+  const linkedSources = new Set(backlinksFor(path, files, index))
+  const patterns = names.map((name) => new RegExp(`(^|[^\\p{L}\\p{N}_])${escapeRegExp(name)}([^\\p{L}\\p{N}_]|$)`, 'iu'))
+  const result: string[] = []
+  for (const source of files.filter(isMarkdown)) {
+    if (source === path || linkedSources.has(source)) continue
+    const content = noteContents.get(source) ?? ''
+    if (patterns.some((pattern) => pattern.test(content))) result.push(source)
   }
   return result.sort()
 }

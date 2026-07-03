@@ -33,6 +33,7 @@ forge --vault /path/to/vault read Projects/Plan.md
 forge --vault /path/to/vault search "Ship it" --json
 forge --vault /path/to/vault move Projects/Plan.md Projects/Active/Plan.md
 forge --vault /path/to/vault analyze --json
+forge --vault /path/to/vault publish --out /path/to/site --clean --json
 ```
 
 ## MCP
@@ -43,7 +44,7 @@ Use `forge-mcp` for Codex, Claude, and other MCP clients:
 FORGE_VAULT=/path/to/vault forge-mcp
 ```
 
-The MCP server exposes tools for listing, reading, writing, appending, creating folders/docs, moving, searching, analyzing, and batch operations. It speaks stdio MCP and should be launched by the MCP client, not used interactively.
+The MCP server exposes tools for listing, reading, writing, appending, creating folders/docs, moving, searching, analyzing, publishing, and batch operations. It speaks stdio MCP and should be launched by the MCP client, not used interactively.
 
 ## Batch Operations
 
@@ -56,7 +57,8 @@ Batch mode is best when an agent needs multiple changes to stay ordered:
     { "action": "createFolder", "path": "Projects" },
     { "action": "createDoc", "path": "Projects/Plan.md", "title": "Plan" },
     { "action": "append", "path": "Projects/Plan.md", "content": "\n## Next\n- Define scope\n" },
-    { "action": "analyze" }
+    { "action": "analyze" },
+    { "action": "publish", "outDir": "/path/to/site", "clean": true }
   ]
 }
 ```
@@ -77,7 +79,7 @@ forge batch batch.json --json
 
 ## Capabilities
 
-The CLI can list, read, create, overwrite, append, move, search, and analyze Markdown notes. `analyze --json` returns totals, tags, wikilinks, backlinks, broken links, empty notes, notes without tags, inbox notes, and orphan notes for organization workflows.
+The CLI can list, read, create, overwrite, append, move, search, analyze Markdown notes, and publish static HTML. `analyze --json` returns totals, tags, wikilinks, backlinks, broken links, empty notes, notes without tags, inbox notes, and orphan notes for organization workflows.
 
 ## Changelog Rule
 

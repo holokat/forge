@@ -1,6 +1,6 @@
 import { Search, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { baseName, isMarkdown } from '../lib/parse'
+import { baseName, isMarkdown, noteDisplayTitle, type NoteMeta } from '../lib/parse'
 import { noteContents, useStore } from '../store'
 
 interface SearchHit {
@@ -29,16 +29,55 @@ function findMatches(query: string, files: string[]): SearchHit[] {
   return hits
 }
 
+function propertyText(meta: NoteMeta | undefined): string {
+  if (!meta) return ''
+  return Object.entries(meta.properties)
+    .flatMap(([key, value]) => [key, Array.isArray(value) ? value.join(' ') : String(value)])
+    .join(' ')
+}
+
+function findSmartMatches(query: string, files: string[], index: Record<string, NoteMeta>): SearchHit[] {
+  const trimmed = query.trim()
+  const tagFilter = /^#?tag:(.+)$/i.exec(trimmed) ?? /^#([A-Za-z][\w/-]*)$/.exec(trimmed)
+  if (tagFilter) {
+    const tag = tagFilter[1].replace(/^#/, '').toLowerCase()
+    return files
+      .filter(isMarkdown)
+      .filter((path) => (index[path]?.tags ?? []).some((candidate) => candidate.toLowerCase() === tag))
+      .map((path) => ({ path, line: 0, text: `#${tag}`, start: 0, end: tag.length + 1 }))
+  }
+
+  const lower = trimmed.toLowerCase()
+  const hits: SearchHit[] = []
+  for (const path of files) {
+    if (!isMarkdown(path)) continue
+    const meta = index[path]
+    const title = noteDisplayTitle(path, meta)
+    const aliases = meta?.aliases ?? []
+    const tags = meta?.tags ?? []
+    const properties = propertyText(meta)
+    const titleHaystack = [title, baseName(path), ...aliases, ...tags.map((tag) => `#${tag}`), properties].join(' ')
+    if (titleHaystack.toLowerCase().includes(lower)) {
+      hits.push({ path, line: 0, text: titleHaystack, start: Math.max(0, titleHaystack.toLowerCase().indexOf(lower)), end: Math.max(0, titleHaystack.toLowerCase().indexOf(lower)) + trimmed.length })
+      continue
+    }
+    hits.push(...findMatches(trimmed, [path]).slice(0, 3))
+    if (hits.length >= 400) break
+  }
+  return hits.slice(0, 400)
+}
+
 export default function SearchPane(): React.JSX.Element {
   const [query, setQuery] = useState('')
   const files = useStore((s) => s.files)
+  const index = useStore((s) => s.index)
   const contentVersion = useStore((s) => s.contentVersion)
   const openFile = useStore((s) => s.openFile)
 
   const hits = useMemo(
-    () => (query.trim().length >= 2 ? findMatches(query.trim(), files) : []),
+    () => (query.trim().length >= 2 ? findSmartMatches(query.trim(), files, index) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [query, files, contentVersion]
+    [query, files, index, contentVersion]
   )
 
   const grouped = useMemo(() => {

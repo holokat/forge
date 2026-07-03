@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { baseName, isMarkdown, resolveLink } from '../lib/parse'
+import { isMarkdown, noteDisplayTitle, resolveLink } from '../lib/parse'
 import { useStore } from '../store'
 
 interface GraphNode {
@@ -40,7 +40,7 @@ export default function GraphView(): React.JSX.Element {
       const radius = 120 + (i % 7) * 30
       return {
         path,
-        label: baseName(path),
+        label: noteDisplayTitle(path, index[path]),
         x: Math.cos(angle) * radius,
         y: Math.sin(angle) * radius,
         vx: 0,

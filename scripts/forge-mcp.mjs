@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import readline from 'node:readline'
 import process from 'node:process'
+import { publishVault } from './lib/publisher.mjs'
 import {
   ensureVault,
   resolveVault,
@@ -183,6 +184,21 @@ const tools = [
     }
   },
   {
+    name: 'forge_publish',
+    description: 'Export the Forge vault to static HTML in a dedicated output folder.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['outDir'],
+      properties: {
+        vault: { type: 'string', description: 'Optional explicit vault path.' },
+        outDir: { type: 'string', description: 'Output folder for generated static files.' },
+        title: { type: 'string', description: 'Optional site title.' },
+        clean: { type: 'boolean', description: 'Clean previous Forge publisher output before writing.' }
+      }
+    }
+  },
+  {
     name: 'forge_batch',
     description: 'Run multiple Forge operations in order. Stops after the first failed operation.',
     inputSchema: {
@@ -262,6 +278,24 @@ async function callTool(name, args = {}) {
       return runOperation(vault, { action: 'search', query: input.query, limit: input.limit })
     case 'forge_analyze':
       return runOperation(vault, { action: 'analyze' })
+    case 'forge_publish': {
+      const result = await publishVault({
+        vault,
+        output: input.outDir,
+        title: input.title,
+        clean: Boolean(input.clean)
+      })
+      return {
+        ok: true,
+        vault: result.vault,
+        outDir: result.output,
+        totals: result.totals,
+        files: result.written.length + result.copied.length,
+        written: result.written.length,
+        copied: result.copied.length,
+        brokenLinks: result.brokenLinks
+      }
+    }
     case 'forge_batch': {
       const operations = Array.isArray(input.operations) ? input.operations : []
       const results = []

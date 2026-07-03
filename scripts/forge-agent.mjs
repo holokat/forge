@@ -4,6 +4,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import { publishVault } from './lib/publisher.mjs'
 
 const WIKILINK_RE = /\[\[([^[\]]+?)\]\]/g
 const TAG_RE = /(^|[\s([])#([A-Za-z][\w/-]*)/g
@@ -33,6 +34,8 @@ Commands:
   move <from> <to>                      Move or rename a file or folder
   search <query> [--limit <n>] [--json] Search Markdown filenames and contents
   analyze [--json]                      Summarize notes, tags, links, backlinks, and gaps
+  publish --out <folder> [--title <s>] [--clean] [--json]
+                                        Export the vault to static HTML
   batch [file|-] [--json]               Run JSON operations in one transaction-like sequence
 
 Batch shape:
@@ -128,7 +131,7 @@ function linkTarget(inner) {
 }
 
 function normalizeDocPath(rel) {
-  return path.extname(rel) ? rel : `${rel}.md`
+  return /\.md$/i.test(rel) ? rel : `${rel}.md`
 }
 
 function normalizeVault(vault) {
@@ -489,6 +492,26 @@ async function analyzeCommand(vault) {
   }
 }
 
+async function publishCommand(vault, { output = '', title = '', clean = false } = {}) {
+  const result = await publishVault({
+    vault,
+    output,
+    title,
+    clean: Boolean(clean)
+  })
+
+  return {
+    ok: true,
+    vault: result.vault,
+    outDir: result.output,
+    totals: result.totals,
+    files: result.written.length + result.copied.length,
+    written: result.written.length,
+    copied: result.copied.length,
+    brokenLinks: result.brokenLinks
+  }
+}
+
 async function runOperation(vault, op) {
   const action = op.action || op.command
   if (!action) throw new Error('Batch operation is missing action.')
@@ -520,6 +543,12 @@ async function runOperation(vault, op) {
       return searchCommand(vault, op.query, { limit: op.limit })
     case 'analyze':
       return analyzeCommand(vault)
+    case 'publish':
+      return publishCommand(vault, {
+        output: op.output ?? op.outDir ?? op.out,
+        title: op.title,
+        clean: Boolean(op.clean)
+      })
     default:
       throw new Error(`Unknown batch action: ${action}`)
   }
@@ -647,6 +676,21 @@ async function main() {
           ].join('\n')
         })
         break
+      case 'publish':
+        printResult(await publishCommand(vault, {
+          output: options.out || options.output || options.outDir,
+          title: options.title,
+          clean: Boolean(options.clean)
+        }), {
+          json,
+          text: (result) => [
+            `Published ${result.totals.notes} notes to ${result.outDir}`,
+            `Files: ${result.files}`,
+            `Tags: ${result.totals.tags}`,
+            `Broken links: ${result.brokenLinks.length}`
+          ].join('\n')
+        })
+        break
       default:
         throw new Error(`Unknown command: ${command}`)
     }
@@ -676,6 +720,7 @@ export {
   ensureVault,
   listCommand,
   moveCommand,
+  publishCommand,
   readCommand,
   renderTree,
   resolveVault,

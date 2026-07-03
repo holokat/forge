@@ -18,6 +18,7 @@ const api: ForgeAPI = {
   getMobilePairingInfo: () => ipcRenderer.invoke('mobile:getPairingInfo'),
   resetMobilePairingToken: () => ipcRenderer.invoke('mobile:resetPairingToken'),
   setMobileVault: (vault) => ipcRenderer.invoke('mobile:setVault', vault),
+  publishVault: (vault, outDir) => ipcRenderer.invoke('vault:publish', vault, outDir),
   setThemeSource: (mode: ThemeMode) => ipcRenderer.invoke('theme:setSource', mode),
   watchVault: (vault) => ipcRenderer.invoke('vault:watch', vault),
   onVaultChanged: (cb) => {

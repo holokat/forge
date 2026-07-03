@@ -57,6 +57,39 @@ function getAgentAccessInfo(): AgentAccessInfo {
   }
 }
 
+async function publishVaultForDesktop(vault: string, outDir: string): Promise<{ outDir: string; files: number; notes: number }> {
+  const publisherPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'scripts', 'lib', 'publisher.mjs')
+    : path.join(app.getAppPath(), 'scripts', 'lib', 'publisher.mjs')
+
+  const publisher = (await import(pathToFileURL(publisherPath).toString())) as {
+    publishVault(options: {
+      vault: string
+      output: string
+      title?: string
+      clean?: boolean
+    }): Promise<{
+      output: string
+      totals: { notes: number }
+      written: string[]
+      copied: string[]
+    }>
+  }
+
+  const result = await publisher.publishVault({
+    vault,
+    output: outDir,
+    title: path.basename(vault),
+    clean: true
+  })
+
+  return {
+    outDir: result.output,
+    files: result.written.length + result.copied.length,
+    notes: result.totals.notes
+  }
+}
+
 // ---------- settings ----------
 
 const settingsPath = (): string => path.join(app.getPath('userData'), 'forge-settings.json')
@@ -255,6 +288,7 @@ function registerIpc(): void {
   ipcMain.handle('settings:write', (_e, s: Settings) => writeSettings(s))
   ipcMain.handle('agent:getAccessInfo', () => getAgentAccessInfo())
   ipcMain.handle('clipboard:writeText', (_e, text: string) => clipboard.writeText(text))
+  ipcMain.handle('vault:publish', (_e, vault: string, outDir: string) => publishVaultForDesktop(vault, outDir))
   ipcMain.handle('mobile:getPairingInfo', () => mobileIngest.getPairingInfo())
   ipcMain.handle('mobile:resetPairingToken', () => {
     mobileIngest.resetToken()

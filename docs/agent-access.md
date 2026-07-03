@@ -6,7 +6,8 @@ Forge is local-first: a vault is just a folder of Markdown files. Agents should 
 
 - `forge`: command-line access for terminal-based agents such as Codex, Claude Code, Cursor, and Windsurf.
 - `forge-mcp`: stdio MCP server for Codex, Claude, and other MCP clients.
-- Packaged macOS app wrappers: `Forge.app/Contents/Resources/bin/forge` and `Forge.app/Contents/Resources/bin/forge-mcp`.
+- `forge-publish`: direct static-site export command for deployment workflows.
+- Packaged macOS app wrappers: `Forge.app/Contents/Resources/bin/forge`, `forge-mcp`, and `forge-publish`.
 
 Both entrypoints use the same safe path handling:
 
@@ -32,6 +33,8 @@ forge --vault /path/to/vault create-doc Projects/Plan --title "Plan"
 printf '\n## Next\n- Define scope\n' | forge --vault /path/to/vault append Projects/Plan.md --stdin
 forge --vault /path/to/vault search "Define scope" --json
 forge --vault /path/to/vault analyze --json
+forge --vault /path/to/vault publish --out /path/to/site --clean --json
+forge-publish --vault /path/to/vault --out /path/to/site --clean
 ```
 
 From a source checkout:
@@ -112,4 +115,5 @@ For MCP clients:
 - `forge_move`
 - `forge_search`
 - `forge_analyze`
+- `forge_publish`
 - `forge_batch`

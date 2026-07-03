@@ -175,6 +175,7 @@ export function installMockApi(): void {
       vaultName: 'Notes'
     }),
     setMobileVault: async () => {},
+    publishVault: async (_vault, outDir) => ({ outDir, files: 0, notes: 0 }),
     setThemeSource: async () => {},
     watchVault: async () => {},
     onVaultChanged: () => () => {},

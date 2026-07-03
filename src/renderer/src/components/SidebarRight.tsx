@@ -2,8 +2,8 @@ import { useMemo } from 'react'
 import { FileAudio } from 'lucide-react'
 import { getActiveEditor } from '../editor/active'
 import { scrollToLine } from '../editor/extensions'
-import { WIKILINK_RE, baseName, isAudio, linkTarget, resolveLink } from '../lib/parse'
-import { activeTab, backlinksFor, noteContents, useStore } from '../store'
+import { WIKILINK_RE, baseName, isAudio, linkTarget, resolveLink, type PropertyValue } from '../lib/parse'
+import { activeTab, backlinksFor, noteContents, unlinkedMentionsFor, useStore } from '../store'
 
 function Backlinks({ path }: { path: string }): React.JSX.Element {
   const files = useStore((s) => s.files)
@@ -33,6 +33,60 @@ function Backlinks({ path }: { path: string }): React.JSX.Element {
           )
         })
       )}
+    </div>
+  )
+}
+
+function UnlinkedMentions({ path }: { path: string }): React.JSX.Element | null {
+  const files = useStore((s) => s.files)
+  const index = useStore((s) => s.index)
+  const openFile = useStore((s) => s.openFile)
+  const mentions = useMemo(() => unlinkedMentionsFor(path, files, index), [path, files, index])
+
+  if (mentions.length === 0) return null
+
+  return (
+    <div className="panel-section">
+      <div className="panel-heading">
+        Unlinked mentions
+        <span className="panel-count">{mentions.length}</span>
+      </div>
+      {mentions.map((source) => {
+        const title = baseName(path).toLowerCase()
+        const line = (noteContents.get(source) ?? '')
+          .split('\n')
+          .find((value) => value.toLowerCase().includes(title))
+        return (
+          <button key={source} className="backlink-item" onClick={() => openFile(source)}>
+            <span className="backlink-name">{baseName(source)}</span>
+            {line && <span className="backlink-snippet">{line.trim().slice(0, 120)}</span>}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function propertyLabel(value: PropertyValue): string {
+  return Array.isArray(value) ? value.join(', ') : String(value)
+}
+
+function Properties({ path }: { path: string }): React.JSX.Element | null {
+  const meta = useStore((s) => s.index[path])
+  const entries = Object.entries(meta?.properties ?? {})
+  if (entries.length === 0) return null
+
+  return (
+    <div className="panel-section">
+      <div className="panel-heading">Properties</div>
+      <div className="property-list">
+        {entries.map(([key, value]) => (
+          <div className="property-row" key={key}>
+            <span>{key}</span>
+            <strong>{propertyLabel(value)}</strong>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -133,8 +187,10 @@ export default function SidebarRight(): React.JSX.Element {
       {path ? (
         <div className="sidebar-content panel-scroll">
           <AudioAttachments path={path} />
+          <Properties path={path} />
           <Outline path={path} />
           <Backlinks path={path} />
+          <UnlinkedMentions path={path} />
           <Tags path={path} />
         </div>
       ) : (

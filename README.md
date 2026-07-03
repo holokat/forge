@@ -13,6 +13,9 @@ A fast, beautiful, local-first knowledge base for macOS — an Obsidian-style no
 - **Graph view** — interactive force-directed graph of your vault (zoom, pan, drag, click to open).
 - **Quick switcher** (⌘O) and **command palette** (⌘P) with fuzzy matching.
 - **Full-text search** across the vault.
+- **Properties, aliases, daily notes, and unlinked mentions** for more Obsidian-like organization.
+- **Local extension marketplace foundation** with declarative built-in extensions and persisted install/enable state.
+- **Static publishing** to local HTML for future website/deployment workflows.
 - **Tabs**, file tree with context menus (rename, reveal in Finder, move to Trash), inline title rename.
 - **Interactive task lists** — click checkboxes in reading view to update the source.
 - **Dark, light, and system themes**, adjustable font size and line width.
@@ -38,6 +41,7 @@ npm install
 npm run dev        # run the Electron app with hot reload
 npm run dev:web    # renderer only, in a browser with a mock vault (design work)
 npm run agent -- --vault /path/to/vault analyze --json
+npm run publish:vault -- --vault /path/to/vault --out /path/to/site --clean
 npm run mcp        # run the Forge MCP server over stdio
 npm run typecheck
 ```
@@ -61,6 +65,20 @@ forge --vault /path/to/vault analyze --json
 From a source checkout, use `npm run agent -- ...` or `node scripts/forge-mcp.mjs`. Packaged macOS builds include wrapper commands at `Forge.app/Contents/Resources/bin/`.
 
 See `AGENTS.md` and `docs/agent-access.md` for the full CLI, MCP, Codex, and Claude setup guide.
+
+## Static publishing
+
+Export a vault to dependency-light static HTML without using the renderer UI:
+
+```bash
+npm run publish:vault -- --vault /path/to/vault --out /path/to/site --clean
+```
+
+The publisher renders Markdown notes, rewrites local note links, creates backlink and tag sections, copies local assets, and writes a bounded cleanup marker. See `docs/static-publishing.md` for details.
+
+## Extensions
+
+Forge now has a local extension marketplace foundation in Settings. It is declarative and bundled-only for the first pass, with extension points for commands, Markdown transforms, metadata, sidebar widgets, and views. See `docs/extensions.md` for the current extension contract and the path toward a public registry.
 
 ## iOS voice recorder
 

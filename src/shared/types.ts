@@ -15,6 +15,23 @@ export interface Settings {
   recentVaults: string[]
   fontSize: number
   lineWidth: number
+  templatesFolder: string
+  dailyNotesFolder: string
+  enabledExtensions: string[]
+  extensionSettings: ExtensionSettings
+}
+
+export interface ExtensionInstallPreference {
+  installed: boolean
+  enabled: boolean
+  installedAt: string | null
+  updatedAt: string | null
+}
+
+export interface ExtensionSettings {
+  schemaVersion: 1
+  registry: 'local'
+  entries: Record<string, ExtensionInstallPreference>
 }
 
 export interface MobilePairingInfo {
@@ -48,7 +65,15 @@ export const DEFAULT_SETTINGS: Settings = {
   lastVault: null,
   recentVaults: [],
   fontSize: 16,
-  lineWidth: 700
+  lineWidth: 700,
+  templatesFolder: 'Templates',
+  dailyNotesFolder: 'Daily',
+  enabledExtensions: [],
+  extensionSettings: {
+    schemaVersion: 1,
+    registry: 'local',
+    entries: {}
+  }
 }
 
 export interface ForgeAPI {
@@ -68,6 +93,7 @@ export interface ForgeAPI {
   getMobilePairingInfo(): Promise<MobilePairingInfo>
   resetMobilePairingToken(): Promise<MobilePairingInfo>
   setMobileVault(vault: string | null): Promise<void>
+  publishVault(vault: string, outDir: string): Promise<{ outDir: string; files: number; notes: number }>
   setThemeSource(mode: ThemeMode): Promise<void>
   watchVault(vault: string): Promise<void>
   onVaultChanged(cb: () => void): () => void

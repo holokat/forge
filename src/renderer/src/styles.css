@@ -1228,6 +1228,37 @@ button.tag:hover {
   color: var(--text-faint);
 }
 
+.property-list {
+  display: grid;
+  gap: 6px;
+  padding: 2px 8px;
+}
+
+.property-row {
+  display: grid;
+  grid-template-columns: minmax(64px, 0.42fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.property-row span {
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-row strong {
+  min-width: 0;
+  color: var(--text-muted);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .audio-attachments {
   display: flex;
   flex-direction: column;
@@ -1512,6 +1543,20 @@ button.tag:hover {
   accent-color: var(--accent);
 }
 
+.settings-text-input {
+  width: 180px;
+  height: 32px;
+  border: 0;
+  outline: 0;
+  padding: 0 10px;
+  border-radius: 9px;
+  color: var(--text-normal);
+  background: var(--bg-hover);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font: inherit;
+  font-size: 12.5px;
+}
+
 .settings-value {
   font-size: 12px;
   color: var(--text-muted);
@@ -1603,6 +1648,32 @@ button.tag:hover {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.static-publish-card {
+  gap: 11px;
+}
+
+.static-publish-actions,
+.static-publish-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.static-publish-status {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.static-publish-status.done {
+  color: var(--accent);
+}
+
+.static-publish-status.failed {
+  color: #e5484d;
 }
 
 .mobile-pairing-card {
@@ -1812,6 +1883,428 @@ button.tag:hover {
 
 .theme-preview-half.light { background: #fdfdfd; }
 .theme-preview-half.dark { background: #1b1b1f; }
+
+/* ============================================================
+   Extensions marketplace
+   ============================================================ */
+
+.extension-marketplace {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  color: var(--text-normal);
+}
+
+.extension-marketplace-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.extension-marketplace .extension-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.extension-marketplace .extension-marketplace-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 720;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.extension-marketplace .extension-marketplace-counts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+.extension-marketplace .extension-marketplace-counts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: var(--bg-hover);
+}
+
+.extension-marketplace .extension-marketplace-counts strong {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.extension-marketplace .extension-marketplace-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.extension-marketplace .extension-search {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+
+.extension-marketplace .extension-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  color: var(--text-faint);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.extension-marketplace .extension-search input {
+  width: 100%;
+  height: 40px;
+  padding: 0 42px 0 34px;
+  border: none;
+  border-radius: 8px;
+  outline: none;
+  background: var(--bg-panel);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--text-normal);
+  transition:
+    box-shadow 0.14s ease,
+    background-color 0.14s ease;
+}
+
+.extension-marketplace .extension-search input:focus {
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    0 0 0 3px var(--accent-soft);
+}
+
+.extension-marketplace .extension-search-clear {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--text-faint);
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease,
+    transform 0.12s ease;
+}
+
+.extension-marketplace .extension-search-clear:hover {
+  background: var(--bg-hover);
+  color: var(--text-normal);
+}
+
+.extension-marketplace .extension-filter {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--bg-hover);
+}
+
+.extension-marketplace .extension-filter button {
+  min-width: 76px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  transition:
+    background-color 0.12s ease,
+    box-shadow 0.12s ease,
+    color 0.12s ease,
+    transform 0.12s ease;
+}
+
+.extension-marketplace .extension-filter button:hover {
+  color: var(--text-normal);
+}
+
+.extension-marketplace .extension-filter button.active {
+  background: var(--bg-panel);
+  color: var(--text-normal);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.extension-marketplace .extension-list {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+}
+
+.extension-marketplace .extension-card {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg-code);
+  box-shadow:
+    inset 0 0 0 1px var(--border),
+    0 1px 2px rgba(0, 0, 0, 0.04);
+  transition:
+    background-color 0.14s ease,
+    box-shadow 0.14s ease,
+    transform 0.14s ease;
+}
+
+.extension-marketplace .extension-card:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0 0 1px var(--border-strong),
+    0 2px 5px rgba(0, 0, 0, 0.06);
+}
+
+.extension-marketplace .extension-card-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.extension-marketplace .extension-card-main {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.extension-marketplace .extension-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.extension-marketplace .extension-card-title-block {
+  min-width: 0;
+}
+
+.extension-marketplace .extension-card h3 {
+  margin: 0;
+  color: var(--text-normal);
+  font-size: 14px;
+  font-weight: 680;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.extension-marketplace .extension-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 9px;
+  margin-top: 3px;
+  color: var(--text-faint);
+  font-size: 11.5px;
+}
+
+.extension-marketplace .extension-card-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.extension-marketplace .extension-status {
+  flex-shrink: 0;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: var(--text-faint);
+  background: var(--bg-hover);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.extension-marketplace .extension-status.enabled {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.extension-marketplace .extension-status.disabled {
+  color: var(--text-muted);
+}
+
+.extension-marketplace .extension-card-desc {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.extension-marketplace .extension-card-tags,
+.extension-marketplace .extension-card-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.extension-marketplace .extension-card-tags span {
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.extension-marketplace .extension-card-details div {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  color: var(--text-faint);
+  font-size: 11.5px;
+}
+
+.extension-marketplace .extension-card-details svg {
+  flex-shrink: 0;
+}
+
+.extension-marketplace .extension-card-details span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.extension-marketplace .extension-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 116px;
+}
+
+.extension-marketplace .extension-enable-toggle,
+.extension-marketplace .extension-install-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  width: 100%;
+  padding: 0 11px;
+  border-radius: 8px;
+  font-weight: 650;
+  transition:
+    background-color 0.12s ease,
+    box-shadow 0.12s ease,
+    color 0.12s ease,
+    transform 0.12s ease;
+}
+
+.extension-marketplace .extension-enable-toggle:active,
+.extension-marketplace .extension-install-btn:active,
+.extension-marketplace .extension-filter button:active,
+.extension-marketplace .extension-search-clear:active {
+  transform: scale(0.96);
+}
+
+.extension-marketplace .extension-enable-toggle {
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.extension-marketplace .extension-enable-toggle.enabled {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.extension-marketplace .extension-enable-toggle:hover {
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+  color: var(--text-normal);
+}
+
+.extension-marketplace .extension-install-btn.available {
+  background: linear-gradient(180deg, #ff8a3d, #f2600e);
+  color: #fff;
+  box-shadow:
+    0 1px 3px rgba(230, 90, 15, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.extension-marketplace .extension-install-btn.available:hover {
+  background: linear-gradient(180deg, #ff9550, #fa6a17);
+}
+
+.extension-marketplace .extension-install-btn.installed {
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.extension-marketplace .extension-install-btn.installed:hover {
+  color: #e5484d;
+  box-shadow: inset 0 0 0 1px rgba(229, 72, 77, 0.35);
+}
+
+.extension-marketplace .extension-empty {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 140px;
+  border-radius: 8px;
+  color: var(--text-faint);
+  background: var(--bg-code);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .extension-marketplace .extension-marketplace-header,
+  .extension-marketplace .extension-marketplace-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .extension-marketplace .extension-marketplace-counts {
+    justify-content: flex-start;
+  }
+
+  .extension-marketplace .extension-filter {
+    width: 100%;
+  }
+
+  .extension-marketplace .extension-filter button {
+    flex: 1;
+  }
+
+  .extension-marketplace .extension-card {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .extension-marketplace .extension-card-actions {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    width: 100%;
+  }
+}
 
 /* ============================================================
    Context menu
