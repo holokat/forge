@@ -29,6 +29,7 @@ const api: ForgeAPI = {
   resetMobilePairingToken: () => ipcRenderer.invoke('mobile:resetPairingToken'),
   setMobileVault: (vault) => ipcRenderer.invoke('mobile:setVault', vault),
   importAttachments: (vault, noteRel, sourcePaths) => ipcRenderer.invoke('file:importAttachments', vault, noteRel, sourcePaths),
+  importMedia: (vault, sourcePaths) => ipcRenderer.invoke('file:importMedia', vault, sourcePaths),
   publishVault: (vault, outDir, options) => ipcRenderer.invoke('vault:publish', vault, outDir, options),
   getUpdateStatus: () => ipcRenderer.invoke('updates:getStatus'),
   checkForUpdates: () => ipcRenderer.invoke('updates:check'),

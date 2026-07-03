@@ -2,6 +2,7 @@ import {
   BookOpen,
   FilePlus2,
   FileText,
+  Images,
   LayoutTemplate,
   PanelLeft,
   PanelRight,
@@ -15,6 +16,7 @@ import { useState } from 'react'
 import Editor from './Editor'
 import { ForgeHexagonMark } from './ForgeLogo'
 import GraphView from './GraphView'
+import MediaVault from './MediaVault'
 import Reading from './Reading'
 import { baseName, isMarkdown } from '../lib/parse'
 import { activeTab, tabTitle, useStore, type Tab } from '../store'
@@ -29,6 +31,7 @@ function TabBar(): React.JSX.Element {
   const activateTab = useStore((s) => s.activateTab)
   const closeTab = useStore((s) => s.closeTab)
   const newTab = useStore((s) => s.newTab)
+  const openMediaVault = useStore((s) => s.openMediaVault)
   const setTabMode = useStore((s) => s.setTabMode)
   const active = useStore(activeTab)
 
@@ -51,6 +54,8 @@ function TabBar(): React.JSX.Element {
           >
             {tab.kind === 'graph' ? (
               <Waypoints size={13} className="tab-icon" />
+            ) : tab.kind === 'media' ? (
+              <Images size={13} className="tab-icon" />
             ) : (
               <FileText size={13} className="tab-icon" />
             )}
@@ -69,6 +74,9 @@ function TabBar(): React.JSX.Element {
         ))}
         <button className="icon-btn tabbar-btn" title="New tab (⌘T)" onClick={() => newTab()}>
           <Plus size={15} />
+        </button>
+        <button className="icon-btn tabbar-btn" title="Media vault" onClick={() => openMediaVault()}>
+          <Images size={15} />
         </button>
       </div>
       <div className="tabbar-drag" />
@@ -126,6 +134,7 @@ function EmptyTab(): React.JSX.Element {
   const createNote = useStore((s) => s.createNote)
   const setModal = useStore((s) => s.setModal)
   const openGraph = useStore((s) => s.openGraph)
+  const openMediaVault = useStore((s) => s.openMediaVault)
 
   return (
     <div className="empty-tab">
@@ -153,6 +162,10 @@ function EmptyTab(): React.JSX.Element {
           Open graph view
           <kbd>⌘⇧G</kbd>
         </button>
+        <button className="empty-tab-action" onClick={() => openMediaVault()}>
+          <Images size={15} />
+          Open media vault
+        </button>
       </div>
     </div>
   )
@@ -171,6 +184,7 @@ function StatusBar(): React.JSX.Element | null {
 
 function TabContent({ tab }: { tab: Tab }): React.JSX.Element {
   if (tab.kind === 'graph') return <GraphView />
+  if (tab.kind === 'media') return <MediaVault />
   if (tab.kind === 'empty' || !tab.path) return <EmptyTab />
   if (!isMarkdown(tab.path)) {
     return (

@@ -424,6 +424,7 @@ export default function CommandPalette(): React.JSX.Element {
       { name: "Open today's daily note", action: close(() => store.createDailyNote()) },
       { name: 'Open quick switcher', hint: '⌘O', action: () => store.setModal('switcher') },
       { name: 'Open graph view', hint: '⌘⇧G', action: close(() => store.openGraph()) },
+      { name: 'Open media vault', action: close(() => store.openMediaVault()) },
       { name: 'Search in all notes', hint: '⌘⇧F', action: close(() => store.setLeftPane('search')) },
       { name: 'Toggle reading view', hint: '⌘E', action: close(() => store.toggleActiveMode()) },
       { name: 'New tab', hint: '⌘T', action: close(() => store.newTab()) },

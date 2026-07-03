@@ -9,7 +9,7 @@ const TAG_RE = /(^|[\s([])#([A-Za-z][\w/-]*)/g
 const HEADING_RE = /^(#{1,6})\s+(.+?)\s*#*\s*$/
 const MARKDOWN_LINK_RE = /(!?)\[([^\]\n]*)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g
 const EXTERNAL_REF_RE = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i
-const IMAGE_EXT_RE = /\.(?:apng|avif|gif|jpe?g|png|svg|webp)$/i
+const IMAGE_EXT_RE = /\.(?:apng|avif|bmp|gif|heic|heif|jpe?g|png|svg|tiff?|webp)$/i
 const AUDIO_EXT_RE = /\.(?:aac|aiff?|flac|m4a|mp3|oga|ogg|opus|wav|webm)$/i
 const VIDEO_EXT_RE = /\.(?:m4v|mov|mp4|ogv|webm)$/i
 const PUBLISH_THEMES = [
@@ -488,6 +488,60 @@ function renderLinkList(links, notesByPath, fromOutputPath, emptyText) {
 function renderMarkdown(note, site) {
   let headingIndex = 0
 
+  function galleryAssetFromLine(line) {
+    const trimmed = line.trim()
+    if (!trimmed) return null
+
+    const wiki = /^!\[\[([^[\]]+?)\]\]$/.exec(trimmed)
+    if (wiki) {
+      const parsed = parseWikiInner(wiki[1])
+      const asset = resolveAssetTarget(parsed.docTarget, note.path, site.assetPaths)
+      if (!asset || !IMAGE_EXT_RE.test(asset)) return null
+      return { asset, label: parsed.label || path.posix.basename(asset), suffix: '' }
+    }
+
+    const markdown = /^!\[([^\]\n]*)\]\((<[^>]+>|[^)\s]+)(?:\s+["'][^"']*["'])?\)$/.exec(trimmed)
+    if (markdown) {
+      const href = normalizeMarkdownHref(markdown[2])
+      const asset = resolveAssetHref(href, note.path, site.assetPaths)
+      if (!asset || !IMAGE_EXT_RE.test(asset.resolved)) return null
+      const suffix = `${asset.query ? `?${asset.query}` : ''}${asset.hash ? `#${encodeURIComponent(asset.hash)}` : ''}`
+      return { asset: asset.resolved, label: markdown[1] || path.posix.basename(asset.resolved), suffix }
+    }
+
+    const asset = resolveAssetTarget(trimmed, note.path, site.assetPaths)
+    if (!asset || !IMAGE_EXT_RE.test(asset)) return null
+    return { asset, label: path.posix.basename(asset), suffix: '' }
+  }
+
+  const galleryExt = {
+    name: 'forgeGallery',
+    level: 'block',
+    start(src) {
+      const match = src.match(/^```forge-gallery/m)
+      return match?.index
+    },
+    tokenizer(src) {
+      const match = /^```forge-gallery[^\n]*\n([\s\S]*?)\n```(?:\n|$)/.exec(src)
+      if (!match) return undefined
+      return { type: 'forgeGallery', raw: match[0], body: match[1] }
+    },
+    renderer(token) {
+      const items = String(token.body ?? '')
+        .split(/\r?\n/)
+        .map(galleryAssetFromLine)
+        .filter(Boolean)
+      if (!items.length) return ''
+      const figures = items
+        .map((item) => {
+          const src = `${relativeHref(note.outputPath, assetOutputPath(item.asset))}${item.suffix}`
+          return `<figure><img src="${escapeAttribute(src)}" alt="${escapeAttribute(item.label)}" loading="lazy"><figcaption>${escapeHtml(item.label)}</figcaption></figure>`
+        })
+        .join('')
+      return `<div class="media-gallery" data-count="${items.length}">${figures}</div>`
+    }
+  }
+
   const wikilinkExt = {
     name: 'wikilink',
     level: 'inline',
@@ -600,7 +654,7 @@ function renderMarkdown(note, site) {
   const marked = new Marked({
     gfm: true,
     breaks: false,
-    extensions: [wikilinkExt, hashtagExt],
+    extensions: [galleryExt, wikilinkExt, hashtagExt],
     renderer
   })
 
@@ -1700,6 +1754,52 @@ a:active {
   background: #000;
   outline: 1px solid rgba(0, 0, 0, 0.1);
   outline-offset: -1px;
+}
+
+.markdown-body .media-gallery,
+.blog-prose .media-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 1.4em 0;
+}
+
+.markdown-body .media-gallery figure,
+.blog-prose .media-gallery figure {
+  min-width: 0;
+  margin: 0;
+}
+
+.markdown-body .media-gallery img,
+.blog-prose .media-gallery img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  margin: 0;
+  border-radius: 8px;
+  outline: 1px solid rgba(0, 0, 0, 0.1);
+  outline-offset: -1px;
+}
+
+.markdown-body .media-gallery figcaption,
+.blog-prose .media-gallery figcaption {
+  margin-top: 7px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.72em;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  text-wrap: pretty;
+  white-space: nowrap;
+}
+
+html[data-theme='dark'] .markdown-body .media-gallery img,
+html[data-theme='dark'] .blog-prose .media-gallery img,
+body.site-theme-terminal-ledger .markdown-body .media-gallery img,
+body.site-theme-terminal-ledger .blog-prose .media-gallery img {
+  outline-color: rgba(255, 255, 255, 0.1);
 }
 
 .internal-link {

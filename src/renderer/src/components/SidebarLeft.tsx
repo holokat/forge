@@ -5,6 +5,7 @@ import {
   FileText,
   FolderPlus,
   Files,
+  Images,
   Search,
   Settings,
   Vault,
@@ -71,6 +72,7 @@ export default function SidebarLeft(): React.JSX.Element {
   const createNote = useStore((s) => s.createNote)
   const createFolder = useStore((s) => s.createFolder)
   const openGraph = useStore((s) => s.openGraph)
+  const openMediaVault = useStore((s) => s.openMediaVault)
   const setModal = useStore((s) => s.setModal)
   const active = useStore(activeTab)
   const bookmarks = useStore((s) => s.bookmarks)
@@ -135,6 +137,9 @@ export default function SidebarLeft(): React.JSX.Element {
           <span className="sidebar-vault-name-text">{vaultName}</span>
         </span>
         <div className="sidebar-footer-actions">
+          <button className="icon-btn" title="Media vault" onClick={() => openMediaVault()}>
+            <Images size={15} />
+          </button>
           <button className="icon-btn" title="Graph view (⌘⇧G)" onClick={() => openGraph()}>
             <Waypoints size={15} />
           </button>

@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify'
 import { marked, type TokenizerAndRendererExtension } from 'marked'
-import { isAudio, isImage, isVideo, linkLabel, linkTarget, resolveLink } from './parse'
+import { baseName, isAudio, isImage, isVideo, linkLabel, linkTarget, resolveLink } from './parse'
 
 interface RenderContext {
   vault: string
@@ -91,10 +91,75 @@ const hashtagExt: TokenizerAndRendererExtension = {
   }
 }
 
+interface GalleryItem {
+  path: string
+  label: string
+}
+
+function normalizeGalleryHref(value: string): string {
+  return value.trim().replace(/^<|>$/g, '')
+}
+
+function galleryItemFromLine(line: string): GalleryItem | null {
+  const trimmed = line.trim()
+  if (!trimmed) return null
+
+  const wiki = /^!\[\[([^[\]]+?)\]\]$/.exec(trimmed)
+  if (wiki) {
+    const target = linkTarget(wiki[1])
+    const resolved = resolveLink(target, ctx.files)
+    if (!resolved || !isImage(resolved)) return null
+    return { path: resolved, label: linkLabel(wiki[1]) || baseName(resolved) }
+  }
+
+  const markdown = /^!\[([^\]\n]*)\]\((<[^>]+>|[^)\s]+)(?:\s+["'][^"']*["'])?\)$/.exec(trimmed)
+  if (markdown) {
+    const target = normalizeGalleryHref(markdown[2])
+    const resolved = resolveLink(target, ctx.files)
+    if (!resolved || !isImage(resolved)) return null
+    return { path: resolved, label: markdown[1] || baseName(resolved) }
+  }
+
+  const resolved = resolveLink(trimmed, ctx.files)
+  if (!resolved || !isImage(resolved)) return null
+  return { path: resolved, label: baseName(resolved) }
+}
+
+function galleryItems(body: string): GalleryItem[] {
+  return body
+    .split(/\r?\n/)
+    .map(galleryItemFromLine)
+    .filter((item): item is GalleryItem => Boolean(item))
+}
+
+const galleryExt: TokenizerAndRendererExtension = {
+  name: 'forgeGallery',
+  level: 'block',
+  start(src: string) {
+    const match = src.match(/^```forge-gallery/m)
+    return match?.index
+  },
+  tokenizer(src: string) {
+    const match = /^```forge-gallery[^\n]*\n([\s\S]*?)\n```(?:\n|$)/.exec(src)
+    if (!match) return undefined
+    return { type: 'forgeGallery', raw: match[0], body: match[1] }
+  },
+  renderer(token) {
+    const items = galleryItems(token.body as string)
+    if (!items.length) return ''
+    const figures = items
+      .map(
+        (item) => `<figure><img src="${window.forge.assetUrl(ctx.vault, item.path)}" alt="${escapeHtml(item.label)}" loading="lazy"><figcaption>${escapeHtml(item.label)}</figcaption></figure>`
+      )
+      .join('')
+    return `<div class="media-gallery" data-count="${items.length}">${figures}</div>`
+  }
+}
+
 marked.use({
   gfm: true,
   breaks: false,
-  extensions: [wikilinkExt, hashtagExt],
+  extensions: [galleryExt, wikilinkExt, hashtagExt],
   renderer: {
     heading({ tokens, depth, text }) {
       const body = this.parser.parseInline(tokens)
@@ -130,8 +195,8 @@ export function renderMarkdown(content: string, vault: string, files: string[]):
   headingSlugs = new Set<string>()
   const html = marked.parse(content, { async: false })
   return DOMPurify.sanitize(html, {
-    ADD_ATTR: ['data-target', 'target', 'controls', 'preload', 'playsinline', 'id', 'aria-label'],
-    ADD_TAGS: ['audio', 'video'],
+    ADD_ATTR: ['data-target', 'data-count', 'target', 'controls', 'preload', 'playsinline', 'id', 'aria-label', 'loading'],
+    ADD_TAGS: ['audio', 'video', 'figure', 'figcaption'],
     ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|forge-asset|data|file):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i
   })
 }

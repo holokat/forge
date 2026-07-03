@@ -385,6 +385,41 @@ async function importAttachments(
   return imported
 }
 
+function mediaFolderForKind(kind: ImportedAttachmentKind): string {
+  if (kind === 'image') return 'Media/Images'
+  if (kind === 'audio') return 'Media/Audio'
+  if (kind === 'video') return 'Media/Video'
+  return 'Media/Files'
+}
+
+async function importMedia(vault: string, sourcePaths: string[]): Promise<ImportedAttachment[]> {
+  suppressWatchUntil = Date.now() + 1200
+  const imported: ImportedAttachment[] = []
+
+  for (const rawSource of sourcePaths) {
+    const sourcePath = path.resolve(rawSource)
+    const stat = await fs.stat(sourcePath).catch(() => null)
+    if (!stat?.isFile()) continue
+
+    const ext = path.extname(sourcePath).toLowerCase()
+    if (!ASSET_EXTS.has(ext)) continue
+
+    const kind = attachmentKind(ext)
+    const rel = await uniqueVaultRel(vault, path.posix.join(mediaFolderForKind(kind), sanitizeFileName(path.basename(sourcePath))))
+    const abs = safeJoin(vault, rel)
+    await fs.mkdir(path.dirname(abs), { recursive: true })
+    await fs.copyFile(sourcePath, abs)
+    imported.push({
+      sourcePath,
+      path: slash(rel),
+      name: path.basename(rel),
+      kind
+    })
+  }
+
+  return imported
+}
+
 async function scanVault(vault: string): Promise<VaultData> {
   const files: string[] = []
   const folders: string[] = []
@@ -536,6 +571,10 @@ function registerIpc(): void {
 
   ipcMain.handle('file:importAttachments', (_e, vault: string, noteRel: string, sourcePaths: string[]) => {
     return importAttachments(vault, noteRel, sourcePaths)
+  })
+
+  ipcMain.handle('file:importMedia', (_e, vault: string, sourcePaths: string[]) => {
+    return importMedia(vault, sourcePaths)
   })
 
   ipcMain.handle('file:rename', async (_e, vault: string, oldRel: string, newRel: string) => {

@@ -187,6 +187,7 @@ export interface ForgeAPI {
   setMobileVault(vault: string | null): Promise<void>
   droppedFilePaths(files: unknown[]): string[]
   importAttachments(vault: string, noteRel: string, sourcePaths: string[]): Promise<ImportedAttachment[]>
+  importMedia(vault: string, sourcePaths: string[]): Promise<ImportedAttachment[]>
   publishVault(vault: string, outDir: string, options?: PublishVaultOptions): Promise<{ outDir: string; files: number; notes: number }>
   getUpdateStatus(): Promise<UpdateStatus>
   checkForUpdates(): Promise<UpdateStatus>
