@@ -13,6 +13,7 @@ import {
   Code2,
   Download,
   Folder,
+  FolderOpen,
   FileAudio,
   FileCode2,
   FileSearch,
@@ -321,6 +322,10 @@ function siteScopeLabel(site: PublishSiteConfig): string {
   return site.scope.kind === 'folder' ? site.scope.folder : 'All folders'
 }
 
+function vaultDisplayName(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).pop() ?? path
+}
+
 function revealRelForOutput(vault: string, outputDir: string): string | null {
   const cleanVault = vault.replace(/\/+$/, '')
   const cleanOutput = outputDir.replace(/\/+$/, '')
@@ -602,6 +607,7 @@ export default function SettingsModal(): React.JSX.Element {
   const fontSize = useStore((s) => s.fontSize)
   const lineWidth = useStore((s) => s.lineWidth)
   const vault = useStore((s) => s.vault)
+  const recentVaults = useStore((s) => s.recentVaults)
   const setTheme = useStore((s) => s.setTheme)
   const setFontSize = useStore((s) => s.setFontSize)
   const setLineWidth = useStore((s) => s.setLineWidth)
@@ -615,6 +621,8 @@ export default function SettingsModal(): React.JSX.Element {
   const createStarterTemplate = useStore((s) => s.createStarterTemplate)
   const setModal = useStore((s) => s.setModal)
   const openVaultDialog = useStore((s) => s.openVaultDialog)
+  const openVaultPath = useStore((s) => s.openVaultPath)
+  const removeRecentVault = useStore((s) => s.removeRecentVault)
   const [activeTab, setActiveTab] = useState<SettingsTabId>('appearance')
   const [selectedPublishSiteId, setSelectedPublishSiteId] = useState<string | null>(null)
   const [agentAccess, setAgentAccess] = useState<AgentAccessInfo | null>(null)
@@ -751,6 +759,10 @@ export default function SettingsModal(): React.JSX.Element {
   const activeSettingsTab = settingsTabs.find((tab) => tab.id === activeTab) ?? settingsTabs[0]
   const starterTemplates = STARTER_TEMPLATE_CATALOG
   const selectedPublishSite = publishSites.find((site) => site.id === selectedPublishSiteId) ?? publishSites[0] ?? null
+  const savedVaults = useMemo(
+    () => (vault ? [vault, ...recentVaults.filter((path) => path !== vault)] : recentVaults),
+    [recentVaults, vault]
+  )
   const groupedTabs = settingsTabs.reduce<Record<SettingsNavGroup, SettingsNavItem[]>>(
     (groups, tab) => {
       groups[tab.group].push(tab)
@@ -999,22 +1011,52 @@ export default function SettingsModal(): React.JSX.Element {
 
               {activeTab === 'vault' && vault && (
                 <section className="settings-section">
-                  <div className="settings-row">
+                  <div className="vault-settings-header">
                     <div>
-                      <div className="settings-row-label">{vault.split('/').pop()}</div>
-                      <div className="settings-row-desc">{vault}</div>
+                      <div className="settings-row-label">Saved vaults</div>
+                      <div className="settings-row-desc">Add local Markdown folders and switch between them from here.</div>
                     </div>
-                    <div className="settings-row-control">
-                      <button
-                        className="btn"
-                        onClick={() => {
-                          setModal(null)
-                          openVaultDialog()
-                        }}
-                      >
-                        Switch vault…
-                      </button>
-                    </div>
+                    <button className="btn btn-compact" onClick={() => openVaultDialog().catch(console.error)}>
+                      <Plus size={14} />
+                      Add vault
+                    </button>
+                  </div>
+
+                  <div className="vault-list">
+                    {savedVaults.map((savedVault) => {
+                      const isActive = savedVault === vault
+                      return (
+                        <div key={savedVault} className={`vault-list-row${isActive ? ' active' : ''}`}>
+                          <span className="vault-list-icon" aria-hidden="true">
+                            <VaultIcon size={16} />
+                          </span>
+                          <span className="vault-list-copy">
+                            <strong>{vaultDisplayName(savedVault)}</strong>
+                            <span>{savedVault}</span>
+                          </span>
+                          <span className="vault-list-actions">
+                            {isActive ? (
+                              <span className="vault-active-badge">
+                                <Check size={13} />
+                                Active
+                              </span>
+                            ) : (
+                              <button className="btn btn-compact" onClick={() => openVaultPath(savedVault).catch(console.error)}>
+                                Switch
+                              </button>
+                            )}
+                            <button className="icon-btn" title="Reveal in Finder" onClick={() => window.forge.reveal(savedVault, '')}>
+                              <FolderOpen size={15} />
+                            </button>
+                            {!isActive && (
+                              <button className="icon-btn" title="Remove from saved vaults" onClick={() => removeRecentVault(savedVault)}>
+                                <Trash2 size={15} />
+                              </button>
+                            )}
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </section>
               )}

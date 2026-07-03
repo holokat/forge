@@ -179,6 +179,7 @@ export interface ForgeState {
   boot(): Promise<void>
   openVaultDialog(): Promise<void>
   openVaultPath(path: string): Promise<void>
+  removeRecentVault(path: string): void
   closeVault(): void
   refreshVault(): Promise<void>
 
@@ -2536,7 +2537,7 @@ export const useStore = create<ForgeState>((set, get) => ({
       data.fileStats[welcome] = fileStatForContent(WELCOME_NOTE)
     }
 
-    const recents = [vault, ...get().recentVaults.filter((v) => v !== vault)].slice(0, 8)
+    const recents = [vault, ...get().recentVaults.filter((v) => v !== vault)].slice(0, 12)
     const firstNote = files.find(isMarkdown) ?? null
     const tab: Tab = { id: newTabId(), kind: firstNote ? 'note' : 'empty', path: firstNote, mode: 'edit' }
     const bookmarks = bookmarksForVault(get().bookmarkSettings, vault, files)
@@ -2567,6 +2568,12 @@ export const useStore = create<ForgeState>((set, get) => ({
       set({ counts: wordCount(noteContents.get(firstNote) ?? '') })
     }
     await window.forge.watchVault(vault)
+    persistSettings(get())
+  },
+
+  removeRecentVault(path) {
+    if (!path || path === get().vault) return
+    set({ recentVaults: get().recentVaults.filter((vault) => vault !== path) })
     persistSettings(get())
   },
 
