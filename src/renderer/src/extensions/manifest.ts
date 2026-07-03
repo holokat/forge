@@ -116,3 +116,19 @@ export interface ExtensionRegistry {
   points: readonly ExtensionPointDefinition[]
   manifests: readonly ExtensionManifest[]
 }
+
+export interface ExtensionRegistrySignature {
+  algorithm: 'ed25519'
+  keyId: string
+  signature: string
+  signedPayloadSha256: string
+  signedAt?: string
+}
+
+export interface ExtensionRegistryDocument {
+  schemaVersion: 1
+  generatedAt: string
+  minForgeVersion?: string
+  registry: ExtensionRegistry
+  signatures: readonly ExtensionRegistrySignature[]
+}

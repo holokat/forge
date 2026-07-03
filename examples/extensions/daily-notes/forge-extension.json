@@ -1,0 +1,40 @@
+{
+  "manifestVersion": 1,
+  "id": "example.daily-notes",
+  "name": "daily-notes",
+  "displayName": "Daily Notes Example",
+  "description": "Example declarative extension that exposes a safe command for opening or creating today's local daily note.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["capture", "organization"],
+  "keywords": ["daily", "journal", "capture"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [{ "id": "forge.commands", "label": "Commands" }],
+  "permissions": [
+    {
+      "kind": "vault:write",
+      "reason": "Creates a Markdown note for the current day when requested."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.daily-notes.open-today",
+      "kind": "command",
+      "extensionPoint": "forge.commands",
+      "label": "Open today's note",
+      "command": "forge.dailyNotes.openToday",
+      "icon": "CalendarDays"
+    }
+  ]
+}

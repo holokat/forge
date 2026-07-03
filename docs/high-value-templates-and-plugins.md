@@ -23,10 +23,13 @@ This checklist tracks the first practical wave of Obsidian-like Forge features t
 
 ## Wave 3: Extension Platform
 
-- [ ] Stabilize real runtime hooks for command, markdown transform, metadata, sidebar widget, and view contributions before remote installs.
+- [x] Add a runtime contribution catalog for command, markdown transform, metadata, sidebar widget, and view hooks before remote installs.
 - [x] Add a safe local extension manifest format for open-source contributors.
-- [ ] Add local folder extension discovery for open-source contributors.
-- [ ] Add extension package validation and permissions review.
+- [x] Add local folder extension discovery for open-source contributors.
+- [x] Add extension package validation and permissions review groundwork.
 - [x] Show local extension contribution counts and registry diagnostics in Settings.
-- [ ] Add signed remote extension registry support.
-- [ ] Publish a minimal extension SDK with examples.
+- [x] Show active and wired runtime hook counts in Settings.
+- [x] Add signed remote extension registry types and documentation.
+- [x] Publish a minimal extension SDK with examples.
+- [ ] Route every declared built-in hook to visible UI before enabling remote installs.
+- [ ] Add signature verification and remote registry install UI.

@@ -1,5 +1,6 @@
 import {
   CheckCircle2,
+  Cable,
   PackageCheck,
   PackagePlus,
   Puzzle,
@@ -14,6 +15,7 @@ import type { ExtensionInstallPreference } from '../../../shared/types'
 import type { ExtensionManifest } from '../extensions/manifest'
 import { extensionEntry } from '../extensions/preferences'
 import { LOCAL_EXTENSION_MANIFESTS, LOCAL_EXTENSION_POINTS, registryDiagnostics, searchLocalExtensions } from '../extensions/registry'
+import { createExtensionRuntime, extensionRuntimeForManifest, type ExtensionRuntimeRoute } from '../extensions/runtime'
 import { useStore } from '../store'
 
 type ExtensionFilter = 'all' | 'installed' | 'available'
@@ -47,17 +49,25 @@ function extensionMatchesFilter(entry: ExtensionInstallPreference, filter: Exten
 function ExtensionCard({
   manifest,
   entry,
+  routes,
   onInstallToggle,
   onEnableToggle
 }: {
   manifest: ExtensionManifest
   entry: ExtensionInstallPreference
+  routes: ExtensionRuntimeRoute[]
   onInstallToggle: () => void
   onEnableToggle: () => void
 }): React.JSX.Element {
   const permissions = manifest.permissions.map((permission) => permission.kind).join(', ')
   const extensionPoints = manifest.extensionPoints.map((point) => point.label).join(', ')
   const runtime = manifest.runtime.arbitraryCode ? 'Code runtime' : `${manifest.runtime.kind} runtime`
+  const wiredRoutes = routes.filter((route) => route.status === 'wired')
+  const hookLabel = routes.length
+    ? `${wiredRoutes.length}/${routes.length} wired hooks`
+    : entry.enabled
+      ? 'No active hooks'
+      : 'Inactive hooks'
 
   return (
     <article className={`extension-card ${statusClass(entry)}`}>
@@ -98,6 +108,10 @@ function ExtensionCard({
           <div title={`${manifest.contributes.length} declared contributions`}>
             <PackageCheck size={13} />
             <span>{manifest.contributes.length} contributions</span>
+          </div>
+          <div title={routes.map((route) => `${route.label}: ${route.implementation}`).join('\n') || hookLabel}>
+            <Cable size={13} />
+            <span>{hookLabel}</span>
           </div>
           <div title={runtime}>
             <Puzzle size={13} />
@@ -140,6 +154,7 @@ export default function ExtensionMarketplace({ className = '' }: ExtensionMarket
   const setExtensionInstalled = useStore((state) => state.setExtensionInstalled)
   const setExtensionEnabled = useStore((state) => state.setExtensionEnabled)
   const diagnostics = useMemo(() => registryDiagnostics(), [])
+  const runtime = useMemo(() => createExtensionRuntime(extensionSettings), [extensionSettings])
 
   const visibleExtensions = useMemo(() => {
     return searchLocalExtensions(query, LOCAL_EXTENSION_MANIFESTS).filter((manifest) =>
@@ -150,6 +165,7 @@ export default function ExtensionMarketplace({ className = '' }: ExtensionMarket
   const installedCount = useMemo(() => {
     return LOCAL_EXTENSION_MANIFESTS.filter((manifest) => extensionEntry(extensionSettings, manifest.id).installed).length
   }, [extensionSettings])
+  const wiredHookCount = runtime.routes.filter((route) => route.status === 'wired').length
 
   const rootClassName = ['extension-marketplace', className].filter(Boolean).join(' ')
 
@@ -169,6 +185,12 @@ export default function ExtensionMarketplace({ className = '' }: ExtensionMarket
           </span>
           <span>
             <strong>{LOCAL_EXTENSION_POINTS.length}</strong> points
+          </span>
+          <span title={runtime.routes.map((route) => `${route.label}: ${route.surface}`).join('\n') || 'No enabled hooks'}>
+            <strong>{runtime.routes.length}</strong> active hooks
+          </span>
+          <span title="Hooks with an implemented Forge runtime route">
+            <strong>{wiredHookCount}</strong> wired
           </span>
           <span title={diagnostics.length ? diagnostics.join('\n') : 'Registry manifests passed local validation'}>
             <strong>{diagnostics.length}</strong> diagnostics
@@ -216,6 +238,7 @@ export default function ExtensionMarketplace({ className = '' }: ExtensionMarket
                 key={manifest.id}
                 manifest={manifest}
                 entry={entry}
+                routes={extensionRuntimeForManifest(runtime, manifest.id)?.routes ?? []}
                 onInstallToggle={() => setExtensionInstalled(manifest.id, !entry.installed)}
                 onEnableToggle={() => setExtensionEnabled(manifest.id, !entry.enabled)}
               />

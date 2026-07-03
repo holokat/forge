@@ -1,0 +1,49 @@
+{
+  "manifestVersion": 1,
+  "id": "example.reading-stats",
+  "name": "reading-stats",
+  "displayName": "Reading Stats Example",
+  "description": "Example declarative extension that contributes note metadata and a sidebar widget without running arbitrary code.",
+  "version": "0.1.0",
+  "publisher": "Example",
+  "license": "MIT",
+  "categories": ["editing", "organization"],
+  "keywords": ["word count", "metadata", "stats"],
+  "source": {
+    "kind": "local-folder",
+    "label": "Local folder",
+    "path": "."
+  },
+  "runtime": {
+    "kind": "declarative",
+    "networkAccess": false,
+    "arbitraryCode": false,
+    "allowedHosts": []
+  },
+  "extensionPoints": [
+    { "id": "forge.note.metadata", "label": "Note metadata" },
+    { "id": "forge.sidebar.widgets", "label": "Sidebar widgets" }
+  ],
+  "permissions": [
+    {
+      "kind": "vault:read",
+      "reason": "Reads the active note content already loaded by Forge."
+    }
+  ],
+  "contributes": [
+    {
+      "id": "example.reading-stats.metadata",
+      "kind": "metadata-provider",
+      "extensionPoint": "forge.note.metadata",
+      "label": "Reading statistics",
+      "fields": ["wordCount", "characterCount", "estimatedReadingMinutes"]
+    },
+    {
+      "id": "example.reading-stats.sidebar",
+      "kind": "sidebar-widget",
+      "extensionPoint": "forge.sidebar.widgets",
+      "label": "Reading stats",
+      "widget": "reading-stats"
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import type { ExtensionManifest, ExtensionPointDefinition, ExtensionRegistry, ExtensionRuntimePolicy } from './manifest'
+import { formatExtensionIssue, validateExtensionRegistry } from './validation'
 
 const declarativeRuntime: ExtensionRuntimePolicy = {
   kind: 'declarative',
@@ -251,28 +252,5 @@ export function searchLocalExtensions(query: string, manifests = LOCAL_EXTENSION
 }
 
 export function registryDiagnostics(registry = LOCAL_EXTENSION_REGISTRY): string[] {
-  const issues: string[] = []
-  const pointIds = new Set(registry.points.map((point) => point.id))
-  const manifestIds = new Set<string>()
-
-  for (const manifest of registry.manifests) {
-    if (manifestIds.has(manifest.id)) issues.push(`Duplicate extension id: ${manifest.id}`)
-    manifestIds.add(manifest.id)
-
-    const runtime = manifest.runtime as { networkAccess: boolean; arbitraryCode: boolean }
-    if (runtime.networkAccess) issues.push(`Network access is not allowed: ${manifest.id}`)
-    if (runtime.arbitraryCode) issues.push(`Arbitrary code execution is not allowed: ${manifest.id}`)
-
-    for (const point of manifest.extensionPoints) {
-      if (!pointIds.has(point.id)) issues.push(`Unknown extension point "${point.id}" in ${manifest.id}`)
-    }
-
-    for (const contribution of manifest.contributes) {
-      if (!pointIds.has(contribution.extensionPoint)) {
-        issues.push(`Unknown contribution point "${contribution.extensionPoint}" in ${manifest.id}`)
-      }
-    }
-  }
-
-  return issues
+  return validateExtensionRegistry(registry).issues.map(formatExtensionIssue)
 }
