@@ -596,11 +596,15 @@ export default function SettingsModal(): React.JSX.Element {
   const setAISettings = useStore((s) => s.setAISettings)
   const createStarterTemplate = useStore((s) => s.createStarterTemplate)
   const setModal = useStore((s) => s.setModal)
-  const openVaultDialog = useStore((s) => s.openVaultDialog)
+  const addVaultPath = useStore((s) => s.addVaultPath)
   const openVaultPath = useStore((s) => s.openVaultPath)
   const removeRecentVault = useStore((s) => s.removeRecentVault)
   const currentTab = useStore(selectActiveTab)
   const [activeTab, setActiveTab] = useState<SettingsTabId>('appearance')
+  const [vaultAddState, setVaultAddState] = useState<{
+    status: 'idle' | 'selecting' | 'added' | 'failed'
+    message: string
+  }>({ status: 'idle', message: '' })
   const [selectedPublishSiteId, setSelectedPublishSiteId] = useState<string | null>(null)
   const [agentAccess, setAgentAccess] = useState<AgentAccessInfo | null>(null)
   const [aiStatus, setAIStatus] = useState<AIStatus | null>(null)
@@ -716,6 +720,32 @@ export default function SettingsModal(): React.JSX.Element {
       const message = error instanceof Error ? error.message : String(error)
       setAITaskMessage(message)
       setAITaskState('failed')
+    }
+  }
+
+  const addVaultFromDialog = async (): Promise<void> => {
+    setVaultAddState({ status: 'selecting', message: 'Choose a folder to save as a vault.' })
+    try {
+      const selectedVault = await window.forge.selectVault()
+      if (!selectedVault) {
+        setVaultAddState({ status: 'idle', message: '' })
+        return
+      }
+      const wasAlreadySaved = selectedVault === vault || recentVaults.includes(selectedVault)
+      await addVaultPath(selectedVault)
+      setVaultAddState({
+        status: 'added',
+        message: wasAlreadySaved
+          ? `${vaultDisplayName(selectedVault)} is already saved.`
+          : `Added ${vaultDisplayName(selectedVault)} to saved vaults.`
+      })
+      window.setTimeout(() => setVaultAddState({ status: 'idle', message: '' }), 2200)
+    } catch (error) {
+      console.error('Add vault failed.', error)
+      setVaultAddState({
+        status: 'failed',
+        message: error instanceof Error ? error.message : String(error)
+      })
     }
   }
 
@@ -1034,11 +1064,29 @@ export default function SettingsModal(): React.JSX.Element {
                       <div className="settings-row-label">Saved vaults</div>
                       <div className="settings-row-desc">Add local Markdown folders and switch between them from here.</div>
                     </div>
-                    <button className="btn btn-compact" onClick={() => openVaultDialog().catch(console.error)}>
+                    <button className="btn btn-compact" disabled={vaultAddState.status === 'selecting'} onClick={() => addVaultFromDialog()}>
                       <Plus size={14} />
-                      Add vault
+                      {vaultAddState.status === 'selecting' ? 'Choosing...' : 'Add vault'}
                     </button>
                   </div>
+
+                  {vaultAddState.status !== 'idle' && (
+                    <div
+                      className={`settings-inline-status ${
+                        vaultAddState.status === 'failed' ? 'error' : vaultAddState.status === 'selecting' ? 'info' : 'success'
+                      }`}
+                      role={vaultAddState.status === 'failed' ? 'alert' : 'status'}
+                    >
+                      {vaultAddState.status === 'failed' ? (
+                        <AlertCircle size={14} />
+                      ) : vaultAddState.status === 'selecting' ? (
+                        <FolderOpen size={14} />
+                      ) : (
+                        <Check size={14} />
+                      )}
+                      <span>{vaultAddState.message}</span>
+                    </div>
+                  )}
 
                   <div className="vault-list">
                     {savedVaults.map((savedVault) => {

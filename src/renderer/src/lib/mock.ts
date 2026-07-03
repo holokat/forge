@@ -10,6 +10,10 @@ import {
   type VaultData
 } from '../../../shared/types'
 
+type DirectoryPickerWindow = Window & {
+  showDirectoryPicker?: (options?: { mode?: 'read' | 'readwrite' }) => Promise<{ name: string }>
+}
+
 const WELCOME = `# Welcome to Forge
 
 Forge is your **local-first** thinking space. Every note is a plain Markdown file on your Mac — no servers, no lock-in.
@@ -153,7 +157,18 @@ function vaultData(): VaultData {
 
 export function installMockApi(): void {
   const api: ForgeAPI = {
-    selectVault: async () => '/Users/demo/Notes',
+    selectVault: async () => {
+      const picker = (window as DirectoryPickerWindow).showDirectoryPicker
+      if (picker) {
+        try {
+          const handle = await picker({ mode: 'readwrite' })
+          return `/Users/demo/${handle.name}`
+        } catch {
+          return null
+        }
+      }
+      return '/Users/demo/Notes'
+    },
     openVault: async () => vaultData(),
     readFile: async (_v, rel) => files[rel] ?? '',
     writeFile: async (_v, rel, content) => {

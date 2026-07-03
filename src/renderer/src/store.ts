@@ -100,6 +100,7 @@ export interface ForgeState {
 
   boot(): Promise<void>
   openVaultDialog(): Promise<void>
+  addVaultPath(path: string): Promise<void>
   openVaultPath(path: string): Promise<void>
   removeRecentVault(path: string): void
   closeVault(): void
@@ -520,6 +521,15 @@ export const useStore = create<ForgeState>((set, get) => ({
   async openVaultDialog() {
     const path = await window.forge.selectVault()
     if (path) await get().openVaultPath(path)
+  },
+
+  async addVaultPath(vault) {
+    const cleanVault = vault.trim()
+    if (!cleanVault) return
+    await window.forge.openVault(cleanVault)
+    const recentVaults = [cleanVault, ...get().recentVaults.filter((path) => path !== cleanVault)].slice(0, 12)
+    set({ recentVaults })
+    await persistSettings(get())
   },
 
   async openVaultPath(vault) {
