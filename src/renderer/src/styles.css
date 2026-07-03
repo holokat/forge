@@ -211,6 +211,11 @@ kbd {
   background: var(--bg-hover);
 }
 
+.btn:disabled {
+  cursor: default;
+  opacity: 0.56;
+}
+
 .btn-primary {
   background: var(--accent);
   border: none;
@@ -659,6 +664,91 @@ body.resizing .pane-resizer::after {
   flex: 1;
   height: 100%;
   min-width: 24px;
+}
+
+.ai-toolbar {
+  position: relative;
+  flex: 0 0 auto;
+  -webkit-app-region: no-drag;
+}
+
+.ai-toolbar-trigger {
+  position: relative;
+  transition-property: background-color, color, transform;
+  transition-duration: 120ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.ai-toolbar-trigger.active,
+.ai-toolbar-trigger:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ai-toolbar-trigger:active {
+  transform: scale(0.96);
+}
+
+.ai-prompt-popover {
+  position: absolute;
+  top: 34px;
+  right: 0;
+  z-index: 40;
+  width: min(390px, calc(100vw - 48px));
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 13px;
+  background: var(--bg-panel);
+  box-shadow:
+    var(--shadow-menu),
+    inset 0 0 0 1px var(--border);
+  -webkit-app-region: no-drag;
+}
+
+.ai-prompt-popover-head,
+.ai-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-prompt-popover-head {
+  justify-content: space-between;
+}
+
+.ai-prompt-popover-head span {
+  color: var(--text-normal);
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.ai-prompt-popover-head .icon-btn {
+  width: 24px;
+  height: 24px;
+}
+
+.ai-provider-selector.compact {
+  gap: 6px;
+}
+
+.ai-provider-selector.compact button {
+  min-height: 30px;
+  padding: 0 9px;
+}
+
+.ai-toolbar-prompt {
+  min-height: 84px;
+  max-height: 180px;
+}
+
+.ai-toolbar-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.ai-toolbar-result pre {
+  max-height: 180px;
 }
 
 .tab {
@@ -3985,6 +4075,11 @@ button.tag:hover {
   font-size: 12px;
   line-height: 1.4;
   text-wrap: pretty;
+}
+
+.ai-settings-toolbar {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .ai-provider-grid {

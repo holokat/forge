@@ -34,7 +34,6 @@ import type {
   AgentAccessInfo,
   AISettings,
   AIStatus,
-  AITextProvider,
   PublishAnalyticsProvider,
   PublishDeployTarget,
   PublishFormProvider,
@@ -44,7 +43,8 @@ import type {
   ThemeMode,
   UpdateStatus
 } from '../../../shared/types'
-import { activeTab as selectActiveTab, noteContents, STARTER_TEMPLATE_CATALOG, useStore } from '../store'
+import { STARTER_TEMPLATE_CATALOG, useStore } from '../store'
+import { updateAIModel } from '../lib/ai'
 import {
   createPublishSite,
   createDefaultPublishSiteIntegrations,
@@ -211,24 +211,6 @@ function publishThemeLabel(theme: PublishSiteConfig['theme']): string {
 
 function vaultDisplayName(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path
-}
-
-function aiProviderLabel(provider: AITextProvider): string {
-  if (provider === 'codex') return 'Codex'
-  if (provider === 'openai') return 'OpenAI API'
-  return 'Anthropic API'
-}
-
-function aiModelForProvider(settings: AISettings, provider: AITextProvider): string {
-  if (provider === 'codex') return settings.codexModel
-  if (provider === 'openai') return settings.openaiModel
-  return settings.anthropicModel
-}
-
-function updateAIModel(settings: AISettings, provider: AITextProvider, model: string): AISettings {
-  if (provider === 'codex') return { ...settings, codexModel: model }
-  if (provider === 'openai') return { ...settings, openaiModel: model }
-  return { ...settings, anthropicModel: model }
 }
 
 function statusLabel(value: boolean | null): string {
@@ -557,7 +539,6 @@ export default function SettingsModal(): React.JSX.Element {
   const addVaultPath = useStore((s) => s.addVaultPath)
   const openVaultPath = useStore((s) => s.openVaultPath)
   const removeRecentVault = useStore((s) => s.removeRecentVault)
-  const currentTab = useStore(selectActiveTab)
   const [activeTab, setActiveTab] = useState<SettingsTabId>('appearance')
   const [vaultAddState, setVaultAddState] = useState<{
     status: 'idle' | 'selecting' | 'added' | 'failed'
@@ -569,11 +550,6 @@ export default function SettingsModal(): React.JSX.Element {
   const [aiStatusError, setAIStatusError] = useState('')
   const [aiSecrets, setAISecrets] = useState({ openaiApiKey: '', anthropicApiKey: '' })
   const [aiSaveState, setAISaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle')
-  const [aiTaskProvider, setAITaskProvider] = useState<AITextProvider>(aiSettings.defaultProvider)
-  const [aiPrompt, setAIPrompt] = useState('Improve the formatting and clarity of this note without changing its meaning.')
-  const [aiTaskState, setAITaskState] = useState<'idle' | 'running' | 'done' | 'failed'>('idle')
-  const [aiTaskMessage, setAITaskMessage] = useState('')
-  const [aiTaskResult, setAITaskResult] = useState('')
   const [publishState, setPublishState] = useState<{
     siteId: string | null
     status: 'idle' | 'publishing' | 'done' | 'failed'
@@ -652,33 +628,6 @@ export default function SettingsModal(): React.JSX.Element {
 
   const updateAISettings = (next: AISettings): void => {
     setAISettings(next)
-  }
-
-  const runAITask = async (): Promise<void> => {
-    if (!aiPrompt.trim()) return
-    const activeNotePath = currentTab?.kind === 'note' ? currentTab.path : null
-    const documentContent =
-      aiSettings.includeActiveNote && activeNotePath ? noteContents.get(activeNotePath) ?? '' : ''
-    setAITaskState('running')
-    setAITaskMessage(`Running ${aiProviderLabel(aiTaskProvider)}...`)
-    setAITaskResult('')
-    try {
-      const result = await window.forge.runAITextTask({
-        provider: aiTaskProvider,
-        prompt: aiPrompt,
-        model: aiModelForProvider(aiSettings, aiTaskProvider),
-        vault,
-        documentPath: activeNotePath,
-        documentContent
-      })
-      setAITaskResult(result.output)
-      setAITaskMessage(`Finished with ${aiProviderLabel(result.provider)}${result.model ? ` (${result.model})` : ''}.`)
-      setAITaskState('done')
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      setAITaskMessage(message)
-      setAITaskState('failed')
-    }
   }
 
   const addVaultFromDialog = async (): Promise<void> => {
@@ -1884,6 +1833,13 @@ export default function SettingsModal(): React.JSX.Element {
                     </span>
                   </div>
 
+                  <div className="ai-settings-toolbar">
+                    <button className="btn btn-compact" onClick={() => refreshAIStatus().catch(console.error)}>
+                      <RefreshCw size={14} />
+                      Refresh status
+                    </button>
+                  </div>
+
                   {aiStatusError && (
                     <div className="static-publish-status failed">
                       <AlertCircle size={14} />
@@ -2099,79 +2055,6 @@ export default function SettingsModal(): React.JSX.Element {
                       <span>{aiSaveState === 'saving' ? 'Saving key...' : aiSaveState === 'saved' ? 'AI settings saved.' : 'Could not save AI settings.'}</span>
                     </div>
                   )}
-
-                  <div className="settings-callout ai-task-card">
-                    <div className="ai-task-header">
-                      <div>
-                        <div className="settings-row-label">Prompt current note</div>
-                        <div className="settings-row-desc">Run a local Codex or API-backed text task without changing files automatically.</div>
-                      </div>
-                      <button className="btn btn-compact" onClick={() => refreshAIStatus().catch(console.error)}>
-                        <RefreshCw size={14} />
-                        Refresh status
-                      </button>
-                    </div>
-
-                    <div className="ai-provider-selector">
-                      {(['codex', 'openai', 'anthropic'] as AITextProvider[]).map((provider) => (
-                        <button
-                          key={provider}
-                          className={aiTaskProvider === provider ? 'active' : ''}
-                          onClick={() => {
-                            setAITaskProvider(provider)
-                            updateAISettings({ ...aiSettings, defaultProvider: provider })
-                          }}
-                        >
-                          {provider === 'codex' ? <Sparkles size={14} /> : <KeyRound size={14} />}
-                          <span>{aiProviderLabel(provider)}</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    <label className="publish-field">
-                      <span>Prompt</span>
-                      <textarea
-                        className="settings-textarea ai-prompt-input"
-                        value={aiPrompt}
-                        onChange={(event) => setAIPrompt(event.target.value)}
-                      />
-                    </label>
-
-                    <div className="ai-task-options">
-                      <label className="publish-option compact">
-                        <input
-                          type="checkbox"
-                          checked={aiSettings.includeActiveNote}
-                          onChange={(event) => updateAISettings({ ...aiSettings, includeActiveNote: event.target.checked })}
-                        />
-                        <span>
-                          <strong>Include active note</strong>
-                          <small>{currentTab?.kind === 'note' && currentTab.path ? currentTab.path : 'No active note open'}</small>
-                        </span>
-                      </label>
-                      <button className="btn" disabled={!aiPrompt.trim() || aiTaskState === 'running'} onClick={() => runAITask()}>
-                        {aiTaskState === 'running' ? <RefreshCw size={14} /> : <Sparkles size={14} />}
-                        {aiTaskState === 'running' ? 'Running' : `Run ${aiProviderLabel(aiTaskProvider)}`}
-                      </button>
-                    </div>
-
-                    {aiTaskMessage && (
-                      <div className={`static-publish-status ${aiTaskState === 'failed' ? 'failed' : aiTaskState === 'done' ? 'done' : 'publishing'}`}>
-                        {aiTaskState === 'failed' ? <AlertCircle size={14} /> : aiTaskState === 'done' ? <Check size={14} /> : <RefreshCw size={14} />}
-                        <span>{aiTaskMessage}</span>
-                      </div>
-                    )}
-
-                    {aiTaskResult && (
-                      <div className="ai-result-block">
-                        <div className="ai-result-head">
-                          <strong>Result</strong>
-                          <CopyButton value={aiTaskResult} label="Copy result" />
-                        </div>
-                        <pre>{aiTaskResult}</pre>
-                      </div>
-                    )}
-                  </div>
 
                   {aiStatus?.notes.length ? (
                     <div className="ai-notes">

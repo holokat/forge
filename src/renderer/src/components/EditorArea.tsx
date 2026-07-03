@@ -1,19 +1,28 @@
 import {
+  AlertCircle,
   BookOpen,
+  Check,
+  Clipboard,
   FilePlus2,
   FileText,
   Globe2,
   Images,
+  KeyRound,
   LayoutTemplate,
   PanelLeft,
   PanelRight,
   Pencil,
   Plus,
+  RefreshCw,
   Search,
+  Sparkles,
   Waypoints,
   X
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { AIStatus, AITextProvider } from '../../../shared/types'
+import { getActiveEditor } from '../editor/active'
+import { aiModelForProvider, aiProviderLabel, configuredAIProviders } from '../lib/ai'
 import Editor from './Editor'
 import { ForgeHexagonMark } from './ForgeLogo'
 import GraphView from './GraphView'
@@ -21,7 +30,241 @@ import MediaVault from './MediaVault'
 import Reading from './Reading'
 import { baseName, isMarkdown } from '../lib/parse'
 import { outputIndexPath, publishSiteForPath } from '../lib/publishing'
-import { activeTab, tabTitle, useStore, type Tab } from '../store'
+import { activeTab, noteContents, tabTitle, useStore, type Tab } from '../store'
+
+const DEFAULT_AI_PROMPT = 'Improve the formatting and clarity of this note without changing its meaning.'
+
+async function copyText(value: string): Promise<void> {
+  try {
+    await window.forge.copyText(value)
+    return
+  } catch (error) {
+    console.warn('Forge clipboard copy failed, trying browser clipboard.', error)
+  }
+
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value)
+  }
+}
+
+function insertionBlock(doc: string, pos: number, body: string): string {
+  const before = doc.slice(0, pos)
+  const after = doc.slice(pos)
+  const prefix = before.length === 0 || /\n\n$/.test(before) ? '' : before.endsWith('\n') ? '\n' : '\n\n'
+  const suffix = after.length === 0 || /^\n\n/.test(after) ? '' : after.startsWith('\n') ? '\n' : '\n\n'
+  return `${prefix}${body.trim()}${suffix}`
+}
+
+function providerIcon(provider: AITextProvider): React.JSX.Element {
+  return provider === 'codex' ? <Sparkles size={14} /> : <KeyRound size={14} />
+}
+
+function NoteAIPromptButton({ tab }: { tab: Tab & { kind: 'note'; path: string } }): React.JSX.Element | null {
+  const vault = useStore((s) => s.vault)
+  const modal = useStore((s) => s.modal)
+  const aiSettings = useStore((s) => s.aiSettings)
+  const setAISettings = useStore((s) => s.setAISettings)
+  const [status, setStatus] = useState<AIStatus | null>(null)
+  const [open, setOpen] = useState(false)
+  const [provider, setProvider] = useState<AITextProvider>(aiSettings.defaultProvider)
+  const [prompt, setPrompt] = useState(DEFAULT_AI_PROMPT)
+  const [taskState, setTaskState] = useState<'idle' | 'running' | 'done' | 'failed'>('idle')
+  const [message, setMessage] = useState('')
+  const [result, setResult] = useState('')
+  const [copied, setCopied] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const cancelStatusRefresh = useRef<(() => void) | null>(null)
+  const providers = configuredAIProviders(status)
+
+  const refreshStatus = (): void => {
+    let cancelled = false
+    window.forge
+      .getAIStatus()
+      .then((next) => {
+        if (!cancelled) setStatus(next)
+      })
+      .catch((error) => {
+        if (!cancelled) console.error('AI status check failed.', error)
+      })
+    const cancel = (): void => {
+      cancelled = true
+    }
+    cancelStatusRefresh.current = cancel
+  }
+
+  useEffect(() => {
+    cancelStatusRefresh.current?.()
+    refreshStatus()
+    return () => cancelStatusRefresh.current?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modal])
+
+  useEffect(() => {
+    const onFocus = (): void => {
+      cancelStatusRefresh.current?.()
+      refreshStatus()
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!providers.length) return
+    if (!providers.includes(provider)) setProvider(providers.includes(aiSettings.defaultProvider) ? aiSettings.defaultProvider : providers[0])
+  }, [aiSettings.defaultProvider, provider, providers])
+
+  useEffect(() => {
+    if (!open) return
+    const close = (event: MouseEvent): void => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const escape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('mousedown', close)
+    window.addEventListener('keydown', escape)
+    return () => {
+      window.removeEventListener('mousedown', close)
+      window.removeEventListener('keydown', escape)
+    }
+  }, [open])
+
+  if (!providers.length) return null
+
+  const runPrompt = async (): Promise<void> => {
+    if (!prompt.trim()) return
+    setTaskState('running')
+    setMessage(`Running ${aiProviderLabel(provider)}...`)
+    setResult('')
+    setCopied(false)
+    try {
+      const response = await window.forge.runAITextTask({
+        provider,
+        prompt,
+        model: aiModelForProvider(aiSettings, provider),
+        vault,
+        documentPath: tab.path,
+        documentContent: noteContents.get(tab.path) ?? ''
+      })
+      setResult(response.output)
+      setTaskState('done')
+      setMessage(`Finished with ${aiProviderLabel(response.provider)}${response.model ? ` (${response.model})` : ''}.`)
+    } catch (error) {
+      setTaskState('failed')
+      setMessage(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const insertResult = (): void => {
+    if (!result.trim()) return
+    const view = tab.mode === 'edit' ? getActiveEditor() : null
+    if (view) {
+      const selection = view.state.selection.main
+      const insert = selection.empty ? insertionBlock(view.state.doc.toString(), selection.from, result) : result.trim()
+      view.dispatch({
+        changes: { from: selection.from, to: selection.to, insert },
+        selection: { anchor: selection.from + insert.length },
+        scrollIntoView: true
+      })
+      view.focus()
+      setMessage('Inserted into note.')
+      return
+    }
+
+    const current = noteContents.get(tab.path) ?? ''
+    useStore.getState().updateContent(tab.path, current + insertionBlock(current, current.length, result))
+    setMessage('Appended to note.')
+  }
+
+  const copyResult = async (): Promise<void> => {
+    if (!result.trim()) return
+    await copyText(result)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1400)
+  }
+
+  return (
+    <div className="ai-toolbar" ref={rootRef}>
+      <button
+        className={`icon-btn tabbar-btn ai-toolbar-trigger${open ? ' active' : ''}`}
+        title="Prompt current note"
+        aria-label="Prompt current note"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Sparkles size={15} />
+      </button>
+      {open && (
+        <div className="ai-prompt-popover" role="dialog" aria-label="Prompt current note">
+          <div className="ai-prompt-popover-head">
+            <span>Ask AI</span>
+            <button className="icon-btn" aria-label="Close" onClick={() => setOpen(false)}>
+              <X size={14} />
+            </button>
+          </div>
+
+          <div className="ai-provider-selector compact">
+            {providers.map((option) => (
+              <button
+                key={option}
+                className={provider === option ? 'active' : ''}
+                onClick={() => {
+                  setProvider(option)
+                  setAISettings({ ...aiSettings, defaultProvider: option })
+                }}
+              >
+                {providerIcon(option)}
+                <span>{aiProviderLabel(option)}</span>
+              </button>
+            ))}
+          </div>
+
+          <label className="publish-field">
+            <span>Prompt</span>
+            <textarea
+              className="settings-textarea ai-toolbar-prompt"
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+            />
+          </label>
+
+          <div className="ai-toolbar-actions">
+            <button className="btn btn-primary btn-compact" disabled={!prompt.trim() || taskState === 'running'} onClick={() => runPrompt()}>
+              {taskState === 'running' ? <RefreshCw size={14} /> : <Sparkles size={14} />}
+              {taskState === 'running' ? 'Running' : 'Run'}
+            </button>
+            {result && (
+              <>
+                <button className="btn btn-compact" onClick={() => insertResult()}>
+                  <Plus size={14} />
+                  Insert
+                </button>
+                <button className="btn btn-compact" onClick={() => copyResult().catch(console.error)}>
+                  {copied ? <Check size={14} /> : <Clipboard size={14} />}
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              </>
+            )}
+          </div>
+
+          {message && (
+            <div className={`static-publish-status ${taskState === 'failed' ? 'failed' : taskState === 'done' ? 'done' : 'publishing'}`}>
+              {taskState === 'failed' ? <AlertCircle size={14} /> : taskState === 'done' ? <Check size={14} /> : <RefreshCw size={14} />}
+              <span>{message}</span>
+            </div>
+          )}
+
+          {result && (
+            <div className="ai-result-block ai-toolbar-result">
+              <pre>{result}</pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function TabBar(): React.JSX.Element {
   const tabs = useStore((s) => s.tabs)
@@ -85,13 +328,16 @@ function TabBar(): React.JSX.Element {
       </div>
       <div className="tabbar-drag" />
       {active?.kind === 'note' && active.path && (
-        <button
-          className="icon-btn tabbar-btn"
-          title={active.mode === 'edit' ? 'Reading view (⌘E)' : 'Edit (⌘E)'}
-          onClick={() => setTabMode(active.id, active.mode === 'edit' ? 'read' : 'edit')}
-        >
-          {active.mode === 'edit' ? <BookOpen size={15} /> : <Pencil size={15} />}
-        </button>
+        <>
+          <NoteAIPromptButton tab={active as Tab & { kind: 'note'; path: string }} />
+          <button
+            className="icon-btn tabbar-btn"
+            title={active.mode === 'edit' ? 'Reading view (⌘E)' : 'Edit (⌘E)'}
+            onClick={() => setTabMode(active.id, active.mode === 'edit' ? 'read' : 'edit')}
+          >
+            {active.mode === 'edit' ? <BookOpen size={15} /> : <Pencil size={15} />}
+          </button>
+        </>
       )}
       {activePublishSite && (
         <button
