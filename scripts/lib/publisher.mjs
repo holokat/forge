@@ -15,6 +15,42 @@ const IMAGE_EXT_RE = /\.(?:apng|avif|bmp|gif|heic|heif|jpe?g|png|svg|tiff?|webp)
 const AUDIO_EXT_RE = /\.(?:aac|aiff?|flac|m4a|mp3|oga|ogg|opus|wav|webm)$/i
 const VIDEO_EXT_RE = /\.(?:m4v|mov|mp4|ogv|webm)$/i
 
+const DEFAULT_INTEGRATIONS = {
+  seoRss: {
+    enabled: true,
+    siteUrl: '',
+    socialImage: '',
+    rss: true,
+    sitemap: true,
+    robots: true
+  },
+  analytics: {
+    provider: 'none',
+    domain: '',
+    scriptUrl: '',
+    websiteId: '',
+    customSnippet: ''
+  },
+  deploy: {
+    target: 'manual',
+    projectName: '',
+    productionUrl: '',
+    notes: ''
+  },
+  embeds: {
+    enabled: true,
+    allowIframes: false,
+    allowExternalMedia: true
+  },
+  forms: {
+    enabled: false,
+    provider: 'none',
+    formName: 'contact',
+    endpoint: '',
+    buttonLabel: 'Send'
+  }
+}
+
 function slash(value) {
   return value.split(path.sep).join('/')
 }
@@ -72,6 +108,89 @@ function escapeAttribute(value) {
   return escapeHtml(value).replace(/'/g, '&#39;')
 }
 
+function escapeXml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+function stringValue(value) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function booleanValue(value, fallback) {
+  return typeof value === 'boolean' ? value : fallback
+}
+
+function enumValue(value, allowed, fallback) {
+  return allowed.includes(value) ? value : fallback
+}
+
+function normalizePublicUrl(value) {
+  const raw = stringValue(value).replace(/\/+$/, '')
+  if (!raw) return ''
+  try {
+    const url = new URL(raw)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return ''
+    return url.href.replace(/\/+$/, '')
+  } catch {
+    return ''
+  }
+}
+
+function normalizeIntegrations(value = {}) {
+  const raw = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  const seoRss = raw.seoRss && typeof raw.seoRss === 'object' && !Array.isArray(raw.seoRss) ? raw.seoRss : {}
+  const analytics =
+    raw.analytics && typeof raw.analytics === 'object' && !Array.isArray(raw.analytics) ? raw.analytics : {}
+  const deploy = raw.deploy && typeof raw.deploy === 'object' && !Array.isArray(raw.deploy) ? raw.deploy : {}
+  const embeds = raw.embeds && typeof raw.embeds === 'object' && !Array.isArray(raw.embeds) ? raw.embeds : {}
+  const forms = raw.forms && typeof raw.forms === 'object' && !Array.isArray(raw.forms) ? raw.forms : {}
+
+  return {
+    seoRss: {
+      enabled: booleanValue(seoRss.enabled, DEFAULT_INTEGRATIONS.seoRss.enabled),
+      siteUrl: normalizePublicUrl(seoRss.siteUrl),
+      socialImage: stringValue(seoRss.socialImage),
+      rss: booleanValue(seoRss.rss, DEFAULT_INTEGRATIONS.seoRss.rss),
+      sitemap: booleanValue(seoRss.sitemap, DEFAULT_INTEGRATIONS.seoRss.sitemap),
+      robots: booleanValue(seoRss.robots, DEFAULT_INTEGRATIONS.seoRss.robots)
+    },
+    analytics: {
+      provider: enumValue(analytics.provider, ['none', 'plausible', 'umami', 'custom'], 'none'),
+      domain: stringValue(analytics.domain),
+      scriptUrl: stringValue(analytics.scriptUrl),
+      websiteId: stringValue(analytics.websiteId),
+      customSnippet: stringValue(analytics.customSnippet)
+    },
+    deploy: {
+      target: enumValue(
+        deploy.target,
+        ['manual', 'github-pages', 'cloudflare-pages', 'netlify', 'vercel', 's3-r2', 'ipfs'],
+        'manual'
+      ),
+      projectName: stringValue(deploy.projectName),
+      productionUrl: normalizePublicUrl(deploy.productionUrl),
+      notes: stringValue(deploy.notes)
+    },
+    embeds: {
+      enabled: booleanValue(embeds.enabled, DEFAULT_INTEGRATIONS.embeds.enabled),
+      allowIframes: booleanValue(embeds.allowIframes, DEFAULT_INTEGRATIONS.embeds.allowIframes),
+      allowExternalMedia: booleanValue(embeds.allowExternalMedia, DEFAULT_INTEGRATIONS.embeds.allowExternalMedia)
+    },
+    forms: {
+      enabled: booleanValue(forms.enabled, DEFAULT_INTEGRATIONS.forms.enabled),
+      provider: enumValue(forms.provider, ['none', 'netlify', 'formspree', 'custom'], 'none'),
+      formName: stringValue(forms.formName) || DEFAULT_INTEGRATIONS.forms.formName,
+      endpoint: stringValue(forms.endpoint),
+      buttonLabel: stringValue(forms.buttonLabel) || DEFAULT_INTEGRATIONS.forms.buttonLabel
+    }
+  }
+}
+
 function stripInlineMarkdown(value) {
   return String(value ?? '')
     .replace(/`([^`]+)`/g, '$1')
@@ -118,6 +237,34 @@ function relativeHref(fromOutputPath, toOutputPath, hash = '') {
   if (!rel) rel = path.posix.basename(toOutputPath)
   if (!rel.startsWith('.')) rel = `./${rel}`
   return `${encodePathForHref(rel)}${hash ? `#${encodeURIComponent(hash)}` : ''}`
+}
+
+function sitePublicBaseUrl(site) {
+  return site.integrations.seoRss.siteUrl || site.integrations.deploy.productionUrl || ''
+}
+
+function publicUrl(site, outputPath = 'index.html') {
+  const base = sitePublicBaseUrl(site)
+  if (!base) return ''
+  const rel = outputPath === 'index.html' ? '' : encodePathForHref(outputPath).replace(/^\.\//, '')
+  try {
+    return new URL(rel, `${base}/`).href
+  } catch {
+    return ''
+  }
+}
+
+function publicAssetUrl(site, value) {
+  const raw = stringValue(value)
+  if (!raw) return ''
+  const absolute = normalizePublicUrl(raw)
+  if (absolute) return absolute
+  if (!sitePublicBaseUrl(site)) return ''
+  return publicUrl(site, raw.replace(/^\/+/, ''))
+}
+
+function pageTitle(title, site) {
+  return title === site.title ? site.title : `${title} - ${site.title}`
 }
 
 function splitOnce(value, separator) {
@@ -473,6 +620,128 @@ function renderLinkList(links, notesByPath, fromOutputPath, emptyText) {
     .join('')}</ul>`
 }
 
+function renderAnalyticsSnippet(site) {
+  const analytics = site.integrations.analytics
+  if (analytics.provider === 'none') return ''
+
+  if (analytics.provider === 'plausible') {
+    if (!analytics.domain) return ''
+    const scriptUrl = analytics.scriptUrl || 'https://plausible.io/js/script.js'
+    return `<script defer data-domain="${escapeAttribute(analytics.domain)}" src="${escapeAttribute(scriptUrl)}"></script>`
+  }
+
+  if (analytics.provider === 'umami') {
+    if (!analytics.websiteId) return ''
+    const scriptUrl = analytics.scriptUrl || 'https://cloud.umami.is/script.js'
+    return `<script defer src="${escapeAttribute(scriptUrl)}" data-website-id="${escapeAttribute(analytics.websiteId)}"></script>`
+  }
+
+  if (analytics.provider === 'custom') {
+    return analytics.customSnippet
+  }
+
+  return ''
+}
+
+function renderHeadTags({ title, site, description = '', currentOutputPath, kind = 'website' }) {
+  const renderedTitle = pageTitle(title, site)
+  const seo = site.integrations.seoRss
+  const desc = String(description || site.description || '').trim()
+  const canonical = seo.enabled ? publicUrl(site, currentOutputPath) : ''
+  const socialImage = seo.enabled ? publicAssetUrl(site, seo.socialImage) : ''
+  const rssHref = seo.enabled && seo.rss ? relativeHref(currentOutputPath, 'rss.xml') : ''
+  const analytics = renderAnalyticsSnippet(site)
+  const tags = [
+    '<meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    `<meta name="generator" content="${GENERATOR}">`,
+    desc ? `<meta name="description" content="${escapeAttribute(desc)}">` : '',
+    seo.enabled ? `<meta property="og:title" content="${escapeAttribute(renderedTitle)}">` : '',
+    seo.enabled && desc ? `<meta property="og:description" content="${escapeAttribute(desc)}">` : '',
+    seo.enabled ? `<meta property="og:type" content="${kind === 'article' ? 'article' : 'website'}">` : '',
+    seo.enabled ? `<meta property="og:site_name" content="${escapeAttribute(site.title)}">` : '',
+    canonical ? `<link rel="canonical" href="${escapeAttribute(canonical)}">` : '',
+    canonical ? `<meta property="og:url" content="${escapeAttribute(canonical)}">` : '',
+    socialImage ? `<meta property="og:image" content="${escapeAttribute(socialImage)}">` : '',
+    socialImage ? '<meta name="twitter:card" content="summary_large_image">' : '',
+    rssHref ? `<link rel="alternate" type="application/rss+xml" title="${escapeAttribute(site.title)} RSS" href="${rssHref}">` : '',
+    `<title>${escapeHtml(renderedTitle)}</title>`,
+    `<link rel="stylesheet" href="${relativeHref(currentOutputPath, '_forge/styles.css')}">`,
+    `<script src="${relativeHref(currentOutputPath, '_forge/site.js')}" defer></script>`,
+    analytics
+  ].filter(Boolean)
+
+  return tags.join('\n  ')
+}
+
+function parseEmbedBlock(body) {
+  const data = {}
+  const freeform = []
+  for (const line of String(body ?? '').split(/\r?\n/)) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+    const match = /^([A-Za-z][\w-]*):\s*(.+)$/.exec(trimmed)
+    if (match) {
+      data[match[1].toLowerCase()] = match[2].trim()
+    } else {
+      freeform.push(trimmed)
+    }
+  }
+
+  return {
+    url: data.url || freeform[0] || '',
+    title: data.title || freeform[1] || 'Embedded content',
+    height: Number.parseInt(data.height || '', 10) || 420
+  }
+}
+
+function renderEmbedBlock(site, body) {
+  const embeds = site.integrations.embeds
+  const parsed = parseEmbedBlock(body)
+  const url = normalizePublicUrl(parsed.url)
+  if (!url) return ''
+  if (!embeds.enabled || !embeds.allowIframes) {
+    return `<p><a class="external-link forge-embed-link" href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">${escapeHtml(parsed.title)}</a></p>`
+  }
+
+  const height = Math.max(220, Math.min(900, parsed.height))
+  return `<figure class="forge-embed-frame">
+    <iframe src="${escapeAttribute(url)}" title="${escapeAttribute(parsed.title)}" loading="lazy" height="${height}" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    <figcaption>${escapeHtml(parsed.title)}</figcaption>
+  </figure>`
+}
+
+function renderSiteForm(site, currentOutputPath) {
+  const form = site.integrations.forms
+  if (!form.enabled || form.provider === 'none') return ''
+
+  const formName = slugify(form.formName, 'contact')
+  const label = form.buttonLabel || 'Send'
+  const endpoint = form.provider === 'netlify' ? '' : normalizePublicUrl(form.endpoint)
+  if (form.provider !== 'netlify' && !endpoint) return ''
+  const action = endpoint ? ` action="${escapeAttribute(endpoint)}"` : ''
+  const providerAttrs =
+    form.provider === 'netlify'
+      ? ` data-netlify="true" netlify-honeypot="bot-field"`
+      : ''
+
+  return `<section class="publish-form-section" aria-label="Contact">
+    <div>
+      <p class="eyebrow">Contact</p>
+      <h2>Send a note</h2>
+      <p>This static form is configured for ${escapeHtml(form.provider === 'netlify' ? 'Netlify Forms' : form.provider)}.</p>
+    </div>
+    <form class="publish-form" name="${escapeAttribute(formName)}" method="POST"${action}${providerAttrs}>
+      <input type="hidden" name="form-name" value="${escapeAttribute(formName)}">
+      ${form.provider === 'netlify' ? '<p class="form-honeypot"><label>Do not fill this out <input name="bot-field"></label></p>' : ''}
+      <label><span>Name</span><input name="name" autocomplete="name"></label>
+      <label><span>Email</span><input name="email" type="email" autocomplete="email"></label>
+      <label><span>Message</span><textarea name="message" rows="5"></textarea></label>
+      <button type="submit">${escapeHtml(label)}</button>
+    </form>
+  </section>`
+}
+
 function renderMarkdown(note, site) {
   let headingIndex = 0
 
@@ -527,6 +796,23 @@ function renderMarkdown(note, site) {
         })
         .join('')
       return `<div class="media-gallery" data-count="${items.length}">${figures}</div>`
+    }
+  }
+
+  const forgeEmbedExt = {
+    name: 'forgeEmbed',
+    level: 'block',
+    start(src) {
+      const match = src.match(/^```forge-embed/m)
+      return match?.index
+    },
+    tokenizer(src) {
+      const match = /^```forge-embed[^\n]*\n([\s\S]*?)\n```(?:\n|$)/.exec(src)
+      if (!match) return undefined
+      return { type: 'forgeEmbed', raw: match[0], body: match[1] }
+    },
+    renderer(token) {
+      return renderEmbedBlock(site, token.body)
     }
   }
 
@@ -600,6 +886,9 @@ function renderMarkdown(note, site) {
     image(token) {
       const href = normalizeMarkdownHref(token.href)
       if (EXTERNAL_REF_RE.test(href) || href.startsWith('data:')) {
+        if (!site.integrations.embeds.allowExternalMedia) {
+          return `<a class="external-link missing-asset" href="${escapeAttribute(href)}" target="_blank" rel="noreferrer">${escapeHtml(token.text || href)}</a>`
+        }
         return `<img class="embed" src="${escapeAttribute(href)}" alt="${escapeAttribute(token.text)}" loading="lazy">`
       }
 
@@ -642,7 +931,7 @@ function renderMarkdown(note, site) {
   const marked = new Marked({
     gfm: true,
     breaks: false,
-    extensions: [galleryExt, wikilinkExt, hashtagExt],
+    extensions: [galleryExt, forgeEmbedExt, wikilinkExt, hashtagExt],
     renderer
   })
 
@@ -650,8 +939,6 @@ function renderMarkdown(note, site) {
 }
 
 function pageShell({ title, site, description = '', currentOutputPath, body, navNotes, tagIndex }) {
-  const stylesheetHref = relativeHref(currentOutputPath, '_forge/styles.css')
-  const scriptHref = relativeHref(currentOutputPath, '_forge/site.js')
   const homeHref = relativeHref(currentOutputPath, 'index.html')
   const noteItems = navNotes
     .map((note) => `<li>${renderNoteLink(note, currentOutputPath, 'sidebar-link')}</li>`)
@@ -669,13 +956,7 @@ function pageShell({ title, site, description = '', currentOutputPath, body, nav
   return `<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="generator" content="${GENERATOR}">
-  ${description ? `<meta name="description" content="${escapeAttribute(description)}">` : ''}
-  <title>${escapeHtml(title)} - ${escapeHtml(site.title)}</title>
-  <link rel="stylesheet" href="${stylesheetHref}">
-  <script src="${scriptHref}" defer></script>
+  ${renderHeadTags({ title, site, description, currentOutputPath })}
 </head>
 <body class="site-theme-${escapeAttribute(site.theme)}">
   <a class="skip-link" href="#content">Skip to content</a>
@@ -778,18 +1059,10 @@ function blogHeader(site, currentOutputPath, variant = '') {
 }
 
 function blogShell({ title, site, description = '', currentOutputPath, body, headerVariant = '' }) {
-  const stylesheetHref = relativeHref(currentOutputPath, '_forge/styles.css')
-  const scriptHref = relativeHref(currentOutputPath, '_forge/site.js')
   return `<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="generator" content="${GENERATOR}">
-  ${description ? `<meta name="description" content="${escapeAttribute(description)}">` : ''}
-  <title>${escapeHtml(title)} - ${escapeHtml(site.title)}</title>
-  <link rel="stylesheet" href="${stylesheetHref}">
-  <script src="${scriptHref}" defer></script>
+  ${renderHeadTags({ title, site, description, currentOutputPath, kind: title === site.title ? 'website' : 'article' })}
 </head>
 <body class="site-theme-${escapeAttribute(site.theme)}">
   <a class="skip-link" href="#content">Skip to content</a>
@@ -829,7 +1102,8 @@ function renderQuietPaperIndex(site, notes = site.notes, title = site.title, des
           )
           .join('')}
       </div>
-    </section>`
+    </section>
+    ${renderSiteForm(site, outputPath)}`
   })
 }
 
@@ -859,7 +1133,8 @@ function renderTerminalIndex(site, notes = site.notes, title = site.title, descr
           )
           .join('')}
       </div>
-    </section>`
+    </section>
+    ${renderSiteForm(site, outputPath)}`
   })
 }
 
@@ -885,7 +1160,8 @@ function renderSwissIndex(site, notes = site.notes, title = site.title, descript
           )
           .join('')}
       </div>
-    </section>`
+    </section>
+    ${renderSiteForm(site, outputPath)}`
   })
 }
 
@@ -912,7 +1188,8 @@ function renderSoftFocusIndex(site, notes = site.notes, title = site.title, desc
           )
           .join('')}
       </div>
-    </section>`
+    </section>
+    ${renderSiteForm(site, outputPath)}`
   })
 }
 
@@ -940,11 +1217,12 @@ function renderFieldNotesIndex(site, notes = site.notes, title = site.title, des
             <span>${escapeHtml(formatNoteDate(note, 'dot'))}</span>
             <strong>${escapeHtml(note.title)}</strong>
           </a>`
-            )
+          )
             .join('')}
         </div>
       </div>
-    </section>`
+    </section>
+    ${renderSiteForm(site, outputPath)}`
   })
 }
 
@@ -1004,6 +1282,7 @@ function renderIndexPage(site) {
         <h2>Tags</h2>
         <div class="tag-cloud">${tagCloud || '<p class="empty-state">No tags found.</p>'}</div>
       </section>` : ''}
+      ${renderSiteForm(site, outputPath)}
       ${broken}`
   })
 }
@@ -1318,6 +1597,93 @@ function outputIsUnsafe(vault, output) {
   return output === root || output === vault
 }
 
+function renderRssFeed(site) {
+  const base = sitePublicBaseUrl(site)
+  if (!base) return ''
+  const items = blogNotes(site)
+    .slice(0, 50)
+    .map((note) => {
+      const url = publicUrl(site, note.outputPath)
+      const description = noteExcerpt(note)
+      return `    <item>
+      <title>${escapeXml(note.title)}</title>
+      <link>${escapeXml(url)}</link>
+      <guid>${escapeXml(url)}</guid>
+      <pubDate>${dateForNote(note).toUTCString()}</pubDate>
+      <description>${escapeXml(description)}</description>
+    </item>`
+    })
+    .join('\n')
+
+  return `<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>${escapeXml(site.title)}</title>
+    <link>${escapeXml(publicUrl(site, 'index.html'))}</link>
+    <description>${escapeXml(site.description || `Published notes from ${site.title}`)}</description>
+    <generator>${GENERATOR}</generator>
+${items}
+  </channel>
+</rss>
+`
+}
+
+function renderSitemap(site) {
+  const base = sitePublicBaseUrl(site)
+  if (!base) return ''
+  const pages = [
+    { loc: publicUrl(site, 'index.html'), modified: new Date().toISOString() },
+    ...site.notes.map((note) => ({ loc: publicUrl(site, note.outputPath), modified: note.modified })),
+    ...(site.showTags ? site.tagIndex.map((tag) => ({ loc: publicUrl(site, tag.outputPath), modified: new Date().toISOString() })) : [])
+  ].filter((page) => page.loc)
+
+  return `<?xml version="1.0" encoding="UTF-8" ?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${pages
+  .map(
+    (page) => `  <url>
+    <loc>${escapeXml(page.loc)}</loc>
+    <lastmod>${escapeXml(new Date(page.modified).toISOString())}</lastmod>
+  </url>`
+  )
+  .join('\n')}
+</urlset>
+`
+}
+
+function renderRobots(site) {
+  const sitemapUrl = publicUrl(site, 'sitemap.xml')
+  return ['User-agent: *', 'Allow: /', sitemapUrl ? `Sitemap: ${sitemapUrl}` : ''].filter(Boolean).join('\n') + '\n'
+}
+
+function publicIntegrationManifest(site) {
+  return {
+    seoRss: {
+      enabled: site.integrations.seoRss.enabled,
+      siteUrl: site.integrations.seoRss.siteUrl,
+      rss: site.integrations.seoRss.rss,
+      sitemap: site.integrations.seoRss.sitemap,
+      robots: site.integrations.seoRss.robots
+    },
+    analytics: {
+      provider: site.integrations.analytics.provider,
+      domain: site.integrations.analytics.provider === 'plausible' ? site.integrations.analytics.domain : '',
+      websiteId: site.integrations.analytics.provider === 'umami' ? site.integrations.analytics.websiteId : ''
+    },
+    deploy: {
+      target: site.integrations.deploy.target,
+      projectName: site.integrations.deploy.projectName,
+      productionUrl: site.integrations.deploy.productionUrl
+    },
+    embeds: site.integrations.embeds,
+    forms: {
+      enabled: site.integrations.forms.enabled,
+      provider: site.integrations.forms.provider,
+      formName: site.integrations.forms.formName
+    }
+  }
+}
+
 export async function publishVault({
   vault,
   output,
@@ -1327,7 +1693,8 @@ export async function publishVault({
   scopePath = '',
   clean = false,
   showTags = true,
-  showBacklinks = true
+  showBacklinks = true,
+  integrations = {}
 }) {
   if (!vault) throw new Error('Missing vault path.')
   if (!output) throw new Error('Missing output path.')
@@ -1370,6 +1737,7 @@ export async function publishVault({
     scopePath: normalizedScopePath,
     showTags: showTags !== false,
     showBacklinks: showBacklinks !== false,
+    integrations: normalizeIntegrations(integrations),
     vault: resolvedVault,
     output: resolvedOutput,
     notes,
@@ -1397,6 +1765,18 @@ export async function publishVault({
   await writeText(resolvedOutput, '_forge/site.js', siteScript(), written)
   await writeText(resolvedOutput, 'index.html', renderIndexPage(site), written)
 
+  if (site.integrations.seoRss.enabled && site.integrations.seoRss.rss && sitePublicBaseUrl(site)) {
+    await writeText(resolvedOutput, 'rss.xml', renderRssFeed(site), written)
+  }
+
+  if (site.integrations.seoRss.enabled && site.integrations.seoRss.sitemap && sitePublicBaseUrl(site)) {
+    await writeText(resolvedOutput, 'sitemap.xml', renderSitemap(site), written)
+  }
+
+  if (site.integrations.seoRss.enabled && site.integrations.seoRss.robots) {
+    await writeText(resolvedOutput, 'robots.txt', renderRobots(site), written)
+  }
+
   for (const tagPage of site.showTags ? tagIndex : []) {
     await writeText(resolvedOutput, tagPage.outputPath, renderTagPage(site, tagPage), written)
   }
@@ -1423,6 +1803,7 @@ export async function publishVault({
           showTags: site.showTags,
           showBacklinks: site.showBacklinks
         },
+        integrations: publicIntegrationManifest(site),
         totals: site.stats,
         notes: notes.map((note) => ({
           path: note.path,

@@ -261,7 +261,12 @@ const tools = [
         },
         clean: { type: 'boolean', description: 'Clean previous Forge publisher output before writing.' },
         showTags: { type: 'boolean', description: 'Generate tag navigation and tag pages. Defaults to true.' },
-        showBacklinks: { type: 'boolean', description: 'Show backlinks on note pages. Defaults to true.' }
+        showBacklinks: { type: 'boolean', description: 'Show backlinks on note pages. Defaults to true.' },
+        integrations: {
+          type: 'object',
+          description: 'Optional publishing integrations: seoRss, analytics, deploy, embeds, and forms.',
+          additionalProperties: true
+        }
       }
     }
   },
@@ -375,7 +380,8 @@ async function callTool(name, args = {}) {
         theme: input.theme,
         clean: Boolean(input.clean),
         showTags: input.showTags,
-        showBacklinks: input.showBacklinks
+        showBacklinks: input.showBacklinks,
+        integrations: input.integrations
       })
       return {
         ok: true,

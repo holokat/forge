@@ -44,7 +44,7 @@ Commands:
   move <from> <to>                      Move or rename a file or folder
   search <query> [--limit <n>] [--json] Search Markdown filenames and contents
   analyze [--stale-days <n>] [--json]   Summarize notes, tags, links, backlinks, gaps, stale notes, and repair queues
-  publish --out <folder> [--title <s>] [--description <s>] [--scope <folder>] [--theme <minimal|editorial|reference|quiet-paper|terminal-ledger|swiss-ledger|soft-focus|field-notes>] [--clean] [--no-tags] [--no-backlinks] [--json]
+  publish --out <folder> [--title <s>] [--description <s>] [--scope <folder>] [--theme <minimal|editorial|reference|quiet-paper|terminal-ledger|swiss-ledger|soft-focus|field-notes>] [--site-url <url>] [--analytics-provider <provider>] [--deploy-target <target>] [--allow-iframes] [--form] [--clean] [--no-tags] [--no-backlinks] [--json]
                                         Export the vault to static HTML
   batch [file|-] [--json]               Run JSON operations in one transaction-like sequence
   built-in-templates [--json] [--content]
@@ -868,7 +868,17 @@ async function analyzeCommand(vault, { staleDays = DEFAULT_STALE_NOTE_DAYS } = {
 
 async function publishCommand(
   vault,
-  { output = '', title = '', description = '', scopePath = '', theme = 'minimal', clean = false, showTags = true, showBacklinks = true } = {}
+  {
+    output = '',
+    title = '',
+    description = '',
+    scopePath = '',
+    theme = 'minimal',
+    clean = false,
+    showTags = true,
+    showBacklinks = true,
+    integrations = {}
+  } = {}
 ) {
   const result = await publishVault({
     vault,
@@ -879,7 +889,8 @@ async function publishCommand(
     theme,
     clean: Boolean(clean),
     showTags,
-    showBacklinks
+    showBacklinks,
+    integrations
   })
 
   return {
@@ -891,6 +902,44 @@ async function publishCommand(
     written: result.written.length,
     copied: result.copied.length,
     brokenLinks: result.brokenLinks
+  }
+}
+
+function publishIntegrationsFromOptions(options = {}) {
+  return {
+    seoRss: {
+      siteUrl: options.siteUrl ?? options['site-url'] ?? options.publicUrl ?? options['public-url'],
+      socialImage: options.socialImage ?? options['social-image'],
+      rss: options.rss === false || options['no-rss'] || options.noRss ? false : undefined,
+      sitemap: options.sitemap === false || options['no-sitemap'] || options.noSitemap ? false : undefined,
+      robots: options.robots === false || options['no-robots'] || options.noRobots ? false : undefined
+    },
+    analytics: {
+      provider: options.analyticsProvider ?? options['analytics-provider'],
+      domain: options.analyticsDomain ?? options['analytics-domain'],
+      scriptUrl: options.analyticsScript ?? options['analytics-script'],
+      websiteId: options.analyticsWebsiteId ?? options['analytics-website-id'],
+      customSnippet: options.analyticsSnippet ?? options['analytics-snippet']
+    },
+    deploy: {
+      target: options.deployTarget ?? options['deploy-target'],
+      projectName: options.deployProject ?? options['deploy-project'],
+      productionUrl: options.deployUrl ?? options['deploy-url'],
+      notes: options.deployNotes ?? options['deploy-notes']
+    },
+    embeds: {
+      enabled: options.embeds === false || options['no-embeds'] || options.noEmbeds ? false : undefined,
+      allowIframes: Boolean(options.allowIframes ?? options['allow-iframes']),
+      allowExternalMedia:
+        options.externalMedia === false || options['no-external-media'] || options.noExternalMedia ? false : undefined
+    },
+    forms: {
+      enabled: Boolean(options.form ?? options.forms),
+      provider: options.formProvider ?? options['form-provider'],
+      formName: options.formName ?? options['form-name'],
+      endpoint: options.formEndpoint ?? options['form-endpoint'],
+      buttonLabel: options.formButton ?? options['form-button']
+    }
   }
 }
 
@@ -1089,7 +1138,8 @@ async function runOperation(vault, op) {
         theme: op.theme,
         clean: Boolean(op.clean),
         showTags: op.showTags ?? !op.noTags,
-        showBacklinks: op.showBacklinks ?? !op.noBacklinks
+        showBacklinks: op.showBacklinks ?? !op.noBacklinks,
+        integrations: op.integrations ?? publishIntegrationsFromOptions(op)
       })
     default:
       throw new Error(`Unknown batch action: ${action}`)
@@ -1294,7 +1344,8 @@ async function main() {
           theme: options.theme,
           clean: Boolean(options.clean),
           showTags: options.tags === false || options['no-tags'] || options.noTags ? false : true,
-          showBacklinks: options.backlinks === false || options['no-backlinks'] || options.noBacklinks ? false : true
+          showBacklinks: options.backlinks === false || options['no-backlinks'] || options.noBacklinks ? false : true,
+          integrations: publishIntegrationsFromOptions(options)
         }), {
           json,
           text: (result) => [

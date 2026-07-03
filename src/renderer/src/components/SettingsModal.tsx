@@ -1,6 +1,8 @@
 import {
   AlertCircle,
+  BarChart3,
   Bot,
+  Braces,
   Check,
   Clipboard,
   Code2,
@@ -9,9 +11,11 @@ import {
   FolderOpen,
   FileText,
   Globe2,
+  Mail,
   Plus,
   RefreshCw,
   Rocket,
+  Rss,
   SearchCheck,
   Smartphone,
   Terminal,
@@ -23,11 +27,16 @@ import QRCode from 'qrcode'
 import { useEffect, useMemo, useState } from 'react'
 import type {
   AgentAccessInfo,
+  PublishAnalyticsProvider,
+  PublishDeployTarget,
+  PublishFormProvider,
   MobilePairingInfo,
   PublishSiteConfig,
+  PublishSiteIntegrations,
   ThemeMode,
   UpdateStatus
 } from '../../../shared/types'
+import { DEFAULT_PUBLISH_SITE_INTEGRATIONS } from '../../../shared/types'
 import { STARTER_TEMPLATE_CATALOG, useStore } from '../store'
 import ExtensionMarketplace from './ExtensionMarketplace'
 import {
@@ -213,6 +222,7 @@ function createPublishSite(vault: string, name: string, scope: PublishSiteConfig
       showTags: true,
       showBacklinks: true
     },
+    integrations: structuredClone(DEFAULT_PUBLISH_SITE_INTEGRATIONS),
     createdAt: now,
     updatedAt: now
   }
@@ -247,6 +257,19 @@ function publicPublishNotes(publishDir: string): string {
     '',
     'For GitHub Pages, keep the generated .nojekyll file so the _forge asset folder is served.'
   ].join('\n')
+}
+
+function publishDeployTargetLabel(target: PublishDeployTarget): string {
+  const labels: Record<PublishDeployTarget, string> = {
+    manual: 'Manual upload',
+    'github-pages': 'GitHub Pages',
+    'cloudflare-pages': 'Cloudflare Pages',
+    netlify: 'Netlify',
+    vercel: 'Vercel',
+    's3-r2': 'S3 / R2',
+    ipfs: 'IPFS'
+  }
+  return labels[target]
 }
 
 async function createPairingQr(pairingUrl: string | undefined): Promise<string> {
@@ -632,6 +655,16 @@ export default function SettingsModal(): React.JSX.Element {
     setPublishSites(publishSites.map((site) => (site.id === siteId ? { ...updater(site), updatedAt: new Date().toISOString() } : site)))
   }
 
+  const updatePublishIntegrations = (
+    siteId: string,
+    updater: (integrations: PublishSiteIntegrations) => PublishSiteIntegrations
+  ): void => {
+    updatePublishSite(siteId, (site) => ({
+      ...site,
+      integrations: updater(site.integrations ?? structuredClone(DEFAULT_PUBLISH_SITE_INTEGRATIONS))
+    }))
+  }
+
   const addPublishSite = (): void => {
     if (!vault) return
     const index = publishSites.length + 1
@@ -673,7 +706,8 @@ export default function SettingsModal(): React.JSX.Element {
         scopePath: site.scope.kind === 'folder' ? site.scope.folder : '',
         clean: site.options.clean,
         showTags: site.options.showTags,
-        showBacklinks: site.options.showBacklinks
+        showBacklinks: site.options.showBacklinks,
+        integrations: site.integrations
       })
       setPublishState({
         siteId: site.id,
@@ -1083,6 +1117,383 @@ export default function SettingsModal(): React.JSX.Element {
                                 </span>
                               </label>
                             ))}
+                          </div>
+                        </div>
+
+                        <div className="publish-subsection">
+                          <div>
+                            <div className="settings-row-label">Publishing integrations</div>
+                            <div className="settings-row-desc">
+                              Provider-neutral primitives emitted into this static site. No Forge-hosted server is required.
+                            </div>
+                          </div>
+                          <div className="publish-integrations-grid">
+                            <div className="publish-integration-card">
+                              <div className="publish-integration-title">
+                                <SearchCheck size={15} />
+                                <span>SEO / RSS</span>
+                              </div>
+                              <label className="publish-option compact">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPublishSite.integrations.seoRss.enabled}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      seoRss: { ...integrations.seoRss, enabled: event.target.checked }
+                                    }))
+                                  }
+                                />
+                                <span>
+                                  <strong>Search metadata</strong>
+                                  <small>Canonical, Open Graph, and feed links.</small>
+                                </span>
+                              </label>
+                              <label className="publish-field">
+                                <span>Public URL</span>
+                                <input
+                                  className="settings-text-input"
+                                  placeholder="https://example.com"
+                                  value={selectedPublishSite.integrations.seoRss.siteUrl}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      seoRss: { ...integrations.seoRss, siteUrl: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="publish-field">
+                                <span>Social image</span>
+                                <input
+                                  className="settings-text-input"
+                                  placeholder="https://example.com/og.png"
+                                  value={selectedPublishSite.integrations.seoRss.socialImage}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      seoRss: { ...integrations.seoRss, socialImage: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <div className="publish-mini-options">
+                                {[
+                                  ['rss', 'RSS', <Rss size={13} />],
+                                  ['sitemap', 'Sitemap', <Globe2 size={13} />],
+                                  ['robots', 'Robots', <Braces size={13} />]
+                                ].map(([key, label, icon]) => (
+                                  <label key={key as string}>
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(
+                                        selectedPublishSite.integrations.seoRss[
+                                          key as keyof typeof selectedPublishSite.integrations.seoRss
+                                        ]
+                                      )}
+                                      onChange={(event) =>
+                                        updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                          ...integrations,
+                                          seoRss: { ...integrations.seoRss, [key as string]: event.target.checked }
+                                        }))
+                                      }
+                                    />
+                                    {icon}
+                                    <span>{label as string}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="publish-integration-card">
+                              <div className="publish-integration-title">
+                                <BarChart3 size={15} />
+                                <span>Analytics</span>
+                              </div>
+                              <label className="publish-field">
+                                <span>Provider</span>
+                                <select
+                                  className="settings-text-input"
+                                  value={selectedPublishSite.integrations.analytics.provider}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      analytics: {
+                                        ...integrations.analytics,
+                                        provider: event.target.value as PublishAnalyticsProvider
+                                      }
+                                    }))
+                                  }
+                                >
+                                  <option value="none">None</option>
+                                  <option value="plausible">Plausible</option>
+                                  <option value="umami">Umami</option>
+                                  <option value="custom">Custom snippet</option>
+                                </select>
+                              </label>
+                              <label className="publish-field">
+                                <span>Domain</span>
+                                <input
+                                  className="settings-text-input"
+                                  placeholder="example.com"
+                                  value={selectedPublishSite.integrations.analytics.domain}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      analytics: { ...integrations.analytics, domain: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="publish-field">
+                                <span>Script URL</span>
+                                <input
+                                  className="settings-text-input"
+                                  placeholder="Optional"
+                                  value={selectedPublishSite.integrations.analytics.scriptUrl}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      analytics: { ...integrations.analytics, scriptUrl: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="publish-field">
+                                <span>Website ID</span>
+                                <input
+                                  className="settings-text-input"
+                                  placeholder="For Umami"
+                                  value={selectedPublishSite.integrations.analytics.websiteId}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      analytics: { ...integrations.analytics, websiteId: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="publish-field">
+                                <span>Custom snippet</span>
+                                <textarea
+                                  className="settings-textarea compact"
+                                  placeholder="<script defer ...></script>"
+                                  value={selectedPublishSite.integrations.analytics.customSnippet}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      analytics: { ...integrations.analytics, customSnippet: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                            </div>
+
+                            <div className="publish-integration-card">
+                              <div className="publish-integration-title">
+                                <Rocket size={15} />
+                                <span>Deploy targets</span>
+                              </div>
+                              <label className="publish-field">
+                                <span>Target</span>
+                                <select
+                                  className="settings-text-input"
+                                  value={selectedPublishSite.integrations.deploy.target}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      deploy: { ...integrations.deploy, target: event.target.value as PublishDeployTarget }
+                                    }))
+                                  }
+                                >
+                                  <option value="manual">Manual upload</option>
+                                  <option value="github-pages">GitHub Pages</option>
+                                  <option value="cloudflare-pages">Cloudflare Pages</option>
+                                  <option value="netlify">Netlify</option>
+                                  <option value="vercel">Vercel</option>
+                                  <option value="s3-r2">S3 / R2</option>
+                                  <option value="ipfs">IPFS</option>
+                                </select>
+                              </label>
+                              <label className="publish-field">
+                                <span>Production URL</span>
+                                <input
+                                  className="settings-text-input"
+                                  placeholder="https://site.example"
+                                  value={selectedPublishSite.integrations.deploy.productionUrl}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      deploy: { ...integrations.deploy, productionUrl: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="publish-field">
+                                <span>Project name</span>
+                                <input
+                                  className="settings-text-input"
+                                  placeholder={publishDeployTargetLabel(selectedPublishSite.integrations.deploy.target)}
+                                  value={selectedPublishSite.integrations.deploy.projectName}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      deploy: { ...integrations.deploy, projectName: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="publish-field">
+                                <span>Deploy notes</span>
+                                <textarea
+                                  className="settings-textarea compact"
+                                  placeholder="Anything the user or agent should remember before deploy."
+                                  value={selectedPublishSite.integrations.deploy.notes}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      deploy: { ...integrations.deploy, notes: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                            </div>
+
+                            <div className="publish-integration-card">
+                              <div className="publish-integration-title">
+                                <Code2 size={15} />
+                                <span>Embeds</span>
+                              </div>
+                              <label className="publish-option compact">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPublishSite.integrations.embeds.enabled}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      embeds: { ...integrations.embeds, enabled: event.target.checked }
+                                    }))
+                                  }
+                                />
+                                <span>
+                                  <strong>Embed blocks</strong>
+                                  <small>Enable fenced forge-embed blocks.</small>
+                                </span>
+                              </label>
+                              <label className="publish-option compact">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPublishSite.integrations.embeds.allowIframes}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      embeds: { ...integrations.embeds, allowIframes: event.target.checked }
+                                    }))
+                                  }
+                                />
+                                <span>
+                                  <strong>Iframe embeds</strong>
+                                  <small>Render approved HTTPS URLs as sandboxed iframes.</small>
+                                </span>
+                              </label>
+                              <label className="publish-option compact">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPublishSite.integrations.embeds.allowExternalMedia}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      embeds: { ...integrations.embeds, allowExternalMedia: event.target.checked }
+                                    }))
+                                  }
+                                />
+                                <span>
+                                  <strong>External media</strong>
+                                  <small>Allow remote image URLs in published notes.</small>
+                                </span>
+                              </label>
+                            </div>
+
+                            <div className="publish-integration-card">
+                              <div className="publish-integration-title">
+                                <Mail size={15} />
+                                <span>Forms</span>
+                              </div>
+                              <label className="publish-option compact">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPublishSite.integrations.forms.enabled}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      forms: { ...integrations.forms, enabled: event.target.checked }
+                                    }))
+                                  }
+                                />
+                                <span>
+                                  <strong>Contact form</strong>
+                                  <small>Add a static form to the generated home page.</small>
+                                </span>
+                              </label>
+                              <label className="publish-field">
+                                <span>Provider</span>
+                                <select
+                                  className="settings-text-input"
+                                  value={selectedPublishSite.integrations.forms.provider}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      forms: { ...integrations.forms, provider: event.target.value as PublishFormProvider }
+                                    }))
+                                  }
+                                >
+                                  <option value="none">None</option>
+                                  <option value="netlify">Netlify Forms</option>
+                                  <option value="formspree">Formspree</option>
+                                  <option value="custom">Custom endpoint</option>
+                                </select>
+                              </label>
+                              <label className="publish-field">
+                                <span>Form name</span>
+                                <input
+                                  className="settings-text-input"
+                                  value={selectedPublishSite.integrations.forms.formName}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      forms: { ...integrations.forms, formName: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="publish-field">
+                                <span>Endpoint</span>
+                                <input
+                                  className="settings-text-input"
+                                  placeholder="https://formspree.io/f/..."
+                                  value={selectedPublishSite.integrations.forms.endpoint}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      forms: { ...integrations.forms, endpoint: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                              <label className="publish-field">
+                                <span>Button label</span>
+                                <input
+                                  className="settings-text-input"
+                                  value={selectedPublishSite.integrations.forms.buttonLabel}
+                                  onChange={(event) =>
+                                    updatePublishIntegrations(selectedPublishSite.id, (integrations) => ({
+                                      ...integrations,
+                                      forms: { ...integrations.forms, buttonLabel: event.target.value }
+                                    }))
+                                  }
+                                />
+                              </label>
+                            </div>
                           </div>
                         </div>
 

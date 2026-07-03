@@ -51,6 +51,56 @@ export interface PublishSiteOptions {
   showBacklinks: boolean
 }
 
+export type PublishAnalyticsProvider = 'none' | 'plausible' | 'umami' | 'custom'
+export type PublishDeployTarget = 'manual' | 'github-pages' | 'cloudflare-pages' | 'netlify' | 'vercel' | 's3-r2' | 'ipfs'
+export type PublishFormProvider = 'none' | 'netlify' | 'formspree' | 'custom'
+
+export interface PublishSeoRssConfig {
+  enabled: boolean
+  siteUrl: string
+  socialImage: string
+  rss: boolean
+  sitemap: boolean
+  robots: boolean
+}
+
+export interface PublishAnalyticsConfig {
+  provider: PublishAnalyticsProvider
+  domain: string
+  scriptUrl: string
+  websiteId: string
+  customSnippet: string
+}
+
+export interface PublishDeployConfig {
+  target: PublishDeployTarget
+  projectName: string
+  productionUrl: string
+  notes: string
+}
+
+export interface PublishEmbedsConfig {
+  enabled: boolean
+  allowIframes: boolean
+  allowExternalMedia: boolean
+}
+
+export interface PublishFormsConfig {
+  enabled: boolean
+  provider: PublishFormProvider
+  formName: string
+  endpoint: string
+  buttonLabel: string
+}
+
+export interface PublishSiteIntegrations {
+  seoRss: PublishSeoRssConfig
+  analytics: PublishAnalyticsConfig
+  deploy: PublishDeployConfig
+  embeds: PublishEmbedsConfig
+  forms: PublishFormsConfig
+}
+
 export interface PublishSiteConfig {
   id: string
   name: string
@@ -59,6 +109,7 @@ export interface PublishSiteConfig {
   scope: PublishSiteScope
   outputDir: string
   options: PublishSiteOptions
+  integrations: PublishSiteIntegrations
   createdAt: string
   updatedAt: string
 }
@@ -71,6 +122,43 @@ export interface PublishVaultOptions {
   clean?: boolean
   showTags?: boolean
   showBacklinks?: boolean
+  integrations?: PublishSiteIntegrations
+}
+
+export const DEFAULT_PUBLISH_SITE_INTEGRATIONS: PublishSiteIntegrations = {
+  seoRss: {
+    enabled: true,
+    siteUrl: '',
+    socialImage: '',
+    rss: true,
+    sitemap: true,
+    robots: true
+  },
+  analytics: {
+    provider: 'none',
+    domain: '',
+    scriptUrl: '',
+    websiteId: '',
+    customSnippet: ''
+  },
+  deploy: {
+    target: 'manual',
+    projectName: '',
+    productionUrl: '',
+    notes: ''
+  },
+  embeds: {
+    enabled: true,
+    allowIframes: false,
+    allowExternalMedia: true
+  },
+  forms: {
+    enabled: false,
+    provider: 'none',
+    formName: 'contact',
+    endpoint: '',
+    buttonLabel: 'Send'
+  }
 }
 
 export interface ExtensionInstallPreference {

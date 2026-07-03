@@ -2,8 +2,13 @@ import { create } from 'zustand'
 import type { ReactNode } from 'react'
 import {
   DEFAULT_SETTINGS,
+  DEFAULT_PUBLISH_SITE_INTEGRATIONS,
+  type PublishAnalyticsProvider,
+  type PublishDeployTarget,
+  type PublishFormProvider,
   type ExtensionSettings,
   type PublishSiteConfig,
+  type PublishSiteIntegrations,
   type PublishSiteTheme,
   type Settings,
   type ThemeMode,
@@ -237,6 +242,91 @@ function normalizePublishSiteTheme(value: unknown): PublishSiteTheme {
   return themes.includes(value as PublishSiteTheme) ? (value as PublishSiteTheme) : 'minimal'
 }
 
+function stringValue(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function booleanValue(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback
+}
+
+function normalizeAnalyticsProvider(value: unknown): PublishAnalyticsProvider {
+  const providers: PublishAnalyticsProvider[] = ['none', 'plausible', 'umami', 'custom']
+  return providers.includes(value as PublishAnalyticsProvider) ? (value as PublishAnalyticsProvider) : 'none'
+}
+
+function normalizeDeployTarget(value: unknown): PublishDeployTarget {
+  const targets: PublishDeployTarget[] = ['manual', 'github-pages', 'cloudflare-pages', 'netlify', 'vercel', 's3-r2', 'ipfs']
+  return targets.includes(value as PublishDeployTarget) ? (value as PublishDeployTarget) : 'manual'
+}
+
+function normalizeFormProvider(value: unknown): PublishFormProvider {
+  const providers: PublishFormProvider[] = ['none', 'netlify', 'formspree', 'custom']
+  return providers.includes(value as PublishFormProvider) ? (value as PublishFormProvider) : 'none'
+}
+
+function normalizePublishSiteIntegrations(value: unknown): PublishSiteIntegrations {
+  const raw = value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Partial<PublishSiteIntegrations>)
+    : {}
+  const seoRss: Record<string, unknown> =
+    raw.seoRss && typeof raw.seoRss === 'object' && !Array.isArray(raw.seoRss)
+      ? (raw.seoRss as unknown as Record<string, unknown>)
+      : {}
+  const analytics: Record<string, unknown> =
+    raw.analytics && typeof raw.analytics === 'object' && !Array.isArray(raw.analytics)
+      ? (raw.analytics as unknown as Record<string, unknown>)
+      : {}
+  const deploy: Record<string, unknown> =
+    raw.deploy && typeof raw.deploy === 'object' && !Array.isArray(raw.deploy)
+      ? (raw.deploy as unknown as Record<string, unknown>)
+      : {}
+  const embeds: Record<string, unknown> =
+    raw.embeds && typeof raw.embeds === 'object' && !Array.isArray(raw.embeds)
+      ? (raw.embeds as unknown as Record<string, unknown>)
+      : {}
+  const forms: Record<string, unknown> =
+    raw.forms && typeof raw.forms === 'object' && !Array.isArray(raw.forms)
+      ? (raw.forms as unknown as Record<string, unknown>)
+      : {}
+
+  return {
+    seoRss: {
+      enabled: booleanValue(seoRss.enabled, DEFAULT_PUBLISH_SITE_INTEGRATIONS.seoRss.enabled),
+      siteUrl: stringValue(seoRss.siteUrl),
+      socialImage: stringValue(seoRss.socialImage),
+      rss: booleanValue(seoRss.rss, DEFAULT_PUBLISH_SITE_INTEGRATIONS.seoRss.rss),
+      sitemap: booleanValue(seoRss.sitemap, DEFAULT_PUBLISH_SITE_INTEGRATIONS.seoRss.sitemap),
+      robots: booleanValue(seoRss.robots, DEFAULT_PUBLISH_SITE_INTEGRATIONS.seoRss.robots)
+    },
+    analytics: {
+      provider: normalizeAnalyticsProvider(analytics.provider),
+      domain: stringValue(analytics.domain),
+      scriptUrl: stringValue(analytics.scriptUrl),
+      websiteId: stringValue(analytics.websiteId),
+      customSnippet: stringValue(analytics.customSnippet)
+    },
+    deploy: {
+      target: normalizeDeployTarget(deploy.target),
+      projectName: stringValue(deploy.projectName),
+      productionUrl: stringValue(deploy.productionUrl),
+      notes: stringValue(deploy.notes)
+    },
+    embeds: {
+      enabled: booleanValue(embeds.enabled, DEFAULT_PUBLISH_SITE_INTEGRATIONS.embeds.enabled),
+      allowIframes: booleanValue(embeds.allowIframes, DEFAULT_PUBLISH_SITE_INTEGRATIONS.embeds.allowIframes),
+      allowExternalMedia: booleanValue(embeds.allowExternalMedia, DEFAULT_PUBLISH_SITE_INTEGRATIONS.embeds.allowExternalMedia)
+    },
+    forms: {
+      enabled: booleanValue(forms.enabled, DEFAULT_PUBLISH_SITE_INTEGRATIONS.forms.enabled),
+      provider: normalizeFormProvider(forms.provider),
+      formName: stringValue(forms.formName) || DEFAULT_PUBLISH_SITE_INTEGRATIONS.forms.formName,
+      endpoint: stringValue(forms.endpoint),
+      buttonLabel: stringValue(forms.buttonLabel) || DEFAULT_PUBLISH_SITE_INTEGRATIONS.forms.buttonLabel
+    }
+  }
+}
+
 function normalizePublishSiteConfig(value: unknown, folders: string[] = []): PublishSiteConfig | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   const raw = value as Partial<PublishSiteConfig>
@@ -268,6 +358,7 @@ function normalizePublishSiteConfig(value: unknown, folders: string[] = []): Pub
       showTags: options.showTags !== false,
       showBacklinks: options.showBacklinks !== false
     },
+    integrations: normalizePublishSiteIntegrations(raw.integrations),
     createdAt,
     updatedAt
   }

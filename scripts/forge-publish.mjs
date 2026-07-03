@@ -26,6 +26,22 @@ Options:
   --clean                 Remove a previous Forge publish output before writing
   --no-tags               Omit tag navigation and tag pages
   --no-backlinks          Omit backlink sections from note pages
+  --site-url <url>        Public URL for canonical links, RSS, sitemap, robots
+  --social-image <url>    Open Graph image URL
+  --no-rss                Skip rss.xml
+  --no-sitemap            Skip sitemap.xml
+  --no-robots             Skip robots.txt
+  --analytics-provider <none|plausible|umami|custom>
+  --analytics-domain <domain>
+  --analytics-script <url>
+  --analytics-website-id <id>
+  --deploy-target <name>  github-pages, cloudflare-pages, netlify, vercel, s3-r2, ipfs
+  --deploy-url <url>      Production URL for the deploy target
+  --allow-iframes         Render forge-embed blocks as sandboxed iframes
+  --no-external-media     Do not render remote image URLs
+  --form                  Add a static contact form to the home page
+  --form-provider <provider>
+  --form-endpoint <url>
   --json                  Print a machine-readable summary
   --help, -h              Show this help
 
@@ -45,6 +61,7 @@ function parseArgv(argv) {
     clean: false,
     showTags: true,
     showBacklinks: true,
+    integrations: {},
     json: false,
     help: false
   }
@@ -81,6 +98,58 @@ function parseArgv(argv) {
       options.showTags = false
     } else if (arg === '--no-backlinks') {
       options.showBacklinks = false
+    } else if (arg === '--site-url') {
+      options.siteUrl = argv[++i] ?? ''
+    } else if (arg.startsWith('--site-url=')) {
+      options.siteUrl = arg.slice('--site-url='.length)
+    } else if (arg === '--social-image') {
+      options.socialImage = argv[++i] ?? ''
+    } else if (arg.startsWith('--social-image=')) {
+      options.socialImage = arg.slice('--social-image='.length)
+    } else if (arg === '--no-rss') {
+      options.noRss = true
+    } else if (arg === '--no-sitemap') {
+      options.noSitemap = true
+    } else if (arg === '--no-robots') {
+      options.noRobots = true
+    } else if (arg === '--analytics-provider') {
+      options.analyticsProvider = argv[++i] ?? ''
+    } else if (arg.startsWith('--analytics-provider=')) {
+      options.analyticsProvider = arg.slice('--analytics-provider='.length)
+    } else if (arg === '--analytics-domain') {
+      options.analyticsDomain = argv[++i] ?? ''
+    } else if (arg.startsWith('--analytics-domain=')) {
+      options.analyticsDomain = arg.slice('--analytics-domain='.length)
+    } else if (arg === '--analytics-script') {
+      options.analyticsScript = argv[++i] ?? ''
+    } else if (arg.startsWith('--analytics-script=')) {
+      options.analyticsScript = arg.slice('--analytics-script='.length)
+    } else if (arg === '--analytics-website-id') {
+      options.analyticsWebsiteId = argv[++i] ?? ''
+    } else if (arg.startsWith('--analytics-website-id=')) {
+      options.analyticsWebsiteId = arg.slice('--analytics-website-id='.length)
+    } else if (arg === '--deploy-target') {
+      options.deployTarget = argv[++i] ?? ''
+    } else if (arg.startsWith('--deploy-target=')) {
+      options.deployTarget = arg.slice('--deploy-target='.length)
+    } else if (arg === '--deploy-url') {
+      options.deployUrl = argv[++i] ?? ''
+    } else if (arg.startsWith('--deploy-url=')) {
+      options.deployUrl = arg.slice('--deploy-url='.length)
+    } else if (arg === '--allow-iframes') {
+      options.allowIframes = true
+    } else if (arg === '--no-external-media') {
+      options.noExternalMedia = true
+    } else if (arg === '--form') {
+      options.form = true
+    } else if (arg === '--form-provider') {
+      options.formProvider = argv[++i] ?? ''
+    } else if (arg.startsWith('--form-provider=')) {
+      options.formProvider = arg.slice('--form-provider='.length)
+    } else if (arg === '--form-endpoint') {
+      options.formEndpoint = argv[++i] ?? ''
+    } else if (arg.startsWith('--form-endpoint=')) {
+      options.formEndpoint = arg.slice('--form-endpoint='.length)
     } else if (arg === '--json') {
       options.json = true
     } else if (arg === '--help' || arg === '-h') {
@@ -91,6 +160,37 @@ function parseArgv(argv) {
   }
 
   return options
+}
+
+function publishIntegrationsFromOptions(options = {}) {
+  return {
+    seoRss: {
+      siteUrl: options.siteUrl,
+      socialImage: options.socialImage,
+      rss: options.noRss ? false : undefined,
+      sitemap: options.noSitemap ? false : undefined,
+      robots: options.noRobots ? false : undefined
+    },
+    analytics: {
+      provider: options.analyticsProvider,
+      domain: options.analyticsDomain,
+      scriptUrl: options.analyticsScript,
+      websiteId: options.analyticsWebsiteId
+    },
+    deploy: {
+      target: options.deployTarget,
+      productionUrl: options.deployUrl
+    },
+    embeds: {
+      allowIframes: Boolean(options.allowIframes),
+      allowExternalMedia: options.noExternalMedia ? false : undefined
+    },
+    forms: {
+      enabled: Boolean(options.form),
+      provider: options.formProvider,
+      endpoint: options.formEndpoint
+    }
+  }
 }
 
 function printSummary(result, json) {
@@ -145,7 +245,8 @@ async function main() {
       theme: options.theme,
       clean: options.clean,
       showTags: options.showTags,
-      showBacklinks: options.showBacklinks
+      showBacklinks: options.showBacklinks,
+      integrations: publishIntegrationsFromOptions(options)
     })
     printSummary(result, options.json)
   } catch (error) {

@@ -516,6 +516,121 @@ body.site-theme-terminal-ledger .blog-prose .media-gallery img {
   outline-color: rgba(255, 255, 255, 0.1);
 }
 
+.forge-embed-frame {
+  margin: 1.4em 0;
+}
+
+.forge-embed-frame iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: var(--panel-soft);
+  box-shadow: var(--shadow-border);
+}
+
+.forge-embed-frame figcaption {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.forge-embed-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+}
+
+.publish-form-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(260px, 1fr);
+  gap: clamp(18px, 4vw, 42px);
+  align-items: start;
+  max-width: 980px;
+  margin: 48px 0 0;
+  padding: clamp(18px, 3vw, 28px);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow-border);
+}
+
+.publish-form-section h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 4vw, 2.8rem);
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.publish-form-section p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.publish-form {
+  display: grid;
+  gap: 12px;
+}
+
+.publish-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.publish-form input,
+.publish-form textarea {
+  width: 100%;
+  border: 0;
+  border-radius: 7px;
+  padding: 11px 12px;
+  background: var(--panel-soft);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.publish-form textarea {
+  resize: vertical;
+}
+
+.publish-form input:focus,
+.publish-form textarea:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.publish-form button {
+  justify-self: start;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--text);
+  color: var(--bg);
+  font: inherit;
+  font-weight: 750;
+  transition-property: transform, opacity;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.publish-form button:hover {
+  opacity: 0.86;
+}
+
+.publish-form button:active {
+  transform: scale(0.96);
+}
+
+.form-honeypot {
+  display: none;
+}
+
 .internal-link {
   color: var(--accent);
   font-weight: 620;
@@ -1751,7 +1866,8 @@ body.site-theme-terminal-ledger .blog-prose .embed {
   }
 
   .swiss-post .blog-toc,
-  .blog-relations {
+  .blog-relations,
+  .publish-form-section {
     grid-template-columns: 1fr;
   }
 }

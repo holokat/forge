@@ -103,6 +103,7 @@ async function publishVaultForDesktop(
       clean?: boolean
       showTags?: boolean
       showBacklinks?: boolean
+      integrations?: PublishVaultOptions['integrations']
     }): Promise<{
       output: string
       totals: { notes: number }
@@ -120,7 +121,8 @@ async function publishVaultForDesktop(
     scopePath: options.scopePath,
     clean: options.clean ?? true,
     showTags: options.showTags,
-    showBacklinks: options.showBacklinks
+    showBacklinks: options.showBacklinks,
+    integrations: options.integrations
   })
 
   return {

@@ -3347,6 +3347,7 @@ button.tag:hover {
   .publish-site-form-grid,
   .publish-theme-grid,
   .publish-options-grid,
+  .publish-integrations-grid,
   .mobile-pairing-card {
     grid-template-columns: 1fr;
   }
@@ -3589,6 +3590,12 @@ button.tag:hover {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.publish-integrations-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
 .publish-theme-card,
 .publish-option {
   min-width: 0;
@@ -3766,6 +3773,87 @@ button.tag:hover {
   width: 15px;
   height: 15px;
   margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+
+.publish-option.compact {
+  padding: 9px;
+}
+
+.publish-integration-card {
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+  align-content: start;
+  padding: 11px;
+  border-radius: 9px;
+  background: var(--bg-panel);
+  box-shadow: inset 0 0 0 1px var(--border);
+  transition-property: box-shadow, transform;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.publish-integration-card:hover {
+  box-shadow: inset 0 0 0 1px var(--border-strong), 0 1px 2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.publish-integration-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 24px;
+  color: var(--text-normal);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.publish-integration-title svg {
+  color: var(--text-muted);
+  stroke-width: 2.1;
+}
+
+.settings-textarea.compact {
+  min-height: 58px;
+}
+
+.publish-mini-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.publish-mini-options label {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 11.5px;
+  font-weight: 650;
+  transition-property: background-color, color, box-shadow, transform;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.publish-mini-options label:hover {
+  color: var(--text-normal);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.publish-mini-options label:active {
+  transform: scale(0.96);
+}
+
+.publish-mini-options input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
   accent-color: var(--accent);
 }
 
@@ -4619,7 +4707,8 @@ button.tag:hover {
   .publish-sites-layout,
   .publish-site-form-grid,
   .publish-theme-grid,
-  .publish-options-grid {
+  .publish-options-grid,
+  .publish-integrations-grid {
     grid-template-columns: 1fr;
   }
 

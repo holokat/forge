@@ -31,6 +31,30 @@ node scripts/forge-publish.mjs \
 
 The desktop app can save multiple publishing profiles per vault. Each profile stores a site name, description, theme, scope, output folder, clean behavior, tag navigation, backlink sections, and deploy notes.
 
+Each site profile also has a Publishing integrations section with five provider-neutral primitives:
+
+- SEO/RSS: canonical URL, Open Graph metadata, `rss.xml`, `sitemap.xml`, and `robots.txt`.
+- Analytics: Plausible, Umami, or a custom snippet emitted into generated pages.
+- Deploy targets: profile metadata for GitHub Pages, Cloudflare Pages, Netlify, Vercel, S3/R2, IPFS, or manual upload.
+- Embeds: optional `forge-embed` fenced blocks for sandboxed HTTPS iframe embeds.
+- Forms: optional static contact form markup for Netlify Forms, Formspree, or a custom endpoint.
+
+Generate a public-ready site with SEO/RSS, Plausible analytics, sandboxed embeds, and a Netlify-compatible static form:
+
+```bash
+node scripts/forge-publish.mjs \
+  --vault /path/to/vault \
+  --out /path/to/site \
+  --title "Projects" \
+  --site-url https://example.com \
+  --analytics-provider plausible \
+  --analytics-domain example.com \
+  --allow-iframes \
+  --form \
+  --form-provider netlify \
+  --clean
+```
+
 Available themes:
 
 - `minimal`, `editorial`, `reference`
@@ -50,6 +74,7 @@ The output folder contains:
 - `tags/*.html` for tag index pages when tag navigation is enabled.
 - `assets/**` copied from non-Markdown files in the vault.
 - `_forge/styles.css`, `_forge/site.js`, and `_forge/manifest.json` for generated site assets, theme toggles, reading progress, and metadata.
+- `rss.xml`, `sitemap.xml`, and `robots.txt` when SEO/RSS integrations are enabled. RSS and sitemap require a public site URL.
 - `.nojekyll` so GitHub Pages serves `_forge` assets.
 - `.forge-publish.json` as the ownership marker used by `--clean`.
 
@@ -59,6 +84,16 @@ The output folder contains:
 - Markdown links to other notes, such as `[Plan](Projects/Plan.md)`, resolve to generated note pages.
 - Hashtags become links to generated tag pages.
 - Local images, audio, video, PDFs, and other non-Markdown assets are copied to `assets/` and linked with relative URLs.
+- `forge-embed` fenced blocks can render sandboxed iframe embeds when iframe embeds are enabled:
+
+  ````markdown
+  ```forge-embed
+  url: https://www.youtube.com/embed/example
+  title: Demo video
+  height: 420
+  ```
+  ````
+
 - Missing wikilinks are shown as unresolved and listed on `index.html`.
 
 ## Public Hosting
