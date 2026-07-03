@@ -7,9 +7,10 @@ export interface TreeNode {
 
 const VOICE_INBOX_PATH = 'Inbox/Voice'
 
-export function buildTree(files: string[], folders: string[]): TreeNode[] {
+export function buildTree(files: string[], folders: string[], pinnedFolders: string[] = []): TreeNode[] {
   const root: TreeNode = { name: '', path: '', isFolder: true, children: [] }
   const nodes = new Map<string, TreeNode>([['', root]])
+  const pinned = new Set(pinnedFolders)
 
   const ensureFolder = (path: string): TreeNode => {
     const existing = nodes.get(path)
@@ -35,6 +36,11 @@ export function buildTree(files: string[], folders: string[]): TreeNode[] {
   const sortNode = (node: TreeNode): void => {
     node.children.sort((a, b) => {
       if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1
+      if (a.isFolder && b.isFolder) {
+        const aPinned = pinned.has(a.path)
+        const bPinned = pinned.has(b.path)
+        if (aPinned !== bPinned) return aPinned ? -1 : 1
+      }
       if (node.path === VOICE_INBOX_PATH && !a.isFolder && !b.isFolder) {
         return b.name.localeCompare(a.name, undefined, { sensitivity: 'base' })
       }

@@ -8,6 +8,8 @@ import {
   FolderPlus,
   Image,
   Pencil,
+  Pin,
+  PinOff,
   Trash2
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -110,7 +112,9 @@ function TreeItem({
   const openFile = useStore((s) => s.openFile)
   const setContextMenu = useStore((s) => s.setContextMenu)
   const active = useStore((s) => activeTab(s)?.path)
+  const pinnedFolders = useStore((s) => s.pinnedFolders)
   const isOpen = expanded.has(node.path)
+  const isPinned = node.isFolder && pinnedFolders.includes(node.path)
 
   const onContextMenu = (e: React.MouseEvent): void => {
     e.preventDefault()
@@ -120,6 +124,11 @@ function TreeItem({
       ? [
           { label: 'New note', icon: <FilePlus2 size={14} />, action: () => store.createNote(node.path) },
           { label: 'New folder', icon: <FolderPlus size={14} />, action: () => store.createFolder(node.path, 'Untitled folder') },
+          {
+            label: isPinned ? 'Unpin folder' : 'Pin folder to top',
+            icon: isPinned ? <PinOff size={14} /> : <Pin size={14} />,
+            action: () => store.togglePinnedFolder(node.path)
+          },
           { label: 'Rename…', icon: <Pencil size={14} />, action: () => setRenaming(node.path) },
           { label: 'Reveal in Finder', icon: <FolderOpen size={14} />, action: () => window.forge.reveal(store.vault!, node.path) },
           {
@@ -156,7 +165,7 @@ function TreeItem({
     return (
       <div>
         <div
-          className={`tree-item tree-folder${dropClass(node.path)}${draggingClass}`}
+          className={`tree-item tree-folder${isPinned ? ' is-pinned' : ''}${dropClass(node.path)}${draggingClass}`}
           style={{ paddingLeft: 8 + depth * 14 }}
           onClick={() => toggle(node.path)}
           onContextMenu={onContextMenu}
@@ -166,7 +175,10 @@ function TreeItem({
           {renaming === node.path ? (
             <RenameInput path={node.path} isFolder />
           ) : (
-            <span className="tree-label">{node.name}</span>
+            <>
+              <span className="tree-label">{node.name}</span>
+              {isPinned && <Pin size={11} className="tree-pin-icon" aria-hidden="true" />}
+            </>
           )}
         </div>
         {isOpen && (
@@ -216,6 +228,7 @@ function TreeItem({
 export default function FileTree(): React.JSX.Element {
   const files = useStore((s) => s.files)
   const folders = useStore((s) => s.folders)
+  const pinnedFolders = useStore((s) => s.pinnedFolders)
   const movePath = useStore((s) => s.movePath)
   const [expanded, setExpanded] = useState<Set<string>>(new Set(folders))
   const [renaming, setRenamingState] = useState<string | null>(null)
@@ -223,7 +236,7 @@ export default function FileTree(): React.JSX.Element {
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   setRenamingGlobal = setRenamingState
 
-  const tree = useMemo(() => buildTree(files, folders), [files, folders])
+  const tree = useMemo(() => buildTree(files, folders, pinnedFolders), [files, folders, pinnedFolders])
 
   const toggle = (path: string): void => {
     setExpanded((prev) => {

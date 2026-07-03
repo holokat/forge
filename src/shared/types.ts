@@ -25,6 +25,7 @@ export interface Settings {
   templatesFolder: string
   dailyNotesFolder: string
   bookmarks: Record<string, string[]>
+  pinnedFolders: Record<string, string[]>
   enabledExtensions: string[]
   extensionSettings: ExtensionSettings
 }
@@ -114,6 +115,7 @@ export const DEFAULT_SETTINGS: Settings = {
   templatesFolder: 'Templates',
   dailyNotesFolder: 'Daily',
   bookmarks: {},
+  pinnedFolders: {},
   enabledExtensions: [],
   extensionSettings: {
     schemaVersion: 1,

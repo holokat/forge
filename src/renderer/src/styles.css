@@ -751,11 +751,19 @@ body.resizing .pane-resizer::after {
   border-radius: 6px;
   color: var(--text-muted);
   overflow: hidden;
+  transition-property: background-color, color, transform, box-shadow;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
 .tree-item:hover {
   background: var(--bg-hover);
   color: var(--text-normal);
+  transform: translateX(1px);
+}
+
+.tree-item:active {
+  transform: scale(0.96);
 }
 
 .tree-item.active {
@@ -766,6 +774,26 @@ body.resizing .pane-resizer::after {
 .tree-folder {
   font-weight: 550;
   color: var(--text-normal);
+}
+
+.tree-folder.is-pinned .tree-label {
+  color: var(--text-normal);
+}
+
+.tree-pin-icon {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--text-faint);
+  opacity: 0.72;
+  transition-property: color, opacity, transform;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.tree-folder:hover .tree-pin-icon {
+  color: var(--accent);
+  opacity: 1;
+  transform: scale(1.04);
 }
 
 .tree-chevron {
@@ -784,6 +812,7 @@ body.resizing .pane-resizer::after {
 }
 
 .tree-label {
+  min-width: 0;
   font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
@@ -2756,9 +2785,13 @@ button.tag:hover {
 }
 
 .template-starter {
-  min-height: 62px;
-  padding: 10px;
-  border-radius: 7px;
+  min-height: 70px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 11px;
+  border-radius: 9px;
   color: var(--text-muted);
   background: var(--bg-panel);
   box-shadow: inset 0 0 0 1px var(--border);
@@ -2771,10 +2804,35 @@ button.tag:hover {
 .template-starter:hover {
   color: var(--text-normal);
   box-shadow: inset 0 0 0 1px var(--border-strong), 0 1px 2px rgba(15, 15, 25, 0.06);
+  transform: translateY(-1px);
 }
 
 .template-starter:active {
   transform: scale(0.96);
+}
+
+.template-starter-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  transition-property: background-color, color, transform;
+  transition-duration: 140ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.template-starter:hover .template-starter-icon {
+  color: var(--accent);
+  background: var(--accent-soft);
+  transform: scale(1.04);
+}
+
+.template-starter-copy {
+  min-width: 0;
+  display: block;
 }
 
 .template-starter strong {
@@ -2784,10 +2842,13 @@ button.tag:hover {
   font-size: 12px;
 }
 
-.template-starter span {
+.template-starter-copy span {
   display: block;
+  min-width: 0;
+  overflow: hidden;
   font-size: 11.5px;
   line-height: 1.35;
+  text-overflow: ellipsis;
 }
 
 @media (max-width: 760px) {
@@ -3827,6 +3888,9 @@ button.tag:hover {
   padding: 5px 10px;
   border-radius: 6px;
   font-size: 13px;
+  transition-property: background-color, color, transform;
+  transition-duration: 120ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
 .context-menu-item-icon {
@@ -3853,6 +3917,10 @@ button.tag:hover {
 .context-menu-item:hover {
   background: var(--accent);
   color: var(--accent-contrast);
+}
+
+.context-menu-item:active {
+  transform: scale(0.96);
 }
 
 .context-menu-item.danger {

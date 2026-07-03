@@ -151,6 +151,8 @@ export interface ForgeState {
   dailyNotesFolder: string
   bookmarks: string[]
   bookmarkSettings: Record<string, string[]>
+  pinnedFolders: string[]
+  pinnedFolderSettings: Record<string, string[]>
   enabledExtensions: string[]
   extensionSettings: ExtensionSettings
   recentVaults: string[]
@@ -201,6 +203,7 @@ export interface ForgeState {
   setDailyNotesFolder(folder: string): void
   toggleBookmark(path: string): void
   removeBookmark(path: string): void
+  togglePinnedFolder(path: string): void
   setExtensionInstalled(extensionId: string, installed: boolean): void
   setExtensionEnabled(extensionId: string, enabled: boolean): void
   setLeftOpen(open: boolean): void
@@ -235,6 +238,7 @@ async function persistSettings(state: ForgeState): Promise<void> {
     templatesFolder: state.templatesFolder,
     dailyNotesFolder: state.dailyNotesFolder,
     bookmarks: bookmarkSettingsForState(state),
+    pinnedFolders: pinnedFolderSettingsForState(state),
     enabledExtensions: enabledExtensionIds(state.extensionSettings),
     extensionSettings: state.extensionSettings
   }
@@ -270,6 +274,25 @@ function bookmarkSettingsForState(state: ForgeState): Record<string, string[]> {
 function bookmarksForVault(settings: Record<string, string[]>, vault: string, files: string[]): string[] {
   const existing = new Set(files)
   return normalizeBookmarkList(settings[vault]).filter((path) => existing.has(path) && isMarkdown(path))
+}
+
+function normalizePinnedFolderSettings(value: unknown): Record<string, string[]> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const settings: Record<string, string[]> = {}
+  for (const [vault, folders] of Object.entries(value)) {
+    if (typeof vault === 'string' && vault.trim()) settings[vault] = normalizeBookmarkList(folders)
+  }
+  return settings
+}
+
+function pinnedFolderSettingsForState(state: ForgeState): Record<string, string[]> {
+  if (!state.vault) return state.pinnedFolderSettings
+  return { ...state.pinnedFolderSettings, [state.vault]: state.pinnedFolders }
+}
+
+function pinnedFoldersForVault(settings: Record<string, string[]>, vault: string, folders: string[]): string[] {
+  const existing = new Set(folders)
+  return normalizeBookmarkList(settings[vault]).filter((path) => existing.has(path))
 }
 
 function normalizeFolderPath(value: string): string {
@@ -2364,6 +2387,8 @@ export const useStore = create<ForgeState>((set, get) => ({
   dailyNotesFolder: DEFAULT_SETTINGS.dailyNotesFolder,
   bookmarks: [],
   bookmarkSettings: DEFAULT_SETTINGS.bookmarks,
+  pinnedFolders: [],
+  pinnedFolderSettings: DEFAULT_SETTINGS.pinnedFolders,
   enabledExtensions: DEFAULT_SETTINGS.enabledExtensions,
   extensionSettings: createDefaultExtensionSettings(),
   recentVaults: [],
@@ -2380,6 +2405,7 @@ export const useStore = create<ForgeState>((set, get) => ({
     const settings = await window.forge.readSettings()
     const extensionSettings = normalizeExtensionSettings(settings.extensionSettings, settings.enabledExtensions)
     const bookmarkSettings = normalizeBookmarkSettings(settings.bookmarks)
+    const pinnedFolderSettings = normalizePinnedFolderSettings(settings.pinnedFolders)
     set({
       theme: settings.theme,
       fontSize: settings.fontSize,
@@ -2387,6 +2413,7 @@ export const useStore = create<ForgeState>((set, get) => ({
       templatesFolder: settings.templatesFolder,
       dailyNotesFolder: settings.dailyNotesFolder,
       bookmarkSettings,
+      pinnedFolderSettings,
       extensionSettings,
       enabledExtensions: enabledExtensionIds(extensionSettings),
       recentVaults: settings.recentVaults,
@@ -2426,6 +2453,7 @@ export const useStore = create<ForgeState>((set, get) => ({
     const firstNote = files.find(isMarkdown) ?? null
     const tab: Tab = { id: newTabId(), kind: firstNote ? 'note' : 'empty', path: firstNote, mode: 'edit' }
     const bookmarks = bookmarksForVault(get().bookmarkSettings, vault, files)
+    const pinnedFolders = pinnedFoldersForVault(get().pinnedFolderSettings, vault, data.folders)
 
     set({
       vault,
@@ -2436,6 +2464,8 @@ export const useStore = create<ForgeState>((set, get) => ({
       index: buildIndex(data.contents),
       bookmarks,
       bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
+      pinnedFolders,
+      pinnedFolderSettings: { ...get().pinnedFolderSettings, [vault]: pinnedFolders },
       tabs: [tab],
       activeTabId: tab.id,
       recentVaults: recents,
@@ -2452,7 +2482,19 @@ export const useStore = create<ForgeState>((set, get) => ({
 
   closeVault() {
     noteContents.clear()
-    set({ vault: null, vaultName: '', files: [], folders: [], fileStats: {}, index: {}, bookmarks: [], tabs: [], activeTabId: null, modal: null })
+    set({
+      vault: null,
+      vaultName: '',
+      files: [],
+      folders: [],
+      fileStats: {},
+      index: {},
+      bookmarks: [],
+      pinnedFolders: [],
+      tabs: [],
+      activeTabId: null,
+      modal: null
+    })
     window.forge.setMobileVault(null).catch(console.error)
     persistSettings({ ...get(), vault: null } as ForgeState)
   },
@@ -2475,6 +2517,7 @@ export const useStore = create<ForgeState>((set, get) => ({
       t.kind === 'note' && t.path && !data.files.includes(t.path) ? { ...t, kind: 'empty' as TabKind, path: null } : t
     )
     const bookmarks = bookmarksForVault(get().bookmarkSettings, vault, data.files)
+    const pinnedFolders = pinnedFoldersForVault(get().pinnedFolderSettings, vault, data.folders)
     set({
       files: data.files,
       folders: data.folders,
@@ -2482,6 +2525,8 @@ export const useStore = create<ForgeState>((set, get) => ({
       index,
       bookmarks,
       bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
+      pinnedFolders,
+      pinnedFolderSettings: { ...get().pinnedFolderSettings, [vault]: pinnedFolders },
       tabs,
       contentVersion: get().contentVersion + 1
     })
@@ -2765,6 +2810,7 @@ export const useStore = create<ForgeState>((set, get) => ({
     for (const [key, value] of Object.entries(get().fileStats)) fileStats[mapPath(key)] = value
 
     const bookmarks = normalizeBookmarkList(get().bookmarks.map(mapPath))
+    const pinnedFolders = normalizeBookmarkList(get().pinnedFolders.map(mapPath))
     set({
       files: get().files.map(mapPath).sort(),
       folders: get().folders.map(mapPath).sort(),
@@ -2772,6 +2818,8 @@ export const useStore = create<ForgeState>((set, get) => ({
       index,
       bookmarks,
       bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
+      pinnedFolders,
+      pinnedFolderSettings: { ...get().pinnedFolderSettings, [vault]: pinnedFolders },
       tabs: get().tabs.map((t) => (t.path ? { ...t, path: mapPath(t.path) } : t)),
       contentVersion: get().contentVersion + 1
     })
@@ -2813,6 +2861,7 @@ export const useStore = create<ForgeState>((set, get) => ({
     const fileStats: Record<string, VaultFileStat> = {}
     for (const [key, value] of Object.entries(get().fileStats)) if (!gone(key)) fileStats[key] = value
     const bookmarks = get().bookmarks.filter((bookmark) => !gone(bookmark))
+    const pinnedFolders = get().pinnedFolders.filter((folder) => !gone(folder))
     set({
       files: get().files.filter((f) => !gone(f)),
       folders: get().folders.filter((f) => !gone(f)),
@@ -2820,6 +2869,8 @@ export const useStore = create<ForgeState>((set, get) => ({
       index,
       bookmarks,
       bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks },
+      pinnedFolders,
+      pinnedFolderSettings: { ...get().pinnedFolderSettings, [vault]: pinnedFolders },
       tabs: get().tabs.map((t) =>
         t.path && gone(t.path) ? { ...t, kind: 'empty' as TabKind, path: null } : t
       ),
@@ -2866,6 +2917,20 @@ export const useStore = create<ForgeState>((set, get) => ({
     const bookmarks = get().bookmarks.filter((bookmark) => bookmark !== path)
     if (bookmarks.length === get().bookmarks.length) return
     set({ bookmarks, bookmarkSettings: { ...get().bookmarkSettings, [vault]: bookmarks } })
+    persistSettings(get())
+  },
+
+  togglePinnedFolder(path) {
+    const { vault, folders, pinnedFolders } = get()
+    if (!vault || !folders.includes(path)) return
+    const next = pinnedFolders.includes(path)
+      ? pinnedFolders.filter((folder) => folder !== path)
+      : [...pinnedFolders, path]
+    const normalized = pinnedFoldersForVault({ [vault]: next }, vault, folders)
+    set({
+      pinnedFolders: normalized,
+      pinnedFolderSettings: { ...get().pinnedFolderSettings, [vault]: normalized }
+    })
     persistSettings(get())
   },
   setExtensionInstalled(extensionId, installed) {
