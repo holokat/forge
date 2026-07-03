@@ -20,7 +20,8 @@
     "mcp": "node scripts/forge-mcp.mjs",
     "publish:vault": "node scripts/forge-publish.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "dist": "electron-vite build && electron-builder --mac"
+    "dist": "electron-vite build && electron-builder --mac",
+    "dist:notarized": "node scripts/check-notarization-env.mjs && electron-vite build && electron-builder --mac"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.4",
@@ -97,6 +98,7 @@
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "build/icon.icns",
+      "notarize": true,
       "target": [
         "dmg"
       ]
