@@ -44,7 +44,7 @@ Commands:
   move <from> <to>                      Move or rename a file or folder
   search <query> [--limit <n>] [--json] Search Markdown filenames and contents
   analyze [--stale-days <n>] [--json]   Summarize notes, tags, links, backlinks, gaps, stale notes, and repair queues
-  publish --out <folder> [--title <s>] [--description <s>] [--scope <folder>] [--theme <minimal|editorial|reference>] [--clean] [--no-tags] [--no-backlinks] [--json]
+  publish --out <folder> [--title <s>] [--description <s>] [--scope <folder>] [--theme <minimal|editorial|reference|quiet-paper|terminal-ledger|swiss-ledger|soft-focus|field-notes>] [--clean] [--no-tags] [--no-backlinks] [--json]
                                         Export the vault to static HTML
   batch [file|-] [--json]               Run JSON operations in one transaction-like sequence
   built-in-templates [--json] [--content]

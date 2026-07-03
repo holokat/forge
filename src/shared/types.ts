@@ -31,7 +31,15 @@ export interface Settings {
   extensionSettings: ExtensionSettings
 }
 
-export type PublishSiteTheme = 'minimal' | 'editorial' | 'reference'
+export type PublishSiteTheme =
+  | 'minimal'
+  | 'editorial'
+  | 'reference'
+  | 'quiet-paper'
+  | 'terminal-ledger'
+  | 'swiss-ledger'
+  | 'soft-focus'
+  | 'field-notes'
 
 export type PublishSiteScope =
   | { kind: 'vault' }

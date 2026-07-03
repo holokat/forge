@@ -31,6 +31,11 @@ node scripts/forge-publish.mjs \
 
 The desktop app can save multiple publishing profiles per vault. Each profile stores a site name, description, theme, scope, output folder, clean behavior, tag navigation, backlink sections, and deploy notes.
 
+Available themes:
+
+- `minimal`, `editorial`, `reference`
+- `quiet-paper`, `terminal-ledger`, `swiss-ledger`, `soft-focus`, `field-notes`
+
 If `--vault` is omitted, the command follows the normal Forge vault resolution order:
 
 1. `FORGE_VAULT`
@@ -44,7 +49,7 @@ The output folder contains:
 - `notes/**/*.html` for rendered Markdown notes.
 - `tags/*.html` for tag index pages when tag navigation is enabled.
 - `assets/**` copied from non-Markdown files in the vault.
-- `_forge/styles.css` and `_forge/manifest.json` for generated site assets and metadata.
+- `_forge/styles.css`, `_forge/site.js`, and `_forge/manifest.json` for generated site assets, theme toggles, reading progress, and metadata.
 - `.nojekyll` so GitHub Pages serves `_forge` assets.
 - `.forge-publish.json` as the ownership marker used by `--clean`.
 

@@ -309,7 +309,17 @@ function pinnedFoldersForVault(settings: Record<string, string[]>, vault: string
 }
 
 function normalizePublishSiteTheme(value: unknown): PublishSiteTheme {
-  return value === 'editorial' || value === 'reference' ? value : 'minimal'
+  const themes: PublishSiteTheme[] = [
+    'minimal',
+    'editorial',
+    'reference',
+    'quiet-paper',
+    'terminal-ledger',
+    'swiss-ledger',
+    'soft-focus',
+    'field-notes'
+  ]
+  return themes.includes(value as PublishSiteTheme) ? (value as PublishSiteTheme) : 'minimal'
 }
 
 function normalizePublishSiteConfig(value: unknown, folders: string[] = []): PublishSiteConfig | null {

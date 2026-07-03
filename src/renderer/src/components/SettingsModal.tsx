@@ -71,7 +71,12 @@ const THEMES: { mode: ThemeMode; label: string; icon: React.ReactNode }[] = [
 const PUBLISH_THEMES: { id: PublishSiteTheme; label: string; detail: string }[] = [
   { id: 'minimal', label: 'Minimal', detail: 'Quiet, clean notes site' },
   { id: 'editorial', label: 'Editorial', detail: 'Sharper typography for essays' },
-  { id: 'reference', label: 'Reference', detail: 'Dense docs-style browsing' }
+  { id: 'reference', label: 'Reference', detail: 'Dense docs-style browsing' },
+  { id: 'quiet-paper', label: 'Quiet Paper', detail: 'Warm editorial paper, serif writing' },
+  { id: 'terminal-ledger', label: 'Terminal Ledger', detail: 'Dark engineering ledger with mono rows' },
+  { id: 'swiss-ledger', label: 'Swiss Ledger', detail: 'High-contrast numbered index' },
+  { id: 'soft-focus', label: 'Soft Focus', detail: 'Airy narrow-column personal blog' },
+  { id: 'field-notes', label: 'Field Notes', detail: 'Archival side-rail journal layout' }
 ]
 
 const STARTER_TEMPLATE_ICONS: Record<StarterTemplateKind, React.ReactNode> = {
@@ -320,6 +325,10 @@ function createPublishSite(vault: string, name: string, scope: PublishSiteConfig
 
 function siteScopeLabel(site: PublishSiteConfig): string {
   return site.scope.kind === 'folder' ? site.scope.folder : 'All folders'
+}
+
+function publishThemeLabel(theme: PublishSiteTheme): string {
+  return PUBLISH_THEMES.find((option) => option.id === theme)?.label ?? theme
 }
 
 function vaultDisplayName(path: string): string {
@@ -1106,7 +1115,9 @@ export default function SettingsModal(): React.JSX.Element {
                         <div className="publish-site-editor-header">
                           <div>
                             <div className="settings-row-label">{selectedPublishSite.name}</div>
-                            <div className="settings-row-desc">{siteScopeLabel(selectedPublishSite)} · {selectedPublishSite.theme}</div>
+                            <div className="settings-row-desc">
+                              {siteScopeLabel(selectedPublishSite)} · {publishThemeLabel(selectedPublishSite.theme)}
+                            </div>
                           </div>
                           {publishSites.length > 1 && (
                             <button className="icon-btn" title="Delete site" onClick={() => deletePublishSite(selectedPublishSite.id)}>
@@ -1196,8 +1207,21 @@ export default function SettingsModal(): React.JSX.Element {
                                   updatePublishSite(selectedPublishSite.id, (site) => ({ ...site, theme: themeOption.id }))
                                 }
                               >
-                                <strong>{themeOption.label}</strong>
-                                <span>{themeOption.detail}</span>
+                                <span className={`publish-theme-preview ${themeOption.id}`} aria-hidden="true">
+                                  <span />
+                                  <span />
+                                  <span />
+                                </span>
+                                <span className="publish-theme-card-copy">
+                                  <strong>{themeOption.label}</strong>
+                                  <span>{themeOption.detail}</span>
+                                </span>
+                                {selectedPublishSite.theme === themeOption.id && (
+                                  <span className="publish-theme-selected">
+                                    <Check size={12} />
+                                    Selected
+                                  </span>
+                                )}
                               </button>
                             ))}
                           </div>

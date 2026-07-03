@@ -21,7 +21,8 @@ Options:
   --title <title>         Site title; defaults to the vault folder name
   --description <text>    Site description used in generated metadata
   --scope <folder>        Publish only one vault folder
-  --theme <name>          minimal, editorial, or reference
+  --theme <name>          minimal, editorial, reference, quiet-paper,
+                          terminal-ledger, swiss-ledger, soft-focus, or field-notes
   --clean                 Remove a previous Forge publish output before writing
   --no-tags               Omit tag navigation and tag pages
   --no-backlinks          Omit backlink sections from note pages

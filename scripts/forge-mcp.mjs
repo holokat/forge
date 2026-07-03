@@ -254,7 +254,11 @@ const tools = [
         title: { type: 'string', description: 'Optional site title.' },
         description: { type: 'string', description: 'Optional site description used in generated metadata.' },
         scopePath: { type: 'string', description: 'Optional vault-relative folder to publish as the site.' },
-        theme: { type: 'string', enum: ['minimal', 'editorial', 'reference'], description: 'Generated site theme.' },
+        theme: {
+          type: 'string',
+          enum: ['minimal', 'editorial', 'reference', 'quiet-paper', 'terminal-ledger', 'swiss-ledger', 'soft-focus', 'field-notes'],
+          description: 'Generated site theme.'
+        },
         clean: { type: 'boolean', description: 'Clean previous Forge publisher output before writing.' },
         showTags: { type: 'boolean', description: 'Generate tag navigation and tag pages. Defaults to true.' },
         showBacklinks: { type: 'boolean', description: 'Show backlinks on note pages. Defaults to true.' }
