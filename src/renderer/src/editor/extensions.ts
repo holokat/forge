@@ -12,6 +12,7 @@ import {
   EditorView,
   keymap,
   MatchDecorator,
+  placeholder,
   ViewPlugin,
   type DecorationSet,
   type ViewUpdate
@@ -67,6 +68,8 @@ const editorTheme = EditorView.theme({
   '&.cm-focused': { outline: 'none' },
   '.cm-scroller': {
     fontFamily: 'var(--font-text)',
+    fontVariantLigatures: 'none',
+    fontKerning: 'none',
     lineHeight: '1.65',
     letterSpacing: '0',
     padding: '0 48px'
@@ -76,29 +79,24 @@ const editorTheme = EditorView.theme({
     margin: '0 auto',
     padding: '8px 0 45vh',
     position: 'relative',
+    textRendering: 'geometricPrecision',
     caretColor: 'var(--accent)'
   },
-  '.cm-line': { padding: '1px 0' },
+  '.cm-line': {
+    padding: '1px 0',
+    fontVariantLigatures: 'none',
+    fontKerning: 'none'
+  },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--accent)', borderLeftWidth: '1px' },
   '.cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
     background: 'var(--selection) !important'
   },
-  '&.cm-empty .cm-line:first-child': { position: 'relative' },
-  '&.cm-empty .cm-line:first-child::before': {
-    content: '"Start writing…"',
-    position: 'absolute',
-    left: '0',
-    top: '0',
+  '.cm-placeholder': {
     color: 'var(--text-faint)',
     pointerEvents: 'none',
     userSelect: 'none'
   }
 })
-
-const emptyEditorClass = EditorView.editorAttributes.compute(
-  ['doc'],
-  (state): Record<string, string> => (state.doc.length === 0 ? { class: 'cm-empty', 'aria-placeholder': 'Start writing…' } : {})
-)
 
 // ---------- wikilinks & tags ----------
 
@@ -234,7 +232,7 @@ export function createEditorState(content: string, callbacks: EditorCallbacks): 
       markdown({ base: markdownLanguage, codeLanguages: languages }),
       syntaxHighlighting(mdHighlight),
       editorTheme,
-      emptyEditorClass,
+      placeholder('Start writing…'),
       decoratorPlugin(wikilinkDecorator),
       decoratorPlugin(tagDecorator),
       wikilinkClick(callbacks.onNavigate),

@@ -1044,10 +1044,9 @@ body.resizing .pane-resizer::after {
 .cm-hashtag {
   color: var(--accent);
   background: var(--accent-soft);
-  border-radius: 20px;
-  padding: 1px 7px;
-  font-size: 0.85em;
-  font-weight: 500;
+  border-radius: 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 /* CodeMirror autocomplete tooltip */
